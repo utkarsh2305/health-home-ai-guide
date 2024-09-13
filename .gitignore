@@ -1,0 +1,37 @@
+# macOS system files
+.DS_Store
+._*
+
+# Datafiles
+*.sqlite
+data/
+
+# Logs
+logs/
+*.log
+server/logs/
+
+# Module Files
+node_modules/
+server/node_modules/
+server/venv
+package-lock.json
+
+# Environment and IDE settings
+.env
+.vscode/
+.idea/
+.zed/
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build directories
+build/
+dist/
+.tmp/
+
+# Docker-related files (if any, modify as needed)
+docker-compose.yml
