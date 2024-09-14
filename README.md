@@ -11,6 +11,7 @@ Essentially, it's a mix of:
 - Basic patient record database (because who doesn't love a good spreadsheet?)
 - "AI-powered" Medical transcriptionist (or at least, my attempt at building one)
 - Task manager/todo list for clinics
+- Simple RSS reader with LLM generated summaries for quick review
 - Some cool AI stuff with RAG which was mostly just to see if it could be done.
 
 The best part? It all runs locally on commodity hardware! I use Ollama for inference and Whisper for transcription. To keep things local and easy I suggest spinning up a local [Faster Whisper Server](https://github.com/fedirz/faster-whisper-server) instance for transcription.To use the microphone feature, you'll need a secure context (HTTPS). For local tinkering, most browsers allow exceptions for localhost.
