@@ -1,8 +1,6 @@
 # Bloodworks Scribe
 
-Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. I'm a haematologist by day and amateur Python tinkerer by night. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day.
-
-{{INSERTED_CODE}}
+Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. I'm a haematologist by day and amateur Python tinkerer by night. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
 
 ![Bloodworks Scribe Logo](/public/logo.webp)
 
@@ -40,8 +38,8 @@ The smaller models do an okay job at summarizing transcripts, but output is bett
 If you're familiar with Python, React, and working with LLMs, you'll might find the project interesting. Feel free to clone the repo and examine the code:
 
 ```
-git clone https://github.com/your-username/bloodworks-scribe.git
-cd bloodworks-scribe
+git clone https://github.com/jfgonsalves/scribe.git
+cd scribe
 ```
 
 For those of you who are comfortable with Docker/Podman and understand the risks, you can build the image:
