@@ -1,6 +1,6 @@
 # Bloodworks Scribe
 
-Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. I'm a haematologist by day and amateur Python tinkerer by night. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
+Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
 
 ![Bloodworks Scribe Logo](/public/logo.webp)
 
