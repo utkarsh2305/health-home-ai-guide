@@ -248,9 +248,16 @@ const Chat = ({
                       </Button>
                     </Flex>
                   )}
+
                   <div ref={messagesEndRef} />
                 </Box>
-                <Flex alignItems="center" justify="space-between" p="4">
+                <Flex
+                  alignItems="center"
+                  justify="space-between"
+                  pt="4"
+                  pl="4"
+                  pr="4"
+                >
                   <Input
                     placeholder="Type your message..."
                     size="sm"
@@ -276,6 +283,15 @@ const Chat = ({
                     aria-label="Send"
                   />
                 </Flex>
+                <Box
+                  mb="2"
+                  textAlign="center"
+                  fontSize="13"
+                  fontWeight="normal"
+                  className="headings"
+                >
+                  LLMs make mistakes. Always verify output.
+                </Box>
               </Box>
             </Collapse>
           </Box>

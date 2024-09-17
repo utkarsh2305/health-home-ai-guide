@@ -139,7 +139,7 @@ const OutstandingJobs = ({ handleSelectPatient, refreshSidebar }) => {
                 className="summary-panels"
                 sx={{
                   "--panels-bg-color":
-                    colorMode === "dark" ? "#fffaf3" : "#1f1d2e",
+                    colorMode === "light" ? "#fffaf3" : "#1f1d2e",
                 }}
               >
                 <VStack spacing="3" align="stretch">

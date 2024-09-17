@@ -303,7 +303,7 @@ const Sidebar = ({
           width="100%"
           onClick={() => handleNavigation("/rag")}
         >
-          <GiBrain boxSize="20px" />
+          <GiBrain boxsize="20px" />
           <Text ml="2" fontSize="md">
             Documents
           </Text>
@@ -320,7 +320,7 @@ const Sidebar = ({
           width="100%"
           onClick={() => handleNavigation("/settings")}
         >
-          <SettingsIcon boxSize="20px" />
+          <SettingsIcon boxsize="20px" />
           <Text ml="2" fontSize="md">
             Settings
           </Text>

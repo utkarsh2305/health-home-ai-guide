@@ -39,6 +39,7 @@ const LandingPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRssFeedsCollapsed, setIsRssFeedsCollapsed] = useState(true);
   const [isRssDigestsCollapsed, setIsRssDigestsCollapsed] = useState(false);
+  const [showAll, setShowAll] = useState(true);
 
   const fetchRssDigests = async () => {
     try {
@@ -248,6 +249,12 @@ const LandingPage = () => {
     }
   }, [feeds]);
 
+  const visibleTodos = showAll
+    ? todos
+    : todos.filter((todo) => !todo.completed);
+
+  const toggleShowAll = () => setShowAll(!showAll);
+
   useEffect(() => {
     const fetchAllData = async () => {
       setIsRefreshing(true);
@@ -298,9 +305,17 @@ const LandingPage = () => {
         <Flex direction={{ base: "column", md: "row" }} gap={6}>
           {/* Todo List Panel */}
           <Box flex="1" className="panels-bg" p="4" borderRadius="md">
-            <Text textAlign="center" mb="5">
-              Todo List
-            </Text>
+            <Flex justify="space-between" align="center" mb="5">
+              <Text>Todo List</Text>
+              <Button
+                size="sm"
+                onClick={toggleShowAll}
+                className="switch-mode"
+                variant="outline"
+              >
+                {showAll ? "To Do" : "All"}
+              </Button>
+            </Flex>
             <VStack align="stretch" spacing={4}>
               <HStack>
                 <Input
@@ -317,48 +332,63 @@ const LandingPage = () => {
                   Add
                 </Button>
               </HStack>
-              <VStack
-                align="stretch"
-                spacing={2}
-                maxHeight="300px"
+              <Box
+                maxHeight="200px"
                 overflowY="auto"
+                borderWidth={1}
+                borderRadius="md"
                 className="summary-panels"
+                css={{
+                  "&::-webkit-scrollbar": {
+                    width: "8px",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    width: "10px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "gray",
+                    borderRadius: "24px",
+                  },
+                }}
               >
-                {todos.map((todo) => (
-                  <HStack
-                    key={todo.id}
-                    justify="space-between"
-                    p={2}
-                    borderWidth={1}
-                    borderRadius="md"
-                  >
-                    <Checkbox
-                      isChecked={todo.completed}
-                      onChange={() => toggleTodo(todo.id, todo.completed)}
-                      size="lg"
-                      className="checkbox task-checkbox"
+                <VStack align="stretch" spacing={2} p={2}>
+                  {visibleTodos.map((todo) => (
+                    <HStack
+                      key={todo.id}
+                      justify="space-between"
+                      p={2}
+                      borderWidth={1}
+                      borderRadius="md"
+                      className="textarea-style"
                     >
-                      <Text as={todo.completed ? "s" : "span"}>
-                        {todo.task}
-                      </Text>
-                    </Checkbox>
-                    <IconButton
-                      icon={<DeleteIcon />}
-                      onClick={() => deleteTodo(todo.id)}
-                      aria-label="Delete todo"
-                      size="sm"
-                      colorScheme="red"
-                      variant="ghost"
-                    />
-                  </HStack>
-                ))}
-              </VStack>
+                      <Checkbox
+                        isChecked={todo.completed}
+                        onChange={() => toggleTodo(todo.id, todo.completed)}
+                        size="lg"
+                        className="checkbox task-checkbox"
+                      >
+                        <Text as={todo.completed ? "s" : "span"}>
+                          {todo.task}
+                        </Text>
+                      </Checkbox>
+                      <IconButton
+                        icon={<DeleteIcon />}
+                        onClick={() => deleteTodo(todo.id)}
+                        aria-label="Delete todo"
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                      />
+                    </HStack>
+                  ))}
+                </VStack>
+              </Box>
             </VStack>
           </Box>
 
           {/* Incomplete Jobs Panel */}
           <Box flex="1" className="panels-bg" p="4" borderRadius="md">
-            <Text textAlign="center">Incomplete Clinic Jobs</Text>
+            <Text>Incomplete Clinic Jobs</Text>
             <Flex
               direction="column"
               align="center"
