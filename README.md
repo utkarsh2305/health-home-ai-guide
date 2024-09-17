@@ -2,7 +2,7 @@
 
 Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
 
-![Bloodworks Scribe Logo](/public/logo.webp)
+![Bloodworks Scribe Logo](/public/readme_logo.webp)
 
 ## What's This All About?
 
@@ -46,7 +46,7 @@ cd scribe
 For those of you who are comfortable with Docker/Podman and understand the risks, you can build the image:
 
 ```
-podman build -t bloodworks-scribe:latest .
+podman build -t scribe:latest .
 ```
 
 Just remember, this is more of a "look, don't touch" kind of project when it comes to real patient data or medical decisions. If you do decide to run it, keep it strictly for personal learning or experimentation.
