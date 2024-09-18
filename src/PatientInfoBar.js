@@ -84,7 +84,7 @@ const PatientInfoBar = ({ patient, setPatient, handleSearch }) => {
               aria-label="Search UR Number"
               size="sm"
               onClick={() => handleSearch(patient.ur_number)}
-              className="icon-button-style"
+              className="search-button"
             />
           </Flex>
         </Tooltip>

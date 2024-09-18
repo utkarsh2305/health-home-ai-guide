@@ -276,16 +276,24 @@ const styles = {
       borderRadius: "4px !important",
       fontSize: "0.9rem !important",
     },
-    ".icon-button-style": {
-      backgroundColor: "#ccc !important",
+    ".search-button": {
       borderLeft: "none !important",
       borderTopLeftRadius: "0 !important",
       borderBottomLeftRadius: "0 !important",
       marginLeft: "-5px",
-      border: "1px solid #ccc !important",
+      backgroundColor:
+        props.colorMode === "light" ? "#ccc !important" : "#191724 !important",
+      border:
+        props.colorMode === "light"
+          ? "1px solid #ccc !important"
+          : "none !important",
+      color: "#575279 !important",
     },
-    ".icon-button-style:hover": {
-      backgroundColor: "#b3b3b3 !important",
+    ".search-button:hover": {
+      backgroundColor:
+        props.colorMode === "light"
+          ? "#b3b3b3 !important"
+          : "#393552 !important",
     },
     ".flex-container": {
       display: "flex",
