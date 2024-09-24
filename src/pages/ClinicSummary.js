@@ -15,7 +15,7 @@ import {
 import { useEffect, useState } from "react";
 import { FaUser, FaCalendarAlt, FaIdBadge } from "react-icons/fa";
 import { RepeatIcon } from "@chakra-ui/icons";
-import { toggleJobsItem, resetJobsItems } from "./patientUtils";
+import { toggleJobsItem, resetJobsItems } from "../utils/patientUtils";
 
 const ClinicSummary = ({
   selectedDate,

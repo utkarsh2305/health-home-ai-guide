@@ -34,7 +34,7 @@ async def update_config(data: dict):
 async def get_models(
     ollamaEndpoint: str = Query(..., description="The endpoint for Ollama")
 ):
-    print(ollamaEndpoint)
+
     try:
         # Use httpx to make an asynchronous HTTP GET request
         async with httpx.AsyncClient() as client:

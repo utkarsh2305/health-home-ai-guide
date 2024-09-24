@@ -1,0 +1,46 @@
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim
+
+# Set the working directory
+WORKDIR /usr/src/app/server
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only the requirements file
+COPY server/requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pytest pytest-asyncio
+
+# Set environment variable to indicate we're in a test environment
+ENV TESTING=true
+
+# Set the working directory for running tests
+WORKDIR /usr/src/app
+
+# Create empty build dir
+RUN mkdir -p /usr/src/app/build
+RUN echo "<html><body>Test</body></html>" > /usr/src/app/build/index.html
+
+# Create the run_tests.sh script
+RUN echo '#!/bin/bash\n\
+# Delete test database if it exists\n\
+rm -f /usr/src/app/data/test_scribe_database.sqlite\n\
+\n\
+# Run tests\n\
+pytest server/tests\n\
+test_exit_code=$?\n\
+\n\
+# Delete test database after tests\n\
+rm -f /usr/src/app/data/test_scribe_database.sqlite\n\
+\n\
+# Exit with the test exit code\n\
+exit $test_exit_code' > /usr/src/app/run_tests.sh && \
+    chmod +x /usr/src/app/run_tests.sh
+
+# Run tests using the script
+CMD ["/usr/src/app/run_tests.sh"]

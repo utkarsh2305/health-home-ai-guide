@@ -28,8 +28,8 @@ app.add_middleware(
 
 # Constants
 DATA_DIR = Path("/usr/src/app/data")
-BUILD_DIR = Path(__file__).parent.parent / "build"
-
+BUILD_DIR = Path("/usr/src/app/build")
+IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 # @app.middleware("http")
 # async def log_requests(request: Request, call_next):

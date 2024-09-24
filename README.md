@@ -1,6 +1,6 @@
-# Bloodworks Scribe
+# Scribe
 
-Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical transcription and basic patient management. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
+Hey there! 👋 Welcome to Scribe, my personal playground for medical transcription and basic patient management. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
 
 ![Bloodworks Scribe Logo](/public/readme_logo.webp)
 
@@ -8,13 +8,13 @@ Hey there! 👋 Welcome to Bloodworks Scribe, my personal playground for medical
 
 Essentially, it's a mix of:
 
-- Basic patient record database (because who doesn't love a good spreadsheet?)
+- Basic patient record database
 - "AI-powered" Medical transcriptionist (or at least, my attempt at building one)
 - Task manager/todo list for clinics
 - Simple RSS reader with LLM generated summaries for quick review
 - Some cool AI stuff with RAG which was mostly just to see if it could be done.
 
-The best part? It all runs locally on commodity hardware! I use Ollama for inference and Whisper for transcription. To keep things local and easy I suggest spinning up a local [Faster Whisper Server](https://github.com/fedirz/faster-whisper-server) instance for transcription.To use the microphone feature, you'll need a secure context (HTTPS). For local tinkering, most browsers allow exceptions for localhost.
+Most importantly, it all runs locally on commodity hardware! I use Ollama for inference and Whisper for transcription. To keep things local and easy I suggest spinning up a [Faster Whisper Server](https://github.com/fedirz/faster-whisper-server) instance for transcription. To record from the browser, you'll need a secure context (HTTPS). For local tinkering, most browsers allow exceptions for localhost.
 
 It's worth mentioning that the format of the notes it produces is based on my personal note-taking style and it's mostly hardcoded in. However, you can adjust the LLM prompts and generation options in the UI to tailor the output somewhat.
 

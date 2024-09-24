@@ -38,8 +38,8 @@ import {
   commitToDatabase,
   formatCollectionName,
   deleteFile,
-} from "./utils/ragUtils";
-import RagChat from "./components/RagChat";
+} from "../utils/ragUtils";
+import RagChat from "../components/RagChat";
 
 const Rag = () => {
   const [collections, setCollections] = useState([]);

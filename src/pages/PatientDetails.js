@@ -8,11 +8,11 @@ import {
 } from "@chakra-ui/react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import PatientInfoBar from "./PatientInfoBar";
-import Transcription from "./Transcription";
-import Summary from "./Summary";
-import Chat from "./Chat";
-import Letter from "./Letter";
+import PatientInfoBar from "../components/PatientInfoBar";
+import Transcription from "../components/Transcription";
+import Summary from "../components/Summary";
+import Chat from "../components/Chat";
+import Letter from "../components/Letter";
 import {
   handleTranscriptionComplete,
   savePatientData,
@@ -20,7 +20,7 @@ import {
   handleChat,
   handleSearchUtil,
   handleGenerateLetter,
-} from "./patientUtils";
+} from "../utils/patientUtils";
 
 const PatientDetails = ({
   patient,

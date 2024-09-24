@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { FaUser, FaCalendarAlt, FaIdBadge } from "react-icons/fa";
-import { toggleJobsItem } from "./patientUtils";
+import { toggleJobsItem } from "../utils/patientUtils";
 
 const OutstandingJobs = ({ handleSelectPatient, refreshSidebar }) => {
   const [patients, setPatients] = useState([]);

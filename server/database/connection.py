@@ -10,7 +10,13 @@ from server.schemas.dashboard import RssFeed, RssItem
 class PatientDatabase:
     def __init__(self, db_dir="/usr/src/app/data"):
         self.db_dir = db_dir
-        self.db_path = os.path.join(db_dir, "scribe_database.sqlite")
+        self.is_test = os.environ.get("TESTING", "False").lower() == "true"
+        self.db_name = (
+            "test_scribe_database.sqlite"
+            if self.is_test
+            else "scribe_database.sqlite"
+        )
+        self.db_path = os.path.join(db_dir, self.db_name)
         self.ensure_data_directory()
         self.connect_to_database()
         self.create_tables()
@@ -112,7 +118,9 @@ class PatientDatabase:
             CREATE TABLE IF NOT EXISTS prompts (
                 key TEXT PRIMARY KEY,
                 system TEXT,
-                initial TEXT
+                initial TEXT,
+                clinicalHistoryInitial TEXT,
+                planInitial TEXT
             )
         """
         )
@@ -191,3 +199,19 @@ class PatientDatabase:
 
     def close(self):
         self.db.close()
+
+    def clear_test_database(self):
+        if self.is_test:
+            tables = [
+                "patients",
+                "rss_feeds",
+                "todos",
+                "rss_items",
+                "config",
+                "prompts",
+                "options",
+                "custom_headings",
+            ]
+            for table in tables:
+                self.cursor.execute(f"DELETE FROM {table}")
+            self.db.commit()

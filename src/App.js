@@ -8,15 +8,15 @@ import {
 } from "@chakra-ui/react";
 import { SunIcon, MoonIcon } from "@chakra-ui/icons";
 import { useState, useEffect, useCallback } from "react";
-import Sidebar from "./Sidebar";
-import LandingPage from "./LandingPage";
-import PatientDetails from "./PatientDetails";
-import Settings from "./Settings";
-import Rag from "./Rag";
-import ClinicSummary from "./ClinicSummary";
-import OutstandingJobs from "./OutstandingJobs";
-import ConfirmLeaveModal from "./ConfirmLeaveModal";
-import { fetchPatientLetter, fetchPatientDetails } from "./patientUtils";
+import Sidebar from "./components/Sidebar";
+import LandingPage from "./pages/LandingPage";
+import PatientDetails from "./pages/PatientDetails";
+import Settings from "./pages/Settings";
+import Rag from "./pages/Rag";
+import ClinicSummary from "./pages/ClinicSummary";
+import OutstandingJobs from "./pages/OutstandingJobs";
+import ConfirmLeaveModal from "./components/ConfirmLeaveModal";
+import { fetchPatientLetter, fetchPatientDetails } from "./utils/patientUtils";
 
 function App() {
   const [patient, setPatient] = useState(null);
