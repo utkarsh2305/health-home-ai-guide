@@ -59,12 +59,6 @@ const PatientDetails = ({
       setMessages([]);
       setUserInput("");
       setShowSuggestions(true);
-
-      if (summaryRef.current) {
-        setTimeout(() => {
-          summaryRef.current.autoResizeAllTextareas();
-        }, 100);
-      }
     }
   }, [patient]);
 

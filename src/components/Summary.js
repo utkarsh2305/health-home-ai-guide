@@ -5,6 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import {
   Box,
   Flex,
@@ -200,7 +201,6 @@ const Summary = forwardRef(
       const newValue = e.target.value;
       setter(newValue);
       setIsModified(true);
-      autoResizeTextarea(key);
 
       // Update cursor position
       const cursorPosition = e.target.selectionStart;
@@ -214,7 +214,7 @@ const Summary = forwardRef(
             <Text fontSize="sm">{customHeadings[key] || label}:</Text>
           </Flex>
           <Box position="relative">
-            <Textarea
+            <TextareaAutosize
               placeholder={label}
               value={value || ""}
               onChange={handleTextareaChange(key, setter)}
@@ -230,9 +230,19 @@ const Summary = forwardRef(
                   [key]: cursorPosition,
                 }));
               }}
-              rows={2}
+              minRows={2}
               className="textarea-style"
               ref={(el) => (textareasRefs.current[key] = el)}
+              style={{
+                width: "100%",
+                resize: "none",
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #e2e8f0",
+                fontSize: "14px",
+                lineHeight: "1.5",
+                // Add any other styles to match your current textarea
+              }}
             />
             {(focusedTextarea === key || recentlyRecordedTextarea === key) &&
               !recordingStates[key] && (
@@ -280,23 +290,9 @@ const Summary = forwardRef(
       setFocusedTextarea(null);
     };
 
-    useImperativeHandle(ref, () => ({
-      autoResizeAllTextareas: () => {
-        Object.keys(textareasRefs.current).forEach(autoResizeTextarea);
-      },
-    }));
+    useImperativeHandle(ref, () => ({}));
 
-    const autoResizeTextarea = (fieldName) => {
-      const textarea = textareasRefs.current[fieldName];
-      if (textarea) {
-        textarea.style.height = "auto";
-        textarea.style.height = textarea.scrollHeight + "px";
-      }
-    };
-
-    useEffect(() => {
-      Object.keys(textareasRefs.current).forEach(autoResizeTextarea);
-    }, [
+    useEffect(() => {}, [
       primaryHistory,
       additionalHistory,
       investigations,

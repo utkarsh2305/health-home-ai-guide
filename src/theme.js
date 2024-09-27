@@ -138,7 +138,18 @@ const styles = {
       overflow: "hidden !important",
       whiteSpace: "pre-wrap !important",
       boxShadow: "none !important",
+      "&::placeholder": {
+        color: props.colorMode === "light" ? "#a8a29e" : "#6e6a86",
+      },
+      "&:focus": {
+        outline: "none !important",
+        boxShadow: "none !important",
+        border: "none !important",
+      },
+      minHeight: "auto !important",
+      overflow: "hidden !important",
     },
+
     ".modal-style": {
       backgroundColor:
         props.colorMode === "light"
