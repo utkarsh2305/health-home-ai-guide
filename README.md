@@ -54,3 +54,7 @@ Just remember, this is more of a "look, don't touch" kind of project when it com
 ## A Note from the Creator
 
 This project is a real mess. The code is sloppy, the paradigms are half-arsed, and I've mixed concerns like I'm tossing a salad. There's probably more duplicated boilerplate than actual functioning code, thanks to my liberal use of LLMs as coding assistants. It isn't remotely ready for any serious use but it's been an absolute blast to work and has been a great learning experience!
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
