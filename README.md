@@ -1,10 +1,10 @@
 # Scribe
 
-Hey there! 👋 Welcome to Scribe, my personal playground for medical transcription and basic patient management. This is a collab with Sonnet 3.5, GPT 4o, Deepseek, and whatever other LLM I could use to make a usable frontend for transcription that I can use day to day. There are a few really excellent and mature commercial solutions available, but I'm a cheapskate so I thought I'd try rolling my own.
+Welcome to Scribe, an open source patient management/AI transcription solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but I'm a cheapskate so I thought I'd try rolling my own.
 
 ![Bloodworks Scribe Logo](/public/readme_logo.webp)
 
-## What's This All About?
+## What is it?
 
 Essentially, it's a mix of:
 
@@ -18,19 +18,37 @@ Most importantly, it all runs locally on commodity hardware! I use Ollama for in
 
 It's worth mentioning that the format of the notes it produces is based on my personal note-taking style and it's mostly hardcoded in. However, you can adjust the LLM prompts and generation options in the UI to tailor the output somewhat.
 
-## Fair Warning ⚠️
+## Features
 
-This is very much a personal project and learning experience. If you're not sure how to run this or don't fully understand the limitations of current LLM technology in medicine, please don't use it in a clinical setting. The chat and RAG features, while cool, are unreliable and prone to hallucination. They are certainly not ready for prime time in healthcare. Especially if you use smaller models you will likely get awful treatment suggestions.
+### Medical Transcription and note summarisation
 
-The smaller models do an okay job at summarizing transcripts, but output is better with larger models (I like Llama 3.1 70B; Q4 is fine). ALWAYS verify the output. Even with large models you will encounter inconsistencies.
+Essentially, the browser sends an audio blob to a Whisper backend of your choice for processing. The raw transcript is then fed through an Ollama backend several times in a quasi-CoT fashion to deliver a bullet point summarisation of the clinical encounter, and a numbered list of the items from the plan. I make heavy use of stop tokens and guided generation. It's not very sophisticated but it gets the job done well enough that it's become my daily driver in the clinic. Simply copy the final note into your EMR and then save it into the local SQLite database.
+
+The patient's demographics, "Primary history" (what you see them for), and additional history can be autofilled from the database by searching the URN in subsequent encounters.
+
+### Task manager
+
+The plan from the clinic note is parsed into a JSON list which can then be manipulated from a few different pages. I've found this really useful for keeping on top of jobs from clinic. As a nice little touch here I utilize a smaller model (configurable in the setting page) to generate a 1 sentence summary of the encounter.
+
+### Correspondence generation
+
+I've implemented a 1-click solution to generate a letter intended for GPs based on the clinical note. It can be a bit verbose and definitely needs to be checked and refined before sending off.
+
+### Decision-support/RAG
+
+You can discuss each case with your primary model and upload relevant documents to the Chroma-powered RAG backend for it to peruse. Simply click the chat button on a patient encounter of interest. This is a bit janky/slow at present and any output here should absolutely be verified using primary sources as hallucinations abound (particularly with smaller models).
+
+### Dashboard with simple RSS reader using LLM summaries
+
+The landing page allows you to subscribe to RSS feeds of your choice. The primary model will then be used to generate quick summaries of each article for your reading pleasure. Useful for tyring to keep on top of the latest PubMed trending articles in your field.
 
 ## Stack
 
 - Frontend: React/Chakra UI
 - Backend: FastAPI
 - Database: SQLite
-- Containerization: Docker/Podman (for when I pretend to be a DevOps engineer)
-- LLM Backend/Inference Engine: [Ollama](https://github.com/ollama/ollama) (an easy-to-use wrapper for llama.cpp)
+- Containerization: Docker/Podman
+- LLM Backend/Inference Engine: [Ollama](https://github.com/ollama/ollama)
 - Transcription: Any Whisper compatible endpoint
 - RAG: [Chroma](https://github.com/chroma-core/chroma)
 
@@ -49,11 +67,15 @@ For those of you who are comfortable with Docker/Podman and understand the risks
 podman build -t scribe:latest .
 ```
 
-Just remember, this is more of a "look, don't touch" kind of project when it comes to real patient data or medical decisions. If you do decide to run it, keep it strictly for personal learning or experimentation.
+## Usage warning
 
-## A Note from the Creator
+This project is a real mess. The code is sloppy, the paradigms are half-arsed, and I've mixed concerns like I'm tossing a salad. There's probably more duplicated boilerplate than actual functioning code, thanks to my liberal use of LLMs as coding assistants.
 
-This project is a real mess. The code is sloppy, the paradigms are half-arsed, and I've mixed concerns like I'm tossing a salad. There's probably more duplicated boilerplate than actual functioning code, thanks to my liberal use of LLMs as coding assistants. It isn't remotely ready for any serious use but it's been an absolute blast to work and has been a great learning experience!
+This is very much a personal project and learning experience. If you're not sure how to run this or don't fully understand the limitations of current LLM technology in medicine, please don't use it in a clinical setting. The chat and RAG features, while cool, are unreliable and prone to hallucination. Especially if you use smaller models you will likely get awful treatment suggestions.
+
+The smaller models do an okay job at summarizing transcripts, but output is better with larger models (I like Llama 3.1 70B; Q4 is fine). ALWAYS verify the output. Even with large models you will encounter inconsistencies.
+
+Finally, expose this to the open internet at your own risk. There is no user authentication or backend encryption; your should definitely run this behind some kind of reverse proxy and auth solution. You've been warned!
 
 ## License
 
