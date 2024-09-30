@@ -40,7 +40,7 @@ You can discuss each case with your primary model and upload relevant documents 
 
 ### Dashboard with simple RSS reader using LLM summaries
 
-The landing page allows you to subscribe to RSS feeds of your choice. The primary model will then be used to generate quick summaries of each article for your reading pleasure. Useful for tyring to keep on top of the latest PubMed trending articles in your field.
+The landing page allows you to subscribe to RSS feeds of your choice. The primary model will then be used to generate quick summaries of each article for your reading pleasure. Useful for trying to keep on top of the latest PubMed trending articles in your field.
 
 ## Stack
 
@@ -51,6 +51,7 @@ The landing page allows you to subscribe to RSS feeds of your choice. The primar
 - LLM Backend/Inference Engine: [Ollama](https://github.com/ollama/ollama)
 - Transcription: Any Whisper compatible endpoint
 - RAG: [Chroma](https://github.com/chroma-core/chroma)
+- Color palette: [Rosé Pine](https://github.com/rose-pine/rose-pine-theme)
 
 ## Quick start
 
@@ -75,7 +76,7 @@ This is very much a personal project and learning experience. If you're not sure
 
 The smaller models do an okay job at summarizing transcripts, but output is better with larger models (I like Llama 3.1 70B; Q4 is fine). ALWAYS verify the output. Even with large models you will encounter inconsistencies.
 
-Finally, expose this to the open internet at your own risk. There is no user authentication or backend encryption; your should definitely run this behind some kind of reverse proxy and auth solution. You've been warned!
+Finally, expose this to the open internet at your own risk. There is no user authentication or backend encryption; you should definitely run this behind some kind of reverse proxy and auth solution. You've been warned!
 
 ## License
 
