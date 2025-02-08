@@ -2,7 +2,7 @@
   <img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
 </p>
 
-[![CI - Run Tests via Docker](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml/badge.svg)](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml)
+[![Tests](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml/badge.svg)](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
