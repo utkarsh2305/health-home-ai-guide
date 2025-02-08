@@ -1,3 +1,5 @@
+![Phlox Logo](/public/readme_logo.webp)
+
 # Phlox
 
 Welcome to Phlox, an open-source patient management/AI transcription/physician assistant solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but none that I'm aware of attempt to roll in some decision support.
@@ -32,8 +34,6 @@ Essentially, it's a mix of:
 - AI physician assistant (see disclaimer)
 
 Most importantly, it all runs locally on commodity hardware! I use [Ollama](https://github.com/ollama/ollama) for inference and [Whisper](https://github.com/openai/whisper) for transcription. To keep things local and easy, I suggest spinning up a [Speeches](https://github.com/speaches-ai/speaches) instance for transcription. To record from the browser, you'll need a secure context (HTTPS). For local tinkering, most browsers allow exceptions for localhost.
-
-![Phlox Logo](/public/readme_logo.webp)
 
 ## Architecture Overview
 
