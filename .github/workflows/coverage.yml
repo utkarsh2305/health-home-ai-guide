@@ -1,26 +1,43 @@
-name: Test Coveralls
+name: Test and Coverage
 
 on: ["push", "pull_request"]
 
 jobs:
-  build:
-    name: Build
+  test:
+    name: Test and Coverage
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js 16.x
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16.x
+      - name: Build Test Docker Image
+        run: docker build -f Dockerfile.test -t phlox-test .
 
-    - name: Install dependencies
-      run: npm install
+      - name: Create coverage directory
+        run: mkdir -p coverage
 
-    - name: Run tests with coverage
-      run: npm test
+      - name: Run Tests in Docker Container
+        run: |
+          docker run --name test-container phlox-test
+          docker cp test-container:/usr/src/app/coverage.xml ./coverage/
+          docker cp test-container:/usr/src/app/coverage.lcov ./coverage/
 
-    - name: Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: coverage/coverage.lcov
+          format: lcov
+
+      - name: Cleanup
+        run: docker rm test-container
+
+  finish:
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
