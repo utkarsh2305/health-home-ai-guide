@@ -12,12 +12,12 @@ RUN apt-get update && apt-get install -y \
 
 # Copy only the requirements file
 COPY server/requirements.txt .
-
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir pytest pytest-asyncio
+RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov
 
 # Set environment variable to indicate we're in a test environment
 ENV TESTING=true
+ENV DB_ENCRYPTION_KEY=test_key_12345
 
 # Set the working directory for running tests
 WORKDIR /usr/src/app
@@ -29,14 +29,14 @@ RUN echo "<html><body>Test</body></html>" > /usr/src/app/build/index.html
 # Create the run_tests.sh script
 RUN echo '#!/bin/bash\n\
 # Delete test database if it exists\n\
-rm -f /usr/src/app/data/test_scribe_database.sqlite\n\
+rm -f /usr/src/app/data/test_phlox_database.sqlite\n\
 \n\
-# Run tests\n\
-pytest server/tests\n\
+# Run tests with coverage\n\
+pytest --cov=server --cov-report=xml --cov-report=lcov server/tests\n\
 test_exit_code=$?\n\
 \n\
 # Delete test database after tests\n\
-rm -f /usr/src/app/data/test_scribe_database.sqlite\n\
+rm -f /usr/src/app/data/test_phlox_database.sqlite\n\
 \n\
 # Exit with the test exit code\n\
 exit $test_exit_code' > /usr/src/app/run_tests.sh && \
