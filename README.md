@@ -1,4 +1,4 @@
-![Phlox Logo](/public/readme_logo.webp | width=300)
+<img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
 
 # Phlox
 
