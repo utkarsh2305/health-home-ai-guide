@@ -1,10 +1,10 @@
-<img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
+<p align="center">
+  <img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
+</p>
 
 # Phlox
 
 Welcome to Phlox, an open-source patient management/AI transcription/physician assistant solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but none that I'm aware of attempt to roll in some decision support.
-
----
 
 ## Table of Contents
 
@@ -20,8 +20,6 @@ Welcome to Phlox, an open-source patient management/AI transcription/physician a
 - [Philosophy](#philosophy)
 - [License](#license)
 - [Contributing](#contributing)
-
----
 
 ## What is it?
 
@@ -44,8 +42,8 @@ graph LR
         A[Frontend Layer]
         B[Backend Layer]
         F[ChromaDB Client]
-        A --- B
-        B --- F
+        A  B
+        B  F
     end
 
     %% Both databases are persistent on the Host
@@ -63,12 +61,12 @@ graph LR
     end
 
     %% Common connection point using empty node
-    B --- recEmpty[ ]:::empty
-    recEmpty --- E
-    recEmpty --- D
-    B --- C
-    F --- G
-    F --- D
+    B  recEmpty[ ]:::empty
+    recEmpty  E
+    recEmpty  D
+    B  C
+    F  G
+    F  D
 
     classDef empty width:0px
     style Phlox fill:#ddd,stroke:#333,stroke-width:4px
@@ -206,7 +204,6 @@ Run with:
 ```bash
 podman-compose up
 ```
-
 #### Development Setup
 For development, use the development compose file (`podman-compose.dev.yml`):
 
@@ -266,7 +263,6 @@ Both human and artificial reasoning seem to navigate similar landscapes of decis
 I'm as seasoned an AI skeptic as any other. While LLMs can help jolt clinical reasoning out of local minima, they can just as easily lead you into spurious attractors—entirely wrong regions of the diagnostic space that seem deceptively correct. This risk is particularly insidious with larger, more sophisticated models whose 'generative pastiche' can be extremely convincing yet fundamentally flawed.
 
 **Ultimately, a medical practitioner bears responsibility for their decisions, and it's crucial to understand that no LLM (at least as currently architected) can reliably distinguish truth from plausible-sounding fiction. The goal here is to use LLMs as a tool for expanding our consideration set, while maintaining rigorous clinical judgment about which paths are worth pursuing.**
-
 
 ## Contributing
 
