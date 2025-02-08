@@ -1,9 +1,6 @@
 <p align="center">
   <img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
 </p>
-
-# Phlox
-
 Welcome to Phlox, an open-source patient management/AI transcription/physician assistant solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but none that I'm aware of attempt to roll in some decision support.
 
 ## Table of Contents
