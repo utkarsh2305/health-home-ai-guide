@@ -2,13 +2,17 @@
   <img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
 </p>
 
-[![Tests](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml/badge.svg)](https://github.com/bloodworks-io/phlox/actions/workflows/ci.yml)
-[![Known Vulnerabilities](https://snyk.io/test/github/{username}/{repo}/badge.svg)](https://snyk.io/test/github/{username}/{repo})
+<div align="center">
+
+[![Tests](https://github.com/bloodworks-io/phlox/actions/workflows/coverage.yml/badge.svg)](https://github.com/bloodworks-io/phlox/actions/workflows/coverage.yml)
+[![Known Vulnerabilities](https://snyk.io/test/github/bloodworks-io/phlox/badge.svg)](https://snyk.io/test/github/bloodworks-io/phlox/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/bloodworks-io/phlox/badge.svg?branch=main)](https://coveralls.io/github/bloodworks-io/phlox?branch=main)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CodeQL](https://github.com/bloodworks-io/phlox/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bloodworks-io/phlox/actions/workflows/github-code-scanning/codeql)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/bloodworks-io/phlox/issues)
 
+</div>
 
 Welcome to Phlox, an open-source patient management/AI transcription/physician assistant solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but none that I'm aware of attempt to roll in some decision support.
 

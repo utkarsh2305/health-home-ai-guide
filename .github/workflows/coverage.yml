@@ -1,43 +1,49 @@
-name: Test and Coverage
+name: CI - Tests
 
-on: ["push", "pull_request"]
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
 
 jobs:
-  test:
-    name: Test and Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    test:
+        runs-on: ubuntu-latest
 
-      - name: Build Test Docker Image
-        run: docker build -f Dockerfile.test -t phlox-test .
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v3
 
-      - name: Create coverage directory
-        run: mkdir -p coverage
+            - name: Build Test Docker Image
+              run: |
+                  docker build -f Dockerfile.test -t phlox-test .
 
-      - name: Run Tests in Docker Container
-        run: |
-          docker run --name test-container phlox-test
-          docker cp test-container:/usr/src/app/coverage.xml ./coverage/
-          docker cp test-container:/usr/src/app/coverage.lcov ./coverage/
+            - name: Run Tests in Docker Container
+              run: |
+                  docker run --name test-container phlox-test
+                  docker cp test-container:/usr/src/app/coverage.xml ./coverage.xml
+                  docker cp test-container:/usr/src/app/coverage.lcov ./coverage.lcov
 
-      - name: Coveralls
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: coverage/coverage.lcov
-          format: lcov
+            - name: Coveralls
+              uses: coverallsapp/github-action@v2
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  file: coverage.lcov
+                  parallel: true
+                  flag-name: run-${{ matrix.python-version }}
 
-      - name: Cleanup
-        run: docker rm test-container
+            - name: Cleanup
+              run: docker rm test-container
 
-  finish:
-    needs: test
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+    finish:
+        needs: test
+        if: ${{ always() }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Coveralls Finished
+              uses: coverallsapp/github-action@v2
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  parallel-finished: true

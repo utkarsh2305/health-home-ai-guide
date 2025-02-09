@@ -6,6 +6,3 @@ services:
             dockerfile: Dockerfile.test
         environment:
             TESTING: true
-        volumes:
-            - ./server:/usr/src/app/server
-            - ./data:/usr/src/app/data
