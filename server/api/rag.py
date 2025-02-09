@@ -4,7 +4,6 @@ from fastapi import (
     File,
     HTTPException,
 )
-from fastapi.exceptions import HTTPException
 import os
 from server.rag.chroma import ChromaManager
 from server.schemas.rag import (
@@ -12,11 +11,12 @@ from server.schemas.rag import (
     CommitRequest,
     DeleteFileRequest,
 )
-
+from server.rag.processing import (
+    generate_specialty_suggestions,
+)
 
 router = APIRouter()
 
-# Initialize the ChromaManager
 chroma_manager = ChromaManager()
 
 
@@ -147,4 +147,31 @@ async def commit_to_db(request: CommitRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Error committing data to database: {str(e)}",
+        )
+
+
+@router.get("/rag/suggestions")
+async def get_rag_suggestions():
+    """Get specialty-specific RAG chat suggestions."""
+    try:
+        suggestions = generate_specialty_suggestions()
+        return {"suggestions": suggestions}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error generating suggestions: {str(e)}"
+        )
+
+
+@router.post("/rag/clear-database")
+async def clear_database():
+    """API endpoint to clear the entire RAG database."""
+    try:
+        # Delete all collections
+        collections = chroma_manager.list_collections()
+        for collection in collections:
+            chroma_manager.delete_collection(collection)
+        return {"message": "RAG database cleared successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error clearing RAG database: {str(e)}"
         )

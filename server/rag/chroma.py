@@ -7,6 +7,8 @@ import re
 from ollama import Client as ollamaClient
 from server.database.config import config_manager
 
+prompts = config_manager.get_prompts_and_options()
+
 
 class ChromaManager:
     """
@@ -45,6 +47,7 @@ class ChromaManager:
         Raises:
             ValueError: If extracted text is not available.
         """
+
         try:
             if self.extracted_text_store is None:
                 raise ValueError(
@@ -275,13 +278,12 @@ class ChromaManager:
         sample_text = " ".join(words[:500])
 
         disease_question_options = {
-            "temperature": 0,
-            "num_ctx": 2048,
-            "stop": [".", "(", "\n", "/"],
+            **prompts["options"]["chat"],  # Unpack the chat options
+            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
         disease_question = self.ollama_client.chat(
-            model=self.config["SECONDARY_MODEL"],
+            model=self.config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -300,7 +302,7 @@ class ChromaManager:
 
         if sanitized_disease_answer == "yes":
             disease_choice = self.ollama_client.chat(
-                model=self.config["SECONDARY_MODEL"],
+                model=self.config["PRIMARY_MODEL"],
                 messages=[
                     {
                         "role": "system",
@@ -328,7 +330,7 @@ class ChromaManager:
             disease_name = disease_choice_response.lower().replace(" ", "_")
         else:
             disease_choice = self.ollama_client.chat(
-                model=self.config["SECONDARY_MODEL"],
+                model=self.config["PRIMARY_MODEL"],
                 messages=[
                     {
                         "role": "system",
@@ -371,13 +373,12 @@ class ChromaManager:
         sample_text = " ".join(words[:500])
 
         disease_question_options = {
-            "temperature": 0,
-            "num_ctx": 2048,
-            "stop": [".", "(", "\n", "/"],
+            **prompts["options"]["chat"],  # Unpack the chat options
+            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
         focus_area_response = self.ollama_client.chat(
-            model=self.config["SECONDARY_MODEL"],
+            model=self.config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -409,19 +410,18 @@ class ChromaManager:
             str: Determined document source.
         """
         words = text.split()
-        sample_text = " ".join(words[:500])
+        sample_text = " ".join(words[:250])
 
         existing_sources = self.list_sources_from_all_collections()
         existing_sources_string = ", ".join(existing_sources)
 
         disease_question_options = {
-            "temperature": 0,
-            "num_ctx": 2048,
-            "stop": [".", "(", "\n", "/"],
+            **prompts["options"]["chat"],  # Unpack the chat options
+            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
         document_source_question = self.ollama_client.chat(
-            model=self.config["SECONDARY_MODEL"],
+            model=self.config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -440,7 +440,7 @@ class ChromaManager:
 
         if source_answer == "yes":
             document_source_choice = self.ollama_client.chat(
-                model=self.config["SECONDARY_MODEL"],
+                model=self.config["PRIMARY_MODEL"],
                 messages=[
                     {
                         "role": "system",
@@ -462,7 +462,7 @@ class ChromaManager:
             )
         else:
             document_source_response = self.ollama_client.chat(
-                model=self.config["SECONDARY_MODEL"],
+                model=self.config["PRIMARY_MODEL"],
                 messages=[
                     {
                         "role": "system",

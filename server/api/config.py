@@ -10,22 +10,26 @@ router = APIRouter()
 
 @router.get("/prompts")
 async def get_prompts():
+    """Retrieve the current prompts configuration."""
     return JSONResponse(content=config_manager.get_prompts())
 
 
 @router.post("/prompts")
 async def update_prompts(data: dict):
+    """Update prompts configuration with provided data."""
     config_manager.update_prompts(data)
     return {"message": "prompts.js updated successfully"}
 
 
 @router.get("/config")
 async def get_config():
+    """Retrieve the current global configuration."""
     return JSONResponse(content=config_manager.get_config())
 
 
 @router.post("/config")
 async def update_config(data: dict):
+    """Update other configuration items with provided data."""
     config_manager.update_config(data)
     return {"message": "config.js updated successfully"}
 
@@ -34,15 +38,13 @@ async def update_config(data: dict):
 async def get_models(
     ollamaEndpoint: str = Query(..., description="The endpoint for Ollama")
 ):
-
+    """Fetch model tags from the configured Ollama endpoint."""
     try:
-        # Use httpx to make an asynchronous HTTP GET request
         async with httpx.AsyncClient() as client:
             url = f"{ollamaEndpoint}/api/tags"
             print(url)
             response = await client.get(url)
 
-            # Check if the request was successfunl
             if response.status_code == 200:
                 return response.json()
             else:
@@ -56,19 +58,11 @@ async def get_models(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.get("/custom-headings")
-async def get_custom_headings():
-    return JSONResponse(content=config_manager.get_custom_headings())
-
-
-@router.post("/custom-headings")
-async def update_custom_headings(data: dict):
-    config_manager.update_custom_headings(data)
-    return {"message": "Custom headings updated successfully"}
 
 
 @router.get("/options")
 async def get_all_options():
+    """Retrieve all Ollama-related configuration options."""
     return JSONResponse(content=config_manager.get_all_options())
 
 
@@ -76,6 +70,7 @@ async def get_all_options():
 async def get_options_by_category(
     category: str = Path(..., description="The category of options to retrieve")
 ):
+    """Retrieve options by category"""
     options = config_manager.get_options(category)
     if options:
         return JSONResponse(content=options)
@@ -90,6 +85,7 @@ async def update_options(
     category: str = Path(..., description="The category of options to update"),
     data: dict = Body(...),
 ):
+    """Update configuration options for the specified category."""
     config_manager.update_options(category, data)
     return {
         "message": f"Options for category '{category}' updated successfully"
@@ -98,5 +94,19 @@ async def update_options(
 
 @router.post("/reset-to-defaults")
 async def reset_to_defaults():
+    """Reset configuration settings to their default values."""
     config_manager.reset_to_defaults()
     return {"message": "All configurations reset to defaults"}
+
+
+@router.get("/user-settings")
+async def get_user_settings():
+    """Retrieve the current user settings."""
+    return JSONResponse(content=config_manager.get_user_settings())
+
+
+@router.post("/user-settings")
+async def update_user_settings(data: dict):
+    """Update user settings with provided data."""
+    config_manager.update_user_settings(data)
+    return {"message": "User settings updated successfully"}

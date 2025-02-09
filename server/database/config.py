@@ -1,11 +1,9 @@
 import json
-import os
-import asyncio
 from threading import Lock
 from server.database.connection import PatientDatabase
 
-
 class ConfigManager:
+    """Manages configuration settings, prompts, and options."""
     _instance = None
     _lock = Lock()
 
@@ -20,25 +18,23 @@ class ConfigManager:
             return cls._instance
 
     def _is_database_empty(self):
+        """Checks if the config, prompts, and options tables are empty."""
         self.db.cursor.execute("SELECT COUNT(*) FROM config")
         config_count = self.db.cursor.fetchone()[0]
         self.db.cursor.execute("SELECT COUNT(*) FROM prompts")
         prompts_count = self.db.cursor.fetchone()[0]
-        self.db.cursor.execute("SELECT COUNT(*) FROM custom_headings")
-        headings_count = self.db.cursor.fetchone()[0]
         self.db.cursor.execute("SELECT COUNT(*) FROM options")
         options_count = self.db.cursor.fetchone()[0]
         return (
             config_count == 0
             and prompts_count == 0
-            and headings_count == 0
             and options_count == 0
         )
 
     def _load_configs(self):
+        """Loads configurations, prompts, and options from the database."""
         self.config = {}
         self.prompts = {}
-        self.custom_headings = {}
 
         # Load config
         self.db.cursor.execute("SELECT key, value FROM config")
@@ -47,20 +43,12 @@ class ConfigManager:
 
         # Load prompts
         self.db.cursor.execute(
-            "SELECT key, system, initial, clinicalHistoryInitial, planInitial FROM prompts"
+            "SELECT key, system FROM prompts"
         )
         for row in self.db.cursor.fetchall():
             self.prompts[row["key"]] = {
-                "system": row["system"],
-                "initial": row["initial"],
-                "clinicalHistoryInitial": row["clinicalHistoryInitial"],
-                "planInitial": row["planInitial"],
+                "system": row["system"]
             }
-
-        # Load custom headings
-        self.db.cursor.execute("SELECT key, value FROM custom_headings")
-        for row in self.db.cursor.fetchall():
-            self.custom_headings[row["key"]] = row["value"]
 
         # Load options
         self.options = {}
@@ -74,19 +62,20 @@ class ConfigManager:
             self.options[category][key] = value
 
     def get_config(self):
+        """Returns the configuration settings."""
         return self.config
 
     def get_prompts(self):
+        """Returns the prompts."""
         return self.prompts
 
     def get_prompts_and_options(self):
+        """Returns the prompts and options in a structured format."""
         structured_prompts = {"prompts": self.prompts, "options": self.options}
         return structured_prompts
 
-    def get_custom_headings(self):
-        return self.custom_headings
-
     def update_config(self, new_config):
+        """Updates the configuration settings in the database."""
         for key, value in new_config.items():
             self.db.cursor.execute(
                 "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
@@ -96,63 +85,67 @@ class ConfigManager:
         self._load_configs()
 
     def update_prompts(self, new_prompts):
+        """Updates the prompts in the database."""
         for key, prompt in new_prompts.items():
             self.db.cursor.execute(
                 """
                 INSERT OR REPLACE INTO prompts
-                (key, system, initial, clinicalHistoryInitial, planInitial)
-                VALUES (?, ?, ?, ?, ?)
+                (key, system)
+                VALUES (?, ?)
                 """,
                 (
                     key,
                     prompt.get("system", ""),
-                    prompt.get("initial", ""),
-                    prompt.get("clinicalHistoryInitial", ""),
-                    prompt.get("planInitial", ""),
                 ),
             )
         self.db.commit()
         self._load_configs()
 
-    def update_custom_headings(self, new_headings):
-        for key, value in new_headings.items():
-            self.db.cursor.execute(
-                "INSERT OR REPLACE INTO custom_headings (key, value) VALUES (?, ?)",
-                (key, value),
-            )
-        self.db.commit()
-        self._load_configs()
-
     def get_all_options(self):
+        """Returns all options."""
         return self.options
 
     def get_options(self, category):
+        """Returns options for a specific category."""
         return self.options.get(category, {})
 
     def update_options(self, category, new_options):
+        """Updates options for a specific category in the database."""
+        # Load current options
+
         if category not in self.options:
             self.options[category] = {}
-        self.options[category].update(new_options)
+
+        # Update only if the key is present
+        for key, value in new_options.items():
+            if (
+                key in self.options[category]
+                or key == "num_ctx"
+                or key == "temperature"
+            ):
+                self.options[category][key] = value
 
         for key, value in new_options.items():
+
             self.db.cursor.execute(
                 "INSERT OR REPLACE INTO options (category, key, value) VALUES (?, ?, ?)",
                 (category, key, json.dumps(value)),
             )
+
         self.db.commit()
         self._load_configs()  # Reload to ensure consistency
 
     def reset_to_defaults(self):
-        # Clear existing data for prompts, custom headings, and options
+        """Resets prompts and options to their default values."""
+        # Clear existing data for prompts and options
         self.db.cursor.execute("DELETE FROM prompts")
-        self.db.cursor.execute("DELETE FROM custom_headings")
         self.db.cursor.execute("DELETE FROM options")
         self.db.commit()
 
-        # Reinitialize with default data
         self._initialize_database()
 
     def _initialize_database(self):
+        """Initializes the database with default configurations, prompts, and options."""
         self.db.cursor.execute("SELECT COUNT(*) FROM config")
         config_count = self.db.cursor.fetchone()[0]
         if config_count == 0:
@@ -165,22 +158,19 @@ class ConfigManager:
                 "PRIMARY_MODEL": "&nbsp;",
                 "SECONDARY_MODEL": "&nbsp;",
                 "EMBEDDING_MODEL": "&nbsp;",
+                "DAILY_SUMMARY": "&nbsp;",
             }
             for key, value in default_config.items():
                 self.db.cursor.execute(
                     "INSERT INTO config (key, value) VALUES (?, ?)",
                     (key, json.dumps(value)),
                 )
+
         # Load initial data from JSON files
         prompts_path = "/usr/src/app/server/database/defaults/prompts.json"
-        custom_headings_path = (
-            "/usr/src/app/server/database/defaults/custom_headings.json"
-        )
 
         with open(prompts_path, "r") as f:
             prompts_data = json.load(f)
-        with open(custom_headings_path, "r") as f:
-            custom_headings = json.load(f)
 
         # Populate database tables
         # Prompts
@@ -188,23 +178,13 @@ class ConfigManager:
             self.db.cursor.execute(
                 """
                 INSERT OR REPLACE INTO prompts
-                (key, system, initial, clinicalHistoryInitial, planInitial)
-                VALUES (?, ?, ?, ?, ?)
+                (key, system)
+                VALUES (?, ?)
                 """,
                 (
                     key,
                     prompt.get("system", ""),
-                    prompt.get("initial", ""),
-                    prompt.get("clinicalHistoryInitial", ""),
-                    prompt.get("planInitial", ""),
                 ),
-            )
-
-        # Custom Headings
-        for key, value in custom_headings.items():
-            self.db.cursor.execute(
-                "INSERT OR REPLACE INTO custom_headings (key, value) VALUES (?, ?)",
-                (key, value),
             )
 
         # Options
@@ -220,6 +200,60 @@ class ConfigManager:
 
         self.db.commit()
         self._load_configs()
+
+    def get_user_settings(self):
+        """Retrieves user settings from the database."""
+        self.db.cursor.execute(
+            """
+            SELECT name, specialty,
+                quick_chat_1_title, quick_chat_1_prompt,
+                quick_chat_2_title, quick_chat_2_prompt,
+                quick_chat_3_title, quick_chat_3_prompt,
+                default_letter_template_id
+            FROM user_settings LIMIT 1
+        """
+        )
+        result = self.db.cursor.fetchone()
+        if result:
+            return dict(result)
+        return {
+            "name": "",
+            "specialty": "",
+            "quick_chat_1_title": "Critique my plan",
+            "quick_chat_1_prompt": "Critique my plan",
+            "quick_chat_2_title": "Any additional investigations",
+            "quick_chat_2_prompt": "Any additional investigations",
+            "quick_chat_3_title": "Any differentials to consider",
+            "quick_chat_3_prompt": "Any differentials to consider",
+            "default_letter_template_id": None
+        }
+
+    def update_user_settings(self, settings):
+        """Updates user settings in the database."""
+        self.db.cursor.execute("DELETE FROM user_settings")  # Clear existing
+        self.db.cursor.execute(
+            """
+            INSERT INTO user_settings (
+                name, specialty,
+                quick_chat_1_title, quick_chat_1_prompt,
+                quick_chat_2_title, quick_chat_2_prompt,
+                quick_chat_3_title, quick_chat_3_prompt,
+                default_letter_template_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                settings["name"],
+                settings["specialty"],
+                settings["quick_chat_1_title"],
+                settings["quick_chat_1_prompt"],
+                settings["quick_chat_2_title"],
+                settings["quick_chat_2_prompt"],
+                settings["quick_chat_3_title"],
+                settings["quick_chat_3_prompt"],
+                settings.get("default_letter_template_id")
+            ),
+        )
+        self.db.commit()
 
 
 config_manager = ConfigManager()

@@ -19,12 +19,18 @@ package-lock.json
 
 # Environment and IDE settings
 .env
+.env.development
+.env.local
+!.env.example
+!.env.test
 .vscode/
 .idea/
 .zed/
 server/.pytest_cache
+oom
 
 # Python compiled files
+.pytest_cache/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -34,5 +40,11 @@ build/
 dist/
 .tmp/
 
-# Docker-related files (if any, modify as needed)
-docker-compose.yml
+# Coverage
+coverage/
+.coverage
+coverage.xml
+coverage.lcov
+.coveralls.yml
+__pycache__/
+*.pyc

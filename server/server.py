@@ -2,20 +2,26 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from server.api import chat, config, dashboard, patient, rag, transcribe
+from server.api import chat, config, dashboard, patient, rag, transcribe, templates, letter
 from server.database.config import ConfigManager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from server.database.analysis import generate_daily_analysis
 
-
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+scheduler = AsyncIOScheduler()
+
 
 # CORS configuration
 app.add_middleware(
@@ -31,12 +37,17 @@ DATA_DIR = Path("/usr/src/app/data")
 BUILD_DIR = Path("/usr/src/app/build")
 IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
 
-# @app.middleware("http")
-# async def log_requests(request: Request, call_next):
-#    body = await request.body()
-#    logging.info(f"Request body: {body.decode()}")
-#    response = await call_next(request)
-#    return response
+
+# Schedule daily analysis at 3 AM
+scheduler.add_job(generate_daily_analysis, "cron", hour=3)
+
+
+# Start the scheduler when the app starts
+@app.on_event("startup")
+async def startup_event():
+    scheduler.start()
+    # Run analysis if none exists or if last one is old
+    await generate_daily_analysis()
 
 
 @app.get("/test-db")
@@ -59,7 +70,8 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(rag.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
-
+app.include_router(templates.router, prefix="/api/templates")
+app.include_router(letter.router, prefix="/api/letter")
 
 # React app routes
 @app.get("/new-patient")
@@ -75,16 +87,26 @@ async def serve_react_app():
 app.mount("/", StaticFiles(directory=BUILD_DIR, html=True), name="static")
 
 
-# Optional: Catch-all route for any other paths
+# Catch-all route for any other paths
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
     return FileResponse(BUILD_DIR / "index.html")
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        app,
+    config = uvicorn.Config(
+        "server.server:app",
         host="0.0.0.0",
         port=int(os.getenv("PORT", 5000)),
-        log_level="debug",
+        timeout_keep_alive=300,
+        timeout_graceful_shutdown=10,
+        loop="asyncio",
+        workers=1,
+        http="httptools",
+        loop_wait=0.0,
+        ws_ping_interval=None,
+        ws_ping_timeout=None,
+        buffer_size=0
     )
+    server = uvicorn.Server(config)
+    server.run()

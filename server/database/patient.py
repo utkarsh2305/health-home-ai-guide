@@ -1,103 +1,78 @@
-import os
-import sqlite3
 import json
 import logging
-from typing import List, Dict, Optional
-from server.schemas.patient import Patient
+from typing import List, Dict, Optional, Any
+from datetime import datetime
 from server.database.connection import PatientDatabase
+from server.database.templates import get_template_by_key, get_persistent_fields
+from server.schemas.patient import Patient
 from server.database.jobs import (
     generate_jobs_list_from_plan,
     are_all_jobs_completed,
 )
-
 db = PatientDatabase()
 
 
-def get_patients_by_date(date: str) -> List[Dict]:
-    """
-    Retrieve patients with encounters on a specific date.
-
-    Args:
-        date (str): The encounter date to search for.
-
-    Returns:
-        List[Dict]: A list of dictionaries containing patient information.
-    """
-    logging.info(f"Getting patients by encounter date: {date}")
-    db.cursor.execute(
-        "SELECT * FROM patients WHERE encounter_date = ?", (date,)
-    )
-    return db.cursor.fetchall()
-
-
-def get_patient_by_id(patient_id: int) -> Optional[Dict]:
-    """
-    Retrieve a patient by their ID.
-
-    Args:
-        patient_id (int): The ID of the patient to retrieve.
-
-    Returns:
-        Optional[Dict]: A dictionary containing patient information if found, None otherwise.
-    """
-    db.cursor.execute("SELECT * FROM patients WHERE id = ?", (patient_id,))
-    row = db.cursor.fetchone()
-    if row is None:
-        return None
-
-    # Convert the row to a dictionary
-    column_names = [description[0] for description in db.cursor.description]
-    return dict(zip(column_names, row))
-
-
 def save_patient(patient: Patient) -> int:
-    """
-    Save a new patient to the database.
+    """Saves patient data."""
+    try:
+        now = datetime.now().isoformat()
 
-    Args:
-        patient (Patient): The patient object to save.
+        # Generate jobs list from plan if one exists
+        jobs_list = []
+        if hasattr(patient, 'template_data'):
+            template_data = (json.loads(patient.template_data)
+                           if isinstance(patient.template_data, str)
+                           else patient.template_data)
+            if plan := template_data.get('plan'):
+                jobs_list = generate_jobs_list_from_plan(plan)
 
-    Returns:
-        int: The ID of the newly saved patient.
-    """
-    jobs_list = generate_jobs_list_from_plan(patient.encounter_plan)
-    all_jobs_completed = are_all_jobs_completed(jobs_list)
+        # Check if all jobs are completed
+        all_jobs_completed = are_all_jobs_completed(jobs_list)
 
-    logging.info("Saving patient")
-    db.cursor.execute(
-        """
-    INSERT INTO patients (
-        name, dob, ur_number, gender, encounter_date, primary_history, additional_history,
-        investigations, encounter_detail, impression, encounter_plan, raw_transcription,
-        transcription_duration, process_duration, encounter_summary, jobs_list,
-        all_jobs_completed, final_letter
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """,
-        (
-            patient.name,
-            patient.dob,
-            patient.ur_number,
-            patient.gender,
-            patient.encounter_date,
-            patient.primary_history,
-            patient.additional_history,
-            patient.investigations,
-            patient.encounter_detail,
-            patient.impression,
-            patient.encounter_plan,
-            patient.raw_transcription,
-            patient.transcription_duration,
-            patient.process_duration,
-            patient.encounter_summary,
-            json.dumps(jobs_list),
-            all_jobs_completed,
-            patient.final_letter,
-        ),
-    )
-    db.commit()
-    return db.cursor.lastrowid
-
+        # Ensure jobs_list is properly serialized as JSON string
+        jobs_list_json = (
+            json.dumps(jobs_list) if isinstance(jobs_list, (list, dict))
+            else jobs_list if isinstance(jobs_list, str)
+            else "[]"
+        )
+        db.cursor.execute(
+            """
+            INSERT INTO patients (
+                name, dob, ur_number, gender, encounter_date,
+                template_key, template_data, raw_transcription,
+                transcription_duration, process_duration,
+                primary_condition, final_letter, jobs_list,
+                all_jobs_completed, encounter_summary,
+                created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                patient.name,
+                patient.dob,
+                patient.ur_number,
+                patient.gender,
+                patient.encounter_date,
+                patient.template_key,
+                json.dumps(patient.template_data),
+                patient.raw_transcription,
+                patient.transcription_duration,
+                patient.process_duration,
+                getattr(patient, 'primary_condition', None),
+                getattr(patient, 'final_letter', None),
+                jobs_list_json,  # Use generated jobs list instead of getting from patient
+                all_jobs_completed,
+                getattr(patient, 'encounter_summary', None),
+                now,
+                now
+            )
+        )
+        db.commit()
+        return db.cursor.lastrowid
+    except Exception as e:
+        db.db.rollback()
+        logging.error(f"Error saving patient: {e}")
+        raise
 
 def update_patient(patient: Patient) -> None:
     """
@@ -106,179 +81,348 @@ def update_patient(patient: Patient) -> None:
     Args:
         patient (Patient): The patient object with updated information.
     """
+
+    # First get existing patient data
     db.cursor.execute(
-        "SELECT encounter_plan, jobs_list FROM patients WHERE id = ?",
+        "SELECT template_data, jobs_list FROM patients WHERE id = ?",
         (patient.id,),
     )
     row = db.cursor.fetchone()
 
-    db_encounter_plan = (
-        row["encounter_plan"].strip() if row and row["encounter_plan"] else ""
-    )
-    patient_encounter_plan = (
-        patient.encounter_plan.strip() if patient.encounter_plan else ""
-    )
+    # Extract plans for comparison
+    current_template_data = {}
+    if row:
+        # Convert row to dict if it's not already
+        row_dict = dict(row) if row else {}
 
-    if db_encounter_plan != patient_encounter_plan:
-        jobs_list = generate_jobs_list_from_plan(patient.encounter_plan)
-    else:
-        if row and row["jobs_list"]:
-            jobs_list = json.loads(row["jobs_list"])
-        else:
-            jobs_list = []
+        if row_dict.get("template_data"):
+            try:
+                current_template_data = (
+                    json.loads(row_dict["template_data"])
+                    if isinstance(row_dict["template_data"], str)
+                    else row_dict["template_data"]
+                )
+            except json.JSONDecodeError:
+                current_template_data = {}
 
-        if not jobs_list and patient.jobs_list:
-            jobs_list = (
-                json.loads(patient.jobs_list)
-                if isinstance(patient.jobs_list, str)
-                else patient.jobs_list
+    new_template_data = {}
+    if patient.template_data:
+        try:
+            new_template_data = (
+                json.loads(patient.template_data)
+                if isinstance(patient.template_data, str)
+                else patient.template_data
             )
 
-        if not jobs_list and patient_encounter_plan:
-            jobs_list = generate_jobs_list_from_plan(patient.encounter_plan)
+        except json.JSONDecodeError:
+            new_template_data = {}
 
+    # Compare plans
+    current_plan = current_template_data.get("plan", "").strip()
+    new_plan = new_template_data.get("plan", "").strip()
+
+    # Handle jobs list updates
+    if current_plan != new_plan:
+        # Plan changed, generate new jobs list
+
+        jobs_list = generate_jobs_list_from_plan(new_plan)
+    else:
+        # Plan unchanged, handle existing jobs list
+        jobs_list = []
+        if row:
+            row_dict = dict(row)
+            if row_dict.get("jobs_list"):
+                try:
+                    jobs_list = (
+                        json.loads(row_dict["jobs_list"])
+                        if isinstance(row_dict["jobs_list"], str)
+                        else row_dict["jobs_list"]
+                    )
+                except json.JSONDecodeError:
+                    jobs_list = []
+
+        # If no jobs list exists but we have patient jobs list data
+        if not jobs_list and hasattr(patient, 'jobs_list'):
+            try:
+                jobs_list = (
+                    json.loads(patient.jobs_list)
+                    if isinstance(patient.jobs_list, str)
+                    else patient.jobs_list
+                )
+            except (json.JSONDecodeError, AttributeError):
+                jobs_list = []
+
+        # If still no jobs list but we have a plan, generate from plan
+        if not jobs_list and new_plan:
+            jobs_list = generate_jobs_list_from_plan(new_plan)
+
+    # Check if all jobs are completed
     all_jobs_completed = are_all_jobs_completed(jobs_list)
 
+    # Ensure template_data is properly serialized
+    template_data_json = (
+        json.dumps(patient.template_data)
+        if isinstance(patient.template_data, dict)
+        else patient.template_data
+    )
+
+    # Ensure jobs_list is properly serialized as JSON string
+    jobs_list_json = (
+        json.dumps(jobs_list) if isinstance(jobs_list, (list, dict))
+        else jobs_list if isinstance(jobs_list, str)
+        else "[]"
+    )
+
+
+    # Update the database
     db.cursor.execute(
         """
-    UPDATE patients
-    SET name = ?, dob = ?, ur_number = ?, gender = ?, encounter_date = ?,
-    primary_history = ?, additional_history = ?, investigations = ?,
-    encounter_detail = ?, impression = ?, encounter_plan = ?,
-    raw_transcription = ?, transcription_duration = ?, process_duration = ?,
-    encounter_summary = ?, jobs_list = ?, all_jobs_completed = ?, final_letter = ?
-    WHERE id = ?
-    """,
+        UPDATE patients
+        SET name = ?,
+            dob = ?,
+            ur_number = ?,
+            gender = ?,
+            encounter_date = ?,
+            template_key = ?,
+            template_data = ?,
+            raw_transcription = ?,
+            transcription_duration = ?,
+            process_duration = ?,
+            primary_condition = ?,
+            final_letter = ?,
+            encounter_summary = ?,
+            jobs_list = ?,
+            all_jobs_completed = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
         (
             patient.name,
             patient.dob,
             patient.ur_number,
             patient.gender,
             patient.encounter_date,
-            patient.primary_history,
-            patient.additional_history,
-            patient.investigations,
-            patient.encounter_detail,
-            patient.impression,
-            patient.encounter_plan,
+            patient.template_key,
+            template_data_json,
             patient.raw_transcription,
             patient.transcription_duration,
             patient.process_duration,
-            patient.encounter_summary,
-            json.dumps(jobs_list),
-            all_jobs_completed,
+            patient.primary_condition,
             patient.final_letter,
+            patient.encounter_summary,
+            jobs_list_json,
+            all_jobs_completed,
+            datetime.now().isoformat(),
             patient.id,
         ),
     )
     db.commit()
 
-
-def search_patient_by_ur_number(ur_number: str) -> List[Dict]:
+def get_patients_by_date(
+    date: str,
+    template_key: Optional[str] = None,
+    include_data: bool = False
+) -> List[Dict[str, Any]]:
     """
-    Search for a patient by their UR number.
+    Retrieve patients with encounters on a specific date.
+
+    Args:
+        date (str): The encounter date.
+        template_key (Optional[str]): Filter by template.
+        include_data (bool): Whether to include template data and jobs information.
+
+    Returns:
+        List[Dict[str, Any]]: List of matching patient records.
+    """
+    try:
+        query = """
+            SELECT id, name, ur_number, dob, gender, encounter_date, template_key
+            """
+
+        # Add additional fields if detailed information is requested
+        if include_data:
+            query += ", template_data, jobs_list, encounter_summary"
+
+        query += " FROM patients WHERE encounter_date = ?"
+        params = [date]
+
+        if template_key:
+            query += " AND template_key = ?"
+            params.append(template_key)
+
+        query += " ORDER BY name"
+
+        db.cursor.execute(query, params)
+        patients = []
+        for row in db.cursor.fetchall():
+            patient = dict(row)
+
+            # Process template data if included
+            if include_data:
+                if patient.get("template_data"):
+                    try:
+                        template_data = json.loads(patient["template_data"])
+                        patient["template_data"] = template_data
+                        # Extract plan from template data if exists
+                        if template_data:
+                            patient["plan"] = template_data.get("plan", "")
+                    except json.JSONDecodeError:
+                        patient["template_data"] = {}
+
+                # Process jobs list if included
+                if patient.get("jobs_list"):
+                    try:
+                        patient["jobs_list"] = json.loads(patient["jobs_list"])
+                    except json.JSONDecodeError:
+                        patient["jobs_list"] = []
+
+            patients.append(patient)
+        return patients
+    except Exception as e:
+        logging.error(f"Error fetching patients by date: {e}")
+        raise
+
+def get_patient_by_id(patient_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve a patient by ID.
+
+    Args:
+        patient_id (int): The patient's ID.
+
+    Returns:
+        Optional[Dict[str, Any]]: Patient data if found.
+    """
+    try:
+        db.cursor.execute(
+            "SELECT * FROM patients WHERE id = ?",
+            (patient_id,)
+        )
+        row = db.cursor.fetchone()
+        if row:
+            patient = dict(row)
+            if patient["template_data"]:
+                patient["template_data"] = json.loads(patient["template_data"])
+            return patient
+        return None
+    except Exception as e:
+        logging.error(f"Error fetching patient by ID: {e}")
+        raise
+
+def get_patient_history(ur_number: str) -> List[Dict[str, Any]]:
+    """
+    Get a patient's historical encounters with persistent fields.
+
+    Args:
+        ur_number (str): The patient's UR number.
+
+    Returns:
+        List[Dict[str, Any]]: List of historical encounters.
+    """
+    try:
+        db.cursor.execute(
+            """
+            SELECT id, encounter_date, template_key, template_data
+            FROM patients
+            WHERE ur_number = ?
+            ORDER BY encounter_date DESC
+            """,
+            (ur_number,)
+        )
+
+        encounters = []
+        for row in db.cursor.fetchall():
+            template = get_template_by_key(row["template_key"])
+            if not template:
+                continue
+
+            persistent_fields = get_persistent_fields(row["template_key"])
+            template_data = json.loads(row["template_data"]) if row["template_data"] else {}
+
+            persistent_data = {
+                field.field_key: template_data.get(field.field_key)
+                for field in persistent_fields
+            }
+
+            encounters.append({
+                "id": row["id"],
+                "encounter_date": row["encounter_date"],
+                "template_key": row["template_key"],
+                "template_data": persistent_data
+            })
+
+        return encounters
+    except Exception as e:
+        logging.error(f"Error fetching patient history: {e}")
+        raise
+
+def search_patient_by_ur_number(ur_number: str) -> List[Dict[str, Any]]:
+    """
+    Search for patients by UR number, returning data in the same format as get_patient_history.
 
     Args:
         ur_number (str): The UR number to search for.
 
     Returns:
-        List[Dict]: A list containing the patient information if found, empty list otherwise.
-
-    Raises:
-        Exception: If an error occurs during the database query.
+        List[Dict[str, Any]]: Matching patient records in history format.
     """
-    cursor = None  # Initialize cursor variable
     try:
-        print(f"Executing query for UR number: {ur_number}")
         db.cursor.execute(
             """
-            SELECT * FROM patients
+            SELECT id, name, gender, dob, ur_number, encounter_date, template_key, template_data
+            FROM patients
             WHERE ur_number = ?
             ORDER BY encounter_date DESC
             LIMIT 1
-        """,
-            (ur_number,),
+            """,
+            (ur_number,)
         )
+
+        encounters = []
         row = db.cursor.fetchone()
         if row:
-            patient = dict(row)
-            encounter_date_str = patient.get("encounter_date")
-            print(f"Most recent encounter: {encounter_date_str}")
-            return [
-                patient
-            ]  # Return as a list for consistency with the original function
-        else:
-            print("No patient found")
-            return []
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
-        raise e
-    finally:
-        if cursor is not None:
-            db.cursor.close()  # Close the cursor only if it was created
+            template = get_template_by_key(row["template_key"])
+            if template:
+                persistent_fields = get_persistent_fields(row["template_key"])
+                template_data = json.loads(row["template_data"]) if row["template_data"] else {}
 
+                persistent_data = {
+                    field.field_key: template_data.get(field.field_key)
+                    for field in persistent_fields
+                }
+
+                encounters.append({
+                    "id": row["id"],
+                    "name": row["name"],
+                    "gender": row["gender"],
+                    "dob": row["dob"],
+                    "ur_number": row["ur_number"],
+                    "encounter_date": row["encounter_date"],
+                    "template_key": row["template_key"],
+                    "template_data": persistent_data
+                })
+
+        return encounters
+    except Exception as e:
+        logging.error(f"Error searching patients: {e}")
+        raise
 
 def delete_patient_by_id(patient_id: int) -> bool:
     """
-    Delete a patient from the database by their ID.
+    Delete a patient record.
 
     Args:
         patient_id (int): The ID of the patient to delete.
 
     Returns:
-        bool: True if the patient was successfully deleted.
-
-    Raises:
-        Exception: If an error occurs during the deletion process.
+        bool: True if deleted successfully.
     """
-    cursor = None  # Initialize cursor variable
     try:
-        db.cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
-        db.commit()  # Commit the transaction to save changes
-        return True
+        db.cursor.execute(
+            "DELETE FROM patients WHERE id = ?",
+            (patient_id,)
+        )
+        db.commit()
+        return db.cursor.rowcount > 0
     except Exception as e:
-        raise e
-    finally:
-        if cursor is not None:
-            db.cursor.close()  # Close the cursor only if it was created
-
-
-def update_patient_letter(patient_id: int, letter: str) -> None:
-    """
-    Update the final letter for a patient.
-
-    Args:
-        patient_id (int): The ID of the patient.
-        letter (str): The final letter content.
-    """
-    db.cursor.execute(
-        """
-    UPDATE patients
-    SET final_letter = ?
-    WHERE id = ?
-    """,
-        (letter, patient_id),
-    )
-    db.commit()
-
-
-async def fetch_patient_letter(patient_id: int) -> Optional[str]:
-    """
-    Fetch the final letter for a patient.
-
-    Args:
-        patient_id (int): The ID of the patient.
-
-    Returns:
-        Optional[str]: The final letter content if found, None otherwise.
-    """
-    db.cursor.execute(
-        """
-    SELECT final_letter
-    FROM patients
-    WHERE id = ?
-    """,
-        (patient_id,),
-    )
-    row = db.cursor.fetchone()
-    return row["final_letter"] if row else None
+        logging.error(f"Error deleting patient: {e}")
+        raise

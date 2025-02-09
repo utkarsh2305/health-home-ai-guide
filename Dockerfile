@@ -1,5 +1,5 @@
 # Stage 1: Build the React app
-FROM node:22 as build
+FROM node:23-slim as build
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install Node.js dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application
 COPY . .
@@ -25,6 +25,7 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y \
     gcc \
     build-essential \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the build output and Python server files

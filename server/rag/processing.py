@@ -2,11 +2,10 @@ import fitz  # PyMuPDF
 from .semantic_chunker import ClusterSemanticChunker
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
-import re
 import os
 from ollama import Client as ollamaClient
 from server.database.config import config_manager
+from server.schemas.grammars import ClinicalSuggestionList
 
 # Initialize ConfigManager
 config = config_manager.get_config()
@@ -15,6 +14,7 @@ prompts = config_manager.get_prompts_and_options()
 
 # Function to process all PDFs in a given directory
 def process_pdfs_in_directory(directory_path):
+    """Processes all PDFs in a given directory."""
     for filename in os.listdir(directory_path):
         if filename.endswith(".pdf"):
             pdf_path = os.path.join(directory_path, filename)
@@ -22,6 +22,7 @@ def process_pdfs_in_directory(directory_path):
 
 
 def extract_pdf_information(pdf_path):
+    """Extracts information from a PDF given its path."""
     global extracted_text_store
     extracted_text_store = None
     filename = os.path.basename(pdf_path)
@@ -36,13 +37,12 @@ def extract_pdf_information(pdf_path):
     sample_text = " ".join(words[:500])
 
     disease_question_options = {
-        "temperature": 0,
-        "num_ctx": 2048,
-        "stop": [".", "(", "\n", "/"],
+        **prompts["options"]["chat"],  # Unpack the chat options
+        "stop": [".", "(", "\n", "/"],  # Add the stop tokens
     }
 
     disease_question = client.chat(
-        model=config["SECONDARY_MODEL"],
+        model=config["PRIMARY_MODEL"],
         messages=[
             {
                 "role": "system",
@@ -58,10 +58,10 @@ def extract_pdf_information(pdf_path):
 
     disease_answer = disease_question["message"]["content"].strip()
     sanitized_disease_answer = disease_answer.lower().replace(" ", "_")
-    print(sanitized_disease_answer)
+
     if sanitized_disease_answer == "yes":
         disease_choice = client.chat(
-            model=config["SECONDARY_MODEL"],
+            model=config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -88,7 +88,7 @@ def extract_pdf_information(pdf_path):
         disease_name = disease_choice_response.lower().replace(" ", "_")
     else:
         disease_choice = client.chat(
-            model=config["SECONDARY_MODEL"],
+            model=config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -114,7 +114,7 @@ def extract_pdf_information(pdf_path):
         disease_name = disease_choice_response.lower().replace(" ", "_")
 
     focus_area_response = client.chat(
-        model=config["SECONDARY_MODEL"],
+        model=config["PRIMARY_MODEL"],
         messages=[
             {
                 "role": "system",
@@ -139,7 +139,7 @@ def extract_pdf_information(pdf_path):
     existing_sources_string = ", ".join(existing_sources)
 
     document_source_question = client.chat(
-        model=config["SECONDARY_MODEL"],
+        model=config["PRIMARY_MODEL"],
         messages=[
             {
                 "role": "system",
@@ -158,7 +158,7 @@ def extract_pdf_information(pdf_path):
 
     if source_answer == "yes":
         document_source_choice = client.chat(
-            model=config["SECONDARY_MODEL"],
+            model=config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -180,7 +180,7 @@ def extract_pdf_information(pdf_path):
         )
     else:
         document_source_response = client.chat(
-            model=config["SECONDARY_MODEL"],
+            model=config["PRIMARY_MODEL"],
             messages=[
                 {
                     "role": "system",
@@ -203,10 +203,67 @@ def extract_pdf_information(pdf_path):
     return disease_name, focus_area, document_source, filename
 
 
-def extract_text_from_pdf(pdf_path):
-    text = ""
-    document = fitz.open(pdf_path)
-    for page_num in range(len(document)):
-        page = document.load_page(page_num)
-        text += page.get_text()
-    return text
+def generate_specialty_suggestions():
+    """Generate RAG chat suggestions based on user's specialty from DB."""
+    try:
+        # Get user settings from DB
+        user_settings = config_manager.get_user_settings()
+        specialty = user_settings.get("specialty", "General Practice")
+
+        # Get config and prompts
+        config = config_manager.get_config()
+        prompts = config_manager.get_prompts_and_options()
+
+        # Initialize Ollama client
+        client = ollamaClient(host=config["OLLAMA_BASE_URL"])
+
+        suggestion_prompt = f"""As an expert in {specialty}, generate 3 brief, focused clinical questions that are 4-5 words long.
+
+        Rules:
+        - Each question MUST be 5-6 words only
+        - Be specific and concise
+        - Use common medical abbreviations when appropriate
+
+        Examples of good questions:
+        - "What are the ET diagnostic criteria?"
+        - "Best treatment for severe sepsis?"
+        - "What's the diagnostic approach for RA?"
+
+        Format your response as structured JSON matching this schema:
+        {{
+            "suggestions": [
+                {{
+                    "question": "string",
+                }}
+            ]
+        }}"""
+
+        response = client.chat(
+            model=config["SECONDARY_MODEL"],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a medical education assistant. Keep all responses extremely concise.",
+                },
+                {"role": "user", "content": suggestion_prompt},
+            ],
+            format=ClinicalSuggestionList.model_json_schema(),
+            options={
+                **prompts["options"]["secondary"],
+                "temperature": 0.7,
+            },
+        )
+
+        suggestions = ClinicalSuggestionList.model_validate_json(
+            response["message"]["content"]
+        )
+
+        return [s.question for s in suggestions.suggestions]
+
+    except Exception as e:
+        print(f"Error generating suggestions: {str(e)}")
+        return [
+            "How to diagnose lupus?",
+            "Best treatment for pneumonia?",
+            "When to start antibiotics?",
+        ]

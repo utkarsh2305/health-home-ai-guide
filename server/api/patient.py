@@ -1,6 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
+import traceback
+import json
+from typing import Optional, List
 from server.database.patient import (
     delete_patient_by_id,
     search_patient_by_ur_number,
@@ -8,38 +11,42 @@ from server.database.patient import (
     update_patient,
     get_patients_by_date,
     get_patient_by_id,
-    update_patient_letter,
-    fetch_patient_letter,
+    get_patient_history
 )
+from server.schemas.patient import (
+    SavePatientRequest,
+    Patient,
+    JobsListUpdate,
+)
+
 from server.database.jobs import (
     update_patient_jobs_list,
     get_patients_with_outstanding_jobs,
     count_incomplete_jobs,
 )
-from server.schemas.patient import (
-    SavePatientRequest,
-    LetterRequest,
-    LetterSave,
-    JobsListUpdate,
-)
-from server.utils.helpers import summarize_encounter
-from server.utils.letter import generate_letter_content
-import logging
 
+from server.utils.helpers import summarize_encounter
+from server.database.analysis import generate_previous_visit_summary
+import logging
 
 router = APIRouter()
 
-
 @router.post("/save-patient")
 async def save_patient_data(request: SavePatientRequest):
+    """Saves patient data."""
     patient = request.patientData
 
     try:
-        # Pass the entire patient object to summarize_encounter
-        encounter_summary = await summarize_encounter(patient=patient)
+        # Summarize the encounter
+        encounter_summary, primary_condition = await summarize_encounter(
+            patient=patient
+        )
 
+        # Add summary data to patient
         patient.encounter_summary = encounter_summary
+        patient.primary_condition = primary_condition
 
+        # Save or update the patient, depending on whether a patient ID was provide by the frontend
         if patient.id:
             update_patient(patient)
             logging.info(f"Patient updated with ID: {patient.id}")
@@ -50,17 +57,134 @@ async def save_patient_data(request: SavePatientRequest):
             return {"id": new_patient_id}
     except Exception as e:
         logging.error(f"Error processing patient data: {e}")
-        logging.error(
-            f"Patient data: {patient}"
-        )  # Log the patient data for debugging
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/patients")
+async def get_patients(
+    date: str,
+    template_key: Optional[str] = None,
+    detailed: Optional[str] = None,
+) -> List[Patient]:
+    """Get patients for a specific date."""
+    try:
+        # Use detailed parameter for backward compatibility
+        include_data = detailed and detailed.lower() == "true"
+
+        patients = get_patients_by_date(date, template_key, include_data)
+
+
+        if include_data:
+            return JSONResponse(content=[
+                {
+                    "id": patient["id"],
+                    "name": patient["name"],
+                    "ur_number": patient["ur_number"],
+                    "jobs_list": (
+                        json.dumps(patient["jobs_list"])
+                        if isinstance(patient.get("jobs_list"), list)
+                        else patient.get("jobs_list", "[]")
+                    ),
+                    "encounter_summary": patient.get("encounter_summary", ""),
+                    "dob": patient["dob"],
+                }
+                for patient in patients
+            ])
+
+        # Basic response
+        return JSONResponse(content=[
+            {
+                "id": patient["id"],
+                "name": patient["name"],
+                "ur_number": patient["ur_number"],
+            }
+            for patient in patients
+        ])
+
+    except Exception as e:
+        logging.error(f"Error fetching patients: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/patient/{id}")
+async def get_patient(
+    id: int,
+    include_history: bool = False
+) -> Patient:
+    """Get patient by ID with option to include history."""
+    try:
+        patient = get_patient_by_id(id)
+
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        if include_history:
+            history = get_patient_history(patient["ur_number"])
+            patient["history"] = history
+
+        return JSONResponse(content=patient)
+    except HTTPException:
+            raise
+    except Exception as e:
+        logging.error(f"Error fetching patient: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/patient/{id}/history")
+async def get_patient_history_endpoint(id: int) -> List[Patient]:
+    """Get patient's historical encounters with persistent fields."""
+    try:
+        patient = get_patient_by_id(id)
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        history = get_patient_history(patient["ur_number"])
+        return JSONResponse(content=history)
+    except Exception as e:
+        logging.error(f"Error fetching patient history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/search-patient")
+async def search_patient(ur_number: str) -> List[Patient]:
+    """Search for patients by UR number."""
+    try:
+        patients = search_patient_by_ur_number(ur_number)
+
+        return JSONResponse(content=patients)
+    except Exception as e:
+        logging.error(f"Error searching patients: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/patient-summary/{id}")
+async def get_patient_summary(id: int):
+    """Get patient summary."""
+    try:
+        patient = get_patient_by_id(id)
+
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        summary = await generate_previous_visit_summary(patient)
+        return JSONResponse(content={"summary": summary})
+    except Exception as e:
+        logging.error(f"Error getting patient summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/patients/{id}")
+async def delete_patient(id: int):
+    """Delete a patient record."""
+    try:
+        success = delete_patient_by_id(id)
+        if success:
+            return {"message": "Patient deleted"}
+        raise HTTPException(status_code=404, detail="Patient not found")
+    except Exception as e:
+        logging.error(f"Error deleting patient: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/update-jobs-list")
 async def update_jobs_list(update: JobsListUpdate):
+    """Update a patient's job list."""
 
     try:
-        # Perform the database update
         update_patient_jobs_list(update.patientId, update.jobsList)
 
         return {"id": update.patientId}
@@ -68,79 +192,56 @@ async def update_jobs_list(update: JobsListUpdate):
         logging.error(f"Error processing to-do list update: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/patients")
-async def get_patients(date: str, detailed: str = "false"):
+@router.post("/update-jobs")
+async def update_jobs(
+    patient_id: int,
+    jobs_list: List[dict] = Body(..., description="Updated jobs list")
+):
+    """Update a patient's jobs list."""
     try:
-        patients = get_patients_by_date(date)
-        if detailed.lower() == "true":
-            return JSONResponse(
-                content=[
-                    {
-                        "id": row["id"],
-                        "name": row["name"],
-                        "ur_number": row["ur_number"],
-                        "jobs_list": row["jobs_list"],
-                        "encounter_summary": row["encounter_summary"],
-                        "dob": row["dob"],
-                    }
-                    for row in patients
-                ]
-            )
-        else:
-            return JSONResponse(
-                content=[
-                    {
-                        "id": row["id"],
-                        "name": row["name"],
-                        "ur_number": row["ur_number"],
-                    }
-                    for row in patients
-                ]
-            )
+        update_patient_jobs_list(patient_id, jobs_list)
+        return JSONResponse(content={"message": "Jobs list updated successfully"})
     except Exception as e:
-        logging.error(f"Error fetching patients: {e}")
-        raise HTTPException(status_code=500, detail=e)
+        logging.error(f"Error updating jobs list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/patient/{id}")
-async def get_patient(id: int):
+@router.post("/update-jobs/{patient_id}")
+async def update_patient_jobs(
+    patient_id: int,
+    jobs_list: List[dict] = Body(...),
+):
+    """Update a patient's jobs list."""
     try:
-        patient = get_patient_by_id(id)
-        if patient is None:
-            raise HTTPException(status_code=404, detail="Patient not found")
-
-        return JSONResponse(content=patient)
+        update_patient_jobs_list(patient_id, jobs_list)
+        return JSONResponse(content={"message": "Jobs updated successfully"})
     except Exception as e:
-        logging.error(f"Error fetching patient: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
+        logging.error(f"Error updating patient jobs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/patients-with-jobs")
 async def get_patients_with_jobs():
+    """Get all patients with outstanding jobs."""
     try:
         patients = get_patients_with_outstanding_jobs()
-        return JSONResponse(
-            content=[
-                {
-                    "id": row["id"],
-                    "name": row["name"],
-                    "ur_number": row["ur_number"],
-                    "jobs_list": row["jobs_list"],
-                    "encounter_summary": row["encounter_summary"],
-                    "dob": row["dob"],
-                    "encounter_date": row["encounter_date"],
-                }
-                for row in patients
-            ]
-        )
+        return JSONResponse(content=[
+            {
+                "id": patient["id"],
+                "name": patient["name"],
+                "ur_number": patient["ur_number"],
+                "jobs_list": json.dumps(patient.get("jobs_list", [])),
+                "encounter_summary": patient.get("encounter_summary", ""),
+                "dob": patient["dob"],
+                "encounter_date": patient["encounter_date"],
+            }
+            for patient in patients
+        ])
     except Exception as e:
         logging.error(f"Error fetching patients with jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/incomplete-jobs-count")
 async def get_incomplete_jobs_count():
+    """Get the count of incomplete jobs."""
     try:
         incomplete_jobs_count = count_incomplete_jobs()
         return JSONResponse(
@@ -148,69 +249,5 @@ async def get_incomplete_jobs_count():
         )
     except Exception as e:
         logging.error(f"Error counting incomplete jobs: {e}")
+        print("TRACEBACK:", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/search-patient")
-async def search_patient(ur_number: str):
-    try:
-        patients = search_patient_by_ur_number(ur_number)
-        return JSONResponse(content=patients)
-    except Exception as e:
-        logging.error(f"Error searching patients: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/patients/{id}")
-async def delete_patient(id: int):
-    try:
-        # Call the function to delete the patient
-        success = delete_patient_by_id(id)
-        if success:
-            logging.info(f"Deleted patient with ID: {id}")
-            return {"message": "Patient deleted"}
-        else:
-            raise Exception("Failed to delete patient")
-    except Exception as e:
-        logging.error(f"Error deleting patient: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/generate-letter")
-async def generate_letter(request: LetterRequest):
-    try:
-        letter_content = await generate_letter_content(
-            request.patientName,
-            request.primaryHistory,
-            request.summary_text,
-        )
-        return JSONResponse(content={"letter": letter_content})
-    except HTTPException as he:
-        # If generate_letter_content raises an HTTPException, re-raise it
-        raise he
-    except Exception as e:
-        logging.error(f"Unexpected error in generate_letter endpoint: {e}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
-
-
-@router.post("/save-letter")
-async def save_letter(request: LetterSave):
-    try:
-        update_patient_letter(request.patientId, request.letter)
-        logging.info(f"Patient letter updated for ID: {request.patientId}")
-        return {"message": "Letter saved successfully"}
-    except Exception as e:
-        logging.error(f"Error updating patient letter: {e}")
-        raise HTTPException(status_code=500, detail=e)
-
-
-@router.get("/fetch-letter")
-async def fetch_letter(patientId: int):
-    try:
-        letter = await fetch_patient_letter(patientId)
-        return JSONResponse(
-            content={"letter": letter or "No letter attached to encounter"}
-        )
-    except Exception as e:
-        logging.error(f"Error fetching letter: {e}")
-        raise HTTPException(status_code=500, detail=e)

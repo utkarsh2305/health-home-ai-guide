@@ -3,15 +3,14 @@ from datetime import datetime, timezone
 from typing import List, Optional, Dict
 from fastapi import HTTPException
 import logging
-import httpx
 import feedparser
 from ollama import AsyncClient
-
+import json
 from server.database.connection import PatientDatabase
 from server.schemas.dashboard import RssFeed, RssItem
 from server.utils.rss import (
-    get_feed_title,
     generate_item_digest,
+    generate_combined_digest,
     fetch_rss_feed,
 )
 
@@ -20,29 +19,58 @@ logger = logging.getLogger(__name__)
 
 
 class RefreshManager:
-    """Manages the refresh state of RSS feeds."""
+    """Manages the refresh state of different tasks."""
 
     def __init__(self):
-        self.lock: asyncio.Lock = asyncio.Lock()
-        self.is_refreshing: bool = False
+        self.lock: Dict[str, asyncio.Lock] = {}
+        self.is_refreshing: Dict[str, bool] = {}
 
-    async def start_refresh(self) -> bool:
+    def _ensure_task_initialized(self, task_name: str) -> None:
+        """Ensures a task has its lock and state initialized."""
+        if task_name not in self.lock:
+            self.lock[task_name] = asyncio.Lock()
+            self.is_refreshing[task_name] = False
+
+    async def start_refresh(self, task_name: str = "rss") -> bool:
         """
-        Attempts to start a refresh operation.
+        Attempts to start a refresh operation for a specific task.
+
+        Args:
+            task_name (str): Name of the task ("rss", "analysis", etc.)
 
         Returns:
             bool: True if refresh started, False if already in progress.
         """
-        async with self.lock:
-            if self.is_refreshing:
+        self._ensure_task_initialized(task_name)
+        async with self.lock[task_name]:
+            if self.is_refreshing[task_name]:
                 return False
-            self.is_refreshing = True
+            self.is_refreshing[task_name] = True
             return True
 
-    async def end_refresh(self) -> None:
-        """Ends the current refresh operation."""
-        async with self.lock:
-            self.is_refreshing = False
+    async def end_refresh(self, task_name: str = "rss") -> None:
+        """
+        Ends the current refresh operation for a specific task.
+
+        Args:
+            task_name (str): Name of the task ("rss", "analysis", etc.)
+        """
+        self._ensure_task_initialized(task_name)
+        async with self.lock[task_name]:
+            self.is_refreshing[task_name] = False
+
+    def is_task_running(self, task_name: str) -> bool:
+        """
+        Checks if a specific task is currently running.
+
+        Args:
+            task_name (str): Name of the task to check
+
+        Returns:
+            bool: True if the task is running, False otherwise
+        """
+        self._ensure_task_initialized(task_name)
+        return self.is_refreshing[task_name]
 
 
 refresh_manager = RefreshManager()
@@ -79,7 +107,7 @@ async def fetch_and_insert_initial_items(
     try:
         logger.info(f"Fetching initial items for feed {feed_url}")
         new_items = await fetch_rss_feed(feed_url)
-        new_items = new_items[:limit]  # Limit to the first 10 items
+        new_items = new_items[:limit]
 
         async def process_item(item: RssItem) -> Dict[str, str]:
             digest = await generate_item_digest(item)
@@ -92,7 +120,7 @@ async def fetch_and_insert_initial_items(
             *(process_item(item) for item in new_items)
         )
 
-        db = PatientDatabase()  # Create a new database connection
+        db = PatientDatabase()
         try:
             for result in processed_items:
                 item = result["item"]
@@ -307,19 +335,113 @@ def fetch_rss_items_from_db(
     ]
 
 
-def get_recent_digests(limit: Optional[int] = 3) -> List[dict]:
+async def store_combined_digest(digest: str, articles: List[dict]) -> None:
+    """Store a new combined digest in the database."""
+    db.cursor.execute(
+        """
+        INSERT INTO combined_digests (digest, articles_json, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (
+            digest,
+            json.dumps(articles),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    db.commit()
+
+
+def get_latest_digest() -> Optional[dict]:
+    """Retrieve the most recent combined digest."""
+    db.cursor.execute(
+        """
+        SELECT digest, articles_json, created_at
+        FROM combined_digests
+        ORDER BY created_at DESC
+        LIMIT 1
+        """
+    )
+    row = db.cursor.fetchone()
+    if row:
+        return {
+            "combined_digest": row[0],
+            "articles": json.loads(row[1]),
+            "created_at": row[2],
+        }
+    return None
+
+
+async def generate_and_store_digest(force: bool = False) -> dict:
+    """Generate and store a new combined digest if needed."""
+    latest = get_latest_digest()
+
+    # If we have a recent digest (less than 24 hours old) and not forcing refresh
+    if (
+        not force
+        and latest
+        and (
+            datetime.now(timezone.utc)
+            - datetime.fromisoformat(latest["created_at"])
+        ).total_seconds()
+        < 86400
+    ):  # 24 hours
+        return latest
+
+    # Fetch recent articles - with explicit column names
+    db.cursor.execute(
+        """
+        SELECT
+            rss_items.title as item_title,
+            rss_items.description,
+            rss_items.link,
+            rss_feeds.title as feed_title
+        FROM rss_items
+        JOIN rss_feeds ON rss_items.feed_id = rss_feeds.id
+        ORDER BY rss_items.published DESC
+        LIMIT 3
+        """
+    )
+    articles = [
+        {
+            "title": row[0],
+            "description": row[1],
+            "link": row[2],
+            "feed_title": row[3],
+        }
+        for row in db.cursor.fetchall()
+    ]
+
+    if not articles:
+        return latest or {
+            "combined_digest": "",
+            "articles": [],
+            "created_at": None,
+        }
+
+    # Generate new combined digest
+    digest = await generate_combined_digest(articles)
+    await store_combined_digest(digest, articles)
+
+    return {
+        "combined_digest": digest,
+        "articles": articles,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def get_recent_digests(limit: Optional[int] = 3) -> dict:
     """
-    Retrieves the most recent RSS item digests.
+    Retrieves and summarizes the most recent RSS items.
 
     Args:
-        limit (Optional[int], optional): Maximum number of digests to retrieve. Defaults to 3.
+        limit (Optional[int], optional): Number of recent articles to consider. Defaults to 3.
 
     Returns:
-        List[dict]: A list of dictionaries containing digest information.
+        dict: A dictionary containing the combined digest and article metadata
     """
     db.cursor.execute(
         """
-        SELECT rss_items.title, rss_items.digest, rss_feeds.title AS feed_title,
+        SELECT rss_items.title, rss_items.description, rss_feeds.title AS feed_title,
                rss_items.link, rss_items.published, rss_items.added_at
         FROM rss_items
         JOIN rss_feeds ON rss_items.feed_id = rss_feeds.id
@@ -328,10 +450,11 @@ def get_recent_digests(limit: Optional[int] = 3) -> List[dict]:
         """,
         (limit,),
     )
-    return [
+
+    articles = [
         {
             "title": row[0],
-            "digest": row[1],
+            "description": row[1],
             "feed_title": row[2],
             "link": row[3],
             "published": row[4],
@@ -339,3 +462,10 @@ def get_recent_digests(limit: Optional[int] = 3) -> List[dict]:
         }
         for row in db.cursor.fetchall()
     ]
+
+    combined_digest = await generate_combined_digest(articles)
+
+    return {
+        "combined_digest": combined_digest,
+        "articles": articles,  # Including original articles for reference
+    }

@@ -1,17 +1,14 @@
 version: "3"
 services:
-  app:
-    # Use either build or image, but not both. Uncomment the needed line.
-    image: localhost/scribe-dev:latest
-    #build: .
-    container_name: scribe
-    network_mode: host
-    environment:
-      NODE_ENV: development
-      REACT_APP_BACKEND_URL: # Backend URL
-    volumes:
-      - ./public:/usr/src/app/public
-      - ./server:/usr/src/app/server
-      - ./src:/usr/src/app/src
-      - ./logs:/usr/src/app/logs
-      - ./data:/usr/src/app/data # Only for persistent data
+    app:
+        image: phlox:latest
+        container_name: phlox
+        ports:
+            - "5000:5000"
+        environment:
+            - DB_ENCRYPTION_KEY= # Replace with your key
+            - REACT_APP_BACKEND_URL= # Replace with your desired URL
+            - TZ= # Replace with your timezone
+        volumes:
+            - ./data:/usr/src/app/data # Only for persistent data
+            - ./logs:/usr/src/app/logs # Optional: Persist logs

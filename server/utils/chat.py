@@ -1,10 +1,11 @@
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
-from ollama import Client as ollamaClient
+from ollama import AsyncClient as ollamaClient
 import re
 from server.database.config import config_manager
-
+import logging
+import asyncio
 
 class ChatEngine:
     """
@@ -18,12 +19,34 @@ class ChatEngine:
         """
         self.config = config_manager.get_config()
         self.prompts = config_manager.get_prompts_and_options()
+
+        # Get user settings for doctor's name and specialty
+        user_settings = config_manager.get_user_settings()
+        doctor_name = user_settings.get("name", "")
+        specialty = user_settings.get("specialty", "")
+
         self.CHAT_SYSTEM_MESSAGE = [
             {
                 "role": "system",
                 "content": self.prompts["prompts"]["chat"]["system"],
             }
         ]
+
+        # Add doctor context as additional system message if available
+        if doctor_name or specialty:
+            doctor_context = "You are assisting."
+            if doctor_name and specialty:
+                doctor_context += f"{doctor_name}, a {specialty} specialist."
+            elif doctor_name:
+                doctor_context += f"{doctor_name}."
+            else:
+                doctor_context += f"a {specialty} specialist."
+
+            self.CHAT_SYSTEM_MESSAGE.append({
+                "role": "system",
+                "content": doctor_context
+            })
+
         self.BASE_URL = self.config["OLLAMA_BASE_URL"]
         self.ollama_client = ollamaClient(host=self.BASE_URL)
         self.chroma_client = self._initialize_chroma_client()
@@ -81,7 +104,7 @@ class ChatEngine:
         Returns:
             str: Relevant literature excerpts or a message if no literature is found.
         """
-        print(disease_name)
+
         collections = self.chroma_client.list_collections()
         collection_names = [collection.name for collection in collections]
 
@@ -96,7 +119,7 @@ class ChatEngine:
                 )
                 context = collection.query(
                     query_texts=[question],
-                    n_results=6,
+                    n_results=3,
                     include=["documents", "metadatas"],
                 )
                 print("Relevant context found")
@@ -118,50 +141,46 @@ class ChatEngine:
         else:
             return "No relevant literature available"
 
-    def get_response(self, conversation_history: list) -> dict:
+    async def get_streaming_response(self, conversation_history: list):
         """
-        Generate a response based on the conversation history and relevant literature.
-
-        Args:
-            conversation_history (list): A list of previous messages in the conversation.
-
-        Returns:
-            dict: A dictionary containing the final answer and optionally the function response.
+        Generate a streaming response based on the conversation history and relevant literature.
         """
+        prompts = config_manager.get_prompts_and_options()
         collections = self.chroma_client.list_collections()
         collection_names = [collection.name for collection in collections]
         collection_names_string = ", ".join(collection_names)
 
-        disease_question_options = {
-            "temperature": 0.1,
-            "num_ctx": 2048,
-            "stop": [".", "(", "\n", "/"],
-        }
-
-        context_question_options = {"temperature": 0.1, "num_ctx": 2048}
-
+        context_question_options = prompts["options"]["chat"]
         message_list = self.CHAT_SYSTEM_MESSAGE + conversation_history
 
-        response = self.ollama_client.chat(
+        # First call to determine if we need literature or direct response
+        response = await self.ollama_client.chat(
             model=self.config["PRIMARY_MODEL"],
             messages=message_list,
+            options=context_question_options,
             tools=[
                 {
                     "type": "function",
                     "function": {
+                        "name": "direct_response",
+                        "description": "Use this tool if the most recent question from the user is a non-medical query (greetings, chat, clarifications).",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
                         "name": "get_relevant_literature",
-                        "description": f"Get the relevant medical literature (only use if appropriate to answer the most recent question, otherwise just answer the question without reference to these tools and functions). Available disease areas:{collection_names_string}",
+                        "description": f"Only use this tool if answering the most recent message from the user would benefit from a literature search. Available disease areas:{collection_names_string}, other",
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "disease_name": {
-                                    "type": "string",
-                                    "description": f"The disease that this question is referring to (must be one of: {collection_names_string}, other)",
-                                },
-                                "question": {
-                                    "type": "string",
-                                    "description": "The question to be answered. Try and be specific.",
-                                },
+                                "disease_name": {"type": "string", "description": f"The disease that this question is referring to (must be one of: {collection_names_string}, other)"},
+                                "question": {"type": "string", "description": "The question to be answered. Try and be specific."},
                             },
                             "required": ["disease_name", "question"],
                         },
@@ -170,61 +189,85 @@ class ChatEngine:
             ],
         )
 
+        function_response = None
+
         if not response["message"].get("tool_calls"):
-            final_answer = response["message"]["content"]
-            function_response = None
+            yield {"type": "status", "content": "Generating response..."}
+            # Stream direct response
+            async for chunk in await self.ollama_client.chat(
+                model=self.config["PRIMARY_MODEL"],
+                messages=message_list,
+                options=context_question_options,
+                stream=True
+            ):
+                if 'message' in chunk and 'content' in chunk['message']:
+                    yield {"type": "chunk", "content": chunk['message']['content']}
         else:
-            available_functions = {
-                "get_relevant_literature": self.get_relevant_literature
-            }
-            for tool in response["message"]["tool_calls"]:
-                function_to_call = available_functions[tool["function"]["name"]]
-                function_response_list = function_to_call(
+            tool = response["message"]["tool_calls"][0]
+            if tool["function"]["name"] == "direct_response":
+                yield {"type": "status", "content": "Generating response..."}
+                # Stream direct response
+                async for chunk in await self.ollama_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=message_list,
+                    options=context_question_options,
+                    stream=True
+                ):
+                    if 'message' in chunk and 'content' in chunk['message']:
+                        yield {"type": "chunk", "content": chunk['message']['content']}
+            else:  # get_relevant_literature
+                # Send RAG status message
+                yield {"type": "status", "content": "Searching medical literature..."}
+
+                function_response_list = self.get_relevant_literature(
                     tool["function"]["arguments"]["disease_name"],
                     tool["function"]["arguments"]["question"],
                 )
                 function_response_string = "\n".join(function_response_list)
+
                 if function_response_list == "No relevant literature available":
                     context_response = {
                         "role": "tool",
                         "content": "No relevant literature available in the database. Answer the user's question but inform them that you were unable to find any relevant information.",
                     }
-                    temp_conversation_history = conversation_history + [
-                        context_response
-                    ]
-                    context_answer = self.ollama_client.chat(
-                        model=self.config["PRIMARY_MODEL"],
-                        messages=temp_conversation_history,
-                        options=context_question_options,
-                    )
-                    final_answer = context_answer["message"]["content"]
                     function_response = None
                 else:
                     context_response = {
                         "role": "tool",
-                        "content": f"The below text is taken from a relevant section of the guidelines.\n\n{function_response_string}",
+                        "content": f"The below text excerpts are taken from relevant sections of the guidelines; these may help you answer the user's question. The user has not sent you these documents, they have come from your own database.\n\n{function_response_string}",
                     }
-                    temp_conversation_history = conversation_history + [
-                        context_response
-                    ]
-                    context_answer = self.ollama_client.chat(
-                        model=self.config["PRIMARY_MODEL"],
-                        messages=temp_conversation_history,
-                        options=context_question_options,
-                    )
-                    final_answer = context_answer["message"]["content"]
                     function_response = function_response_list
 
-        if function_response is not None:
-            return {
-                "final_answer": final_answer,
-                "function_response": function_response,
-            }
-        else:
-            return {"final_answer": final_answer}
+                temp_conversation_history = message_list + [context_response]
 
-    def chat(self, conversation_history: list) -> dict:
-        return self.get_response(conversation_history)
+                # Send generating response status
+                yield {"type": "status", "content": "Generating response with retrieved information..."}
+
+                # Stream the context answer
+                async for chunk in await self.ollama_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=temp_conversation_history,
+                    options=context_question_options,
+                    stream=True
+                ):
+                    if 'message' in chunk and 'content' in chunk['message']:
+                        yield {"type": "chunk", "content": chunk['message']['content']}
+
+        # Signal end of stream with function_response if available
+        yield {"type": "end", "content": "", "function_response": function_response}
+
+    async def stream_chat(self, conversation_history: list):
+        """Stream chat response from Ollama"""
+        try:
+            print("Starting Ollama stream")
+            yield {"type": "start", "content": ""}
+
+            async for chunk in self.get_streaming_response(conversation_history):
+                yield chunk
+
+        except Exception as e:
+            logging.error(f"Error in stream_chat: {e}")
+            raise
 
 
 # Usage

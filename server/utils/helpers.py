@@ -1,64 +1,109 @@
+# server/utils/helpers.py
 from datetime import datetime
-from ollama import Client as ollamaClient
-from server.schemas.patient import Patient
+from ollama import AsyncClient
+from server.schemas.patient import Patient, Condition
 from server.database.config import config_manager
 import logging
+import asyncio
+from pydantic import BaseModel
+from typing import Optional
 
 
-async def summarize_encounter(patient: Patient) -> str:
+async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
     """
-    Summarize a patient encounter based on provided patient information.
+    Summarize a patient encounter and extract the primary condition asynchronously.
 
     Args:
         patient (Patient): A Patient object containing relevant encounter information.
 
     Returns:
-        str: A summarized description of the patient encounter.
+        tuple[str, Optional[str]]: A tuple containing the summarized description and the extracted condition.
 
     Raises:
         ValueError: If DOB or Encounter Date is missing from the patient data.
     """
-    logging.info("Received summarisation request")
+
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
 
-    client = ollamaClient(host=config["OLLAMA_BASE_URL"])
+    client = AsyncClient(host=config["OLLAMA_BASE_URL"])
 
     if not patient.dob or not patient.encounter_date:
         raise ValueError("DOB or Encounter Date is missing")
 
-    combined_text = "\n\n".join(
-        [
-            patient.primary_history,
-            patient.additional_history,
-            patient.investigations,
-            patient.encounter_detail,
-            patient.impression,
-            patient.encounter_plan,
-        ]
-    )
+    template_values = []
+    for field_key, field_value in patient.template_data.items():
+        if field_value:
+            template_values.append(field_value)
+
+    combined_text = "\n\n".join(template_values)
+
     age = calculate_age(patient.dob, patient.encounter_date)
     initial_summary_content = (
         f"{age} year old {'male' if patient.gender == 'M' else 'female'} with"
     )
 
-    request_body = [
+    summary_request_body = [
         {"role": "system", "content": prompts["prompts"]["summary"]["system"]},
         {"role": "user", "content": combined_text},
         {"role": "assistant", "content": initial_summary_content},
     ]
 
-    summary_content = client.chat(
-        model=config["SECONDARY_MODEL"],
-        messages=request_body,
-        options=prompts["options"]["general"],
-    )["message"]["content"]
+    condition_request_body = [
+        {
+            "role": "system",
+            "content": "You are a medical AI that is skilled at extracting the primary diagnosis for a medical encounter. You should return a JSON formatted string that has a singular field called `condition_name` that represents the primary problem according to the ICD-10 WHO classifications",
+        },
+        {
+            "role": "user",
+            "content": f"Patient note: {combined_text}. Please provide the primary condition they are being treated for according to the WHO ICD-10 classification. Please do not include the ICD code, rather, just respond with the common name of the condition.",
+        },
+    ]
 
-    # Truncate at the first empty line
-    summary_content = summary_content.split("\n\n")[0]
-    logging.debug(f"Summary content: {summary_content}")
+    async def fetch_summary():
 
-    return initial_summary_content + summary_content
+        response = await client.chat(
+            model=config["SECONDARY_MODEL"],
+            messages=summary_request_body,
+            options=prompts["options"]["secondary"],
+        )
+        summary_content = response["message"]["content"]
+
+        # Truncate at the first empty line
+        summary_content = summary_content.split("\n\n")[0]
+        logging.info(f"Summary content: {summary_content}")
+
+        return initial_summary_content + summary_content
+
+    async def fetch_condition():
+        response = await client.chat(
+            model=config["SECONDARY_MODEL"],
+            messages=condition_request_body,
+            format=Condition.model_json_schema(),
+            options=prompts["options"]["secondary"],
+        )
+        try:
+            condition_response = Condition.model_validate_json(
+                response["message"][
+                    "content"
+                ]
+            )
+
+            condition_name = condition_response.condition_name
+
+            logging.info(f"Condition: {condition_name}")
+            return condition_name
+        except Exception as e:
+            logging.error(
+                f"Error extracting condition: {e}, response content:{response['message']['content']}"
+            )
+            return None
+
+    summary, condition = await asyncio.gather(
+        fetch_summary(), fetch_condition()
+    )
+
+    return summary, condition
 
 
 def calculate_age(dob: str, encounter_date: str = None) -> int:

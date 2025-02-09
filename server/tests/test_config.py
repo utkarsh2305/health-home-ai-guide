@@ -1,21 +1,18 @@
+"""
+Tests for configuration endpoints.
+Uses TestClient and checks JSON response structure.
+"""
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from fastapi import FastAPI
 from server.api.config import router
 
-# Create FastAPI app and include your router
 app = FastAPI()
-app.include_router(router)
+app.include_router(router, prefix="/api")
+client = TestClient(app)
 
 
-@pytest.fixture(scope="module")
-def test_app():
-    client = TestClient(app)
-    yield client
-
-
-# Helper function to validate JSON response
 def is_valid_json(response):
     try:
         response.json()
@@ -24,65 +21,70 @@ def is_valid_json(response):
         return False
 
 
-# Test functions
-def test_get_prompts(test_app):
-    response = test_app.get("/prompts")
+def test_get_prompts():
+    response = client.get("/api/prompts")
     assert response.status_code == 200
     assert is_valid_json(response)
+    data = response.json()
+    # Expect prompts to be a dict
+    assert isinstance(data, dict)
 
 
-def test_get_config(test_app):
-    response = test_app.get("/config")
+def test_get_config():
+    response = client.get("/api/config")
     assert response.status_code == 200
     assert is_valid_json(response)
+    data = response.json()
+    # Expect config to be a dict
+    assert isinstance(data, dict)
 
 
-def test_get_custom_headings(test_app):
-    response = test_app.get("/custom-headings")
+def test_get_custom_headings():
+    response = client.get("/api/custom-headings")
     assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    # Check that required keys exist
+    for key in ["primaryHistory", "additionalHistory", "investigations", "encounterDetail", "impression", "encounterPlan"]:
+        assert key in data
 
 
-def test_get_all_options(test_app):
-    response = test_app.get("/options")
+def test_get_all_options():
+    response = client.get("/api/options")
     assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    assert isinstance(data, dict)
 
 
-def test_update_prompts(test_app):
+def test_update_prompts():
     new_prompts = {
-        "NEW_PROMPT": {
-            "system": "New System Prompt",
-            "initial": "New Initial Prompt",
+        "TEST_PROMPT": {
+            "system": "Test System Prompt",
         }
     }
-    response = test_app.post("/prompts", json=new_prompts)
+    response = client.post("/api/prompts", json=new_prompts)
     assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    assert "message" in data or "updated" in data.get("message", "").lower()
 
 
-def test_update_config(test_app):
-    new_config = {"NEW_CONFIG": "new_value"}
-    response = test_app.post("/config", json=new_config)
+def test_update_config():
+    new_config = {"TEST_CONFIG": "test_value"}
+    response = client.post("/api/config", json=new_config)
     assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    message = data.get("message", "")
+    assert "message" in data and ("success" in message.lower())
 
-
-def test_update_custom_headings(test_app):
-    new_headings = {"NEW_HEADING": "New Custom Heading"}
-    response = test_app.post("/custom-headings", json=new_headings)
+def test_update_options():
+    new_options = {"TEST_OPTION": "test_option_value"}
+    response = client.post("/api/options/TEST_CATEGORY", json=new_options)
     assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    assert "updated" in data.get("message", "").lower()
 
 
-def test_update_options(test_app):
-    new_options = {"NEW_OPTION": "new_option_value"}
-    response = test_app.post("/options/TEST_CATEGORY", json=new_options)
+def test_reset_to_defaults():
+    response = client.post("/api/reset-to-defaults")
     assert response.status_code == 200
-    assert is_valid_json(response)
-
-
-def test_reset_to_defaults(test_app):
-    response = test_app.post("/reset-to-defaults")
-    assert response.status_code == 200
-    assert is_valid_json(response)
+    data = response.json()
+    assert "reset" in data.get("message", "").lower()

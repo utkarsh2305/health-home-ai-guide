@@ -29,24 +29,3 @@ class ConfigData(BaseModel):
     """
 
     data: dict
-
-
-class CustomHeadings(BaseModel):
-    """
-    Custom headings model for the application.
-
-    Attributes:
-        primaryHistory (str): Custom heading for Primary History.
-        additionalHistory (str): Custom heading for Additional History.
-        investigations (str): Custom heading for Investigations.
-        encounterDetail (str): Custom heading for Encounter Detail.
-        impression (str): Custom heading for Impression.
-        encounterPlan (str): Custom heading for Encounter Plan.
-    """
-
-    primaryHistory: str
-    additionalHistory: str
-    investigations: str
-    encounterDetail: str
-    impression: str
-    encounterPlan: str

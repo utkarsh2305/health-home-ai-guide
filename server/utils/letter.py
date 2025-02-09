@@ -6,60 +6,77 @@ from server.database.config import config_manager
 
 
 async def generate_letter_content(
-    patient_name: str, primary_history: str, summary_text: str
+    patient_name: str,
+    gender: str,
+    template_data: dict,
+    additional_instruction: str | None = None,
+    context: list | None = None
 ):
-    """
-    Generates letter content based on patient information and summary text.
-
-    Args:
-        patient_name (str): The name of the patient in 'Last, First' format.
-        primary_history (str): The patient's haematological history.
-        summary_text (str): A summary text to be included in the letter.
-
-    Returns:
-        str: The generated letter content.
-
-    Raises:
-        HTTPException: If there's an error during the generation process.
-    """
+    """Generates letter content using Ollama based on provided data and prompts."""
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
     client = ollamaClient(host=config["OLLAMA_BASE_URL"])
 
     try:
-        formatted_name = _format_name(patient_name)
-        name_parts = patient_name.split(",")
-        first_name = name_parts[1].strip()
-
-        initial_letter_content = _generate_initial_content(
-            formatted_name, primary_history, first_name
-        )
-
+        # Always start with system messages
         request_body = [
+             {
+                "role": "system",
+                "content": prompts["prompts"]["letter"]["system"]
+            },
             {
                 "role": "system",
-                "content": prompts["prompts"]["letter"]["system"],
-            },
-            {
-                "role": "user",
-                "content": summary_text,
-            },
-            {
-                "role": "assistant",
-                "content": initial_letter_content,
-            },
+                "content": additional_instruction or ""
+            }
         ]
 
+        # Add doctor context if available
+        user_settings = config_manager.get_user_settings()
+        doctor_name = user_settings.get("name", "")
+        specialty = user_settings.get("specialty", "")
+        if doctor_name or specialty:
+            doctor_context = "Write the letter in the voice of "
+            doctor_context += f"{doctor_name}, " if doctor_name else ""
+            doctor_context += f"a {specialty} specialist." if specialty else "a specialist."
+            request_body.append({"role": "system", "content": doctor_context})
+
+
+        # Format clinic note
+        clinic_note = "\n\n".join(
+            f"{key.replace('_', ' ').title()}:\n{value}"
+            for key, value in template_data.items()
+            if value
+        )
+
+        # Always include initial patient data as first user message
+        request_body.append({
+            "role": "user",
+             "content": f"Patient Name: {patient_name}\nGender: {gender}\n\nClinic Note:\n{clinic_note}",
+        })
+
+        # Add any context from the frontend
+        if context:
+            request_body.extend(context)
+
+        # Always end with the code block prompt
+        request_body.append({
+            "role": "assistant",
+            "content": "I'll write the letter in a code block:\n```",
+        })
+
+        # Letter options
+        options = prompts["options"]["general"].copy() # General options
+        options["temperature"] = prompts["options"]["letter"]["temperature"] # User defined temperature
+        options["stop"] = ["```"]
+
+        # Generate the letter content
         ollama_letter_response = client.chat(
             model=config["PRIMARY_MODEL"],
             messages=request_body,
-            options=prompts["options"]["letter"],
+            options=options,
         )["message"]["content"]
 
-        random_pleasantry = _choose_random_pleasantry()
-        combined_content = f"{initial_letter_content}{ollama_letter_response}\n{random_pleasantry},"
-
-        return combined_content
+        return ollama_letter_response.strip()
 
     except Exception as e:
         logging.error(f"Error generating letter content: {e}")
@@ -106,33 +123,3 @@ def _format_name(patient_name):
     last_name = name_parts[0].strip()
     first_name = name_parts[1].strip()
     return f"{first_name} {last_name}"
-
-
-def _generate_initial_content(formatted_name, primaryHistory, first_name):
-    """
-    Generates the initial content of the letter including a random opening phrase.
-
-    Args:
-        formatted_name (str): The patient's full name in 'First Last' format.
-        primaryHistory (str): The patient's haematological history.
-        first_name (str): The patient's first name.
-
-    Returns:
-        str: The initial content of the letter.
-    """
-    phrases = [
-        "I reviewed <name> today",
-        "I caught up with <name>",
-        "<name> has been",
-        "Today, I met with <name>",
-        "I had a consultation with <name>",
-        "I saw <name> today",
-        "Following up with <name>",
-        "I had the pleasure of meeting <name> today",
-        "My consultation with <name> today",
-        "During my appointment with <name> today",
-    ]
-
-    random_phrase = random.choice(phrases).replace("<name>", first_name)
-    initial_letter_content = f"Dear Colleague,\n\nRe: {formatted_name}\n\n{primaryHistory}\n\n{random_phrase}"
-    return initial_letter_content
