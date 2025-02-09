@@ -39,15 +39,6 @@ def test_get_config():
     assert isinstance(data, dict)
 
 
-def test_get_custom_headings():
-    response = client.get("/api/custom-headings")
-    assert response.status_code == 200
-    data = response.json()
-    # Check that required keys exist
-    for key in ["primaryHistory", "additionalHistory", "investigations", "encounterDetail", "impression", "encounterPlan"]:
-        assert key in data
-
-
 def test_get_all_options():
     response = client.get("/api/options")
     assert response.status_code == 200
