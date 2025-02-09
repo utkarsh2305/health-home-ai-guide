@@ -17,18 +17,18 @@
 Welcome to Phlox, an open-source patient management/AI transcription/physician assistant solution that I've developed over the past few months with heavy input from various LLMs. There are a few really excellent and mature commercial solutions available for AI medical transcription, but none that I'm aware of attempt to roll in some decision support.
 
 ## Table of Contents 📑
-- [What is it?](#what-is-it)
-- [Architecture Overview](#architecture-overview)
-- [Known Bugs](#known-bugs)
-- [Roadmap](#roadmap)
-- [Features](#features)
-- [Stack](#stack)
-- [Quick Start](#quick-start)
-- [Usage Warning](#usage-warning)
-- [HIPAA/GDPR Compliance](#hipaagdpr-compliance)
-- [Philosophy](#philosophy)
-- [License](#license)
-- [Contributing](#contributing)
+- [What is it? 🩺](#what-is-it-)
+- [Architecture Overview 🏗️](#architecture-overview-️)
+- [Known Bugs 🐛](#known-bugs-)
+- [Roadmap 🗺️](#roadmap-️)
+- [Features ✨](#features-)
+- [Stack 🛠️](#stack-️)
+- [Quick Start 🚀](#quick-start-)
+- [Usage Warning ⚠️](#usage-warning-️)
+- [HIPAA/GDPR Compliance 🔒](#hipaagdpr-compliance-)
+- [Philosophy 💭](#philosophy-)
+- [License 📄](#license-)
+- [Contributing 🤝](#contributing-)
 
 ## What is it? 🩺
 Essentially, it's a mix of:
