@@ -102,7 +102,7 @@ class ChromaManager:
         """
         try:
             collections = self.chroma_client.list_collections()
-            return sorted([collection.name for collection in collections])
+            return sorted(collections)
         except Exception as e:
             print("Error retrieving collections:", e)
             return []

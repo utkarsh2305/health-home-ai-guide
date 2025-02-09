@@ -106,7 +106,7 @@ class ChatEngine:
         """
 
         collections = self.chroma_client.list_collections()
-        collection_names = [collection.name for collection in collections]
+        collection_names = collections
 
         sanitized_disease_name = self.sanitizer(disease_name)
 
@@ -147,7 +147,7 @@ class ChatEngine:
         """
         prompts = config_manager.get_prompts_and_options()
         collections = self.chroma_client.list_collections()
-        collection_names = [collection.name for collection in collections]
+        collection_names = collections
         collection_names_string = ", ".join(collection_names)
 
         context_question_options = prompts["options"]["chat"]
