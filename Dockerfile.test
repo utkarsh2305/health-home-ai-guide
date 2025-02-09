@@ -28,15 +28,10 @@ RUN echo "<html><body>Test</body></html>" > /usr/src/app/build/index.html
 # Create the run_tests.sh script
 RUN cat << 'EOF' > /usr/src/app/run_tests.sh && chmod +x /usr/src/app/run_tests.sh
 #!/bin/bash
-# Delete test database if it exists
-rm -f /usr/src/app/data/test_phlox_database.sqlite
 
 # Run tests with coverage
 pytest --cov=server --cov-report=xml --cov-report=lcov server/tests
 test_exit_code=$?
-
-# Delete test database after tests
-rm -f /usr/src/app/data/test_phlox_database.sqlite
 
 # Exit with the test exit code
 exit $test_exit_code
