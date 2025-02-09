@@ -149,8 +149,8 @@ The landing page allows you to subscribe to RSS feeds of your choice. The primar
 If you're familiar with Python, React, and working with LLMs, you'll find the project interesting. Feel free to clone the repo and examine the code:
 
 ```bash
-git clone https://github.com/phlox-dev/Phlox.git  # Update with actual repo link
-cd Phlox
+git clone https://github.com/bloodworks-io/phlox.git
+cd phlox
 ```
 
 For those of you who are comfortable with Docker/Podman and understand the risks, you can build the image:
