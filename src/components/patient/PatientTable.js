@@ -158,7 +158,7 @@ const PatientTable = ({
                         return acc;
                     }, {}),
                 )
-                    .sort(([a], [b]) => new Date(b) - new Date(a))
+                    .sort((a, b) => a.id - b.id)
                     .map(([date, patients]) => (
                         <Box key={date} mb={8}>
                             <Text as="h3" mb={2}>
@@ -177,9 +177,7 @@ const PatientTable = ({
                                     </Thead>
                                     <Tbody>
                                         {patients
-                                            .sort((a, b) =>
-                                                a.name.localeCompare(b.name),
-                                            )
+                                            .sort((a, b) => a.id - b.id)
                                             .map((patient, index) =>
                                                 renderPatientRow(
                                                     patient,
