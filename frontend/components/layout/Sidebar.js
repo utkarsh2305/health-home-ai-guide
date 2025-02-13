@@ -43,7 +43,7 @@ const Sidebar = ({
 
     const fetchPatients = async (date) => {
         try {
-            const response = await fetch(`/api/patients?date=${date}`);
+            const response = await fetch(`/api/patient/list?date=${date}`);
             if (!response.ok) {
                 throw new Error("Network response was not ok");
             }
@@ -58,7 +58,7 @@ const Sidebar = ({
 
     const fetchIncompleteJobsCount = async () => {
         try {
-            const response = await fetch(`/api/incomplete-jobs-count`);
+            const response = await fetch(`/api/patient/incomplete-jobs-count`);
             if (!response.ok) {
                 throw new Error("Network response was not ok");
             }
@@ -83,7 +83,7 @@ const Sidebar = ({
         if (patientToDelete) {
             try {
                 const response = await fetch(
-                    `/api/patients/${patientToDelete.id}`,
+                    `/api/patient/id/${patientToDelete.id}`,
                     {
                         method: "DELETE",
                     },

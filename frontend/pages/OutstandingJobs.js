@@ -7,7 +7,7 @@ const OutstandingJobs = ({ handleSelectPatient, refreshSidebar }) => {
 
     const fetchPatientsWithJobs = async () => {
         try {
-            const response = await fetch(`/api/patients-with-jobs`);
+            const response = await fetch(`/api/patient/patients-with-jobs`);
             if (!response.ok) {
                 throw new Error("Network response was not ok");
             }

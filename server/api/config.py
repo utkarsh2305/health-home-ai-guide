@@ -21,13 +21,13 @@ async def update_prompts(data: dict):
     return {"message": "prompts.js updated successfully"}
 
 
-@router.get("/config")
+@router.get("/global")
 async def get_config():
     """Retrieve the current global configuration."""
     return JSONResponse(content=config_manager.get_config())
 
 
-@router.post("/config")
+@router.post("/global")
 async def update_config(data: dict):
     """Update other configuration items with provided data."""
     config_manager.update_config(data)
@@ -60,13 +60,13 @@ async def get_models(
 
 
 
-@router.get("/options")
+@router.get("/ollama")
 async def get_all_options():
     """Retrieve all Ollama-related configuration options."""
     return JSONResponse(content=config_manager.get_all_options())
 
 
-@router.get("/options/{category}")
+@router.get("/ollama/{category}")
 async def get_options_by_category(
     category: str = Path(..., description="The category of options to retrieve")
 ):
@@ -80,7 +80,7 @@ async def get_options_by_category(
         )
 
 
-@router.post("/options/{category}")
+@router.post("/ollama/{category}")
 async def update_options(
     category: str = Path(..., description="The category of options to update"),
     data: dict = Body(...),
@@ -99,13 +99,13 @@ async def reset_to_defaults():
     return {"message": "All configurations reset to defaults"}
 
 
-@router.get("/user-settings")
+@router.get("/user")
 async def get_user_settings():
     """Retrieve the current user settings."""
     return JSONResponse(content=config_manager.get_user_settings())
 
 
-@router.post("/user-settings")
+@router.post("/user")
 async def update_user_settings(data: dict):
     """Update user settings with provided data."""
     config_manager.update_user_settings(data)

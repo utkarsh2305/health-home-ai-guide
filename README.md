@@ -14,8 +14,6 @@
 
 </div>
 
-# Phlox
-
 Phlox is an open-source patient management system integrating AI-powered medical transcription, clinical note generation, and an AI chatbot interface. It's designed to run locally, utilizing Ollama and Whisper for inference and transcription.
 
 ## Key Features ✨
@@ -43,11 +41,11 @@ Phlox is an open-source patient management system integrating AI-powered medical
 3. **Build:** `podman build -t phlox:latest .`
 4. **Environment:** Create `.env` in `phlox-dev/` (see example in documentation).
 5. **Run:** `podman-compose up` (Production) or `podman-compose -f podman-compose.dev.yml up` (Development).
-6. **Access:** http://localhost:3000
+6. **Access:** http://localhost:5000
 
 **For detailed setup, feature explanations, and important warnings, please see the [Documentation](./docs/README.md).**
 
-## ⚠️ Usage Warning: Experimental and Not for Unverified Clinical Use
+## Usage Warning ⚠️
 
 Phlox is an experimental project intended for educational and personal use. **It is not a certified medical device and should NOT be used for clinical decision-making without thorough validation, regulatory approvals, and under the direct supervision of qualified medical professionals.**
 

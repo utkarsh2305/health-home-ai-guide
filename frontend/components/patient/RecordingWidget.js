@@ -266,8 +266,8 @@ const RecordingWidget = ({
         setLoading(true);
 
         try {
-            console.log("Sending request to /api/transcribe");
-            const response = await fetch(`/api/transcribe`, {
+            console.log("Sending request to /api/transcribe/audio");
+            const response = await fetch(`/api/transcribe/audio`, {
                 method: "POST",
                 body: formData,
             });
@@ -328,8 +328,8 @@ const RecordingWidget = ({
         setLoading(true);
 
         try {
-            console.log("Sending request to /api/transcribe for resend");
-            const response = await fetch(`/api/transcribe`, {
+            console.log("Sending request to /api/transcribe/audio for resend");
+            const response = await fetch(`/api/transcribe/audio`, {
                 method: "POST",
                 body: formData,
             });
@@ -378,7 +378,7 @@ const RecordingWidget = ({
         setLoading(true);
 
         try {
-            const response = await fetch(`/api/transcribe`, {
+            const response = await fetch(`/api/transcribe/audio`, {
                 method: "POST",
                 body: formData,
             });

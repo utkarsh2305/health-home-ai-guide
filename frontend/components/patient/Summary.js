@@ -127,7 +127,7 @@ const Summary = forwardRef(
             formData.append("fieldKey", key);
 
             try {
-                const response = await fetch("/api/dictate", {
+                const response = await fetch("/api/transcribe/dictate", {
                     method: "POST",
                     body: formData,
                 });

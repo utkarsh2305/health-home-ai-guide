@@ -4,20 +4,20 @@ import { handleApiRequest } from "../helpers/apiHelpers";
 export const landingApi = {
     fetchFeeds: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/rss/list"),
+            apiCall: () => fetch("/api/dashboard/rss/list"),
             errorMessage: "Error fetching feeds",
         }),
 
     fetchRssDigests: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/rss/digest"),
+            apiCall: () => fetch("/api/dashboard/rss/digest"),
             errorMessage: "Error fetching RSS digests",
         }),
 
     refreshAllFeeds: () =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/rss/refresh", {
+                fetch("/api/dashboard/rss/refresh", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ feed_id: null }), // Explicitly send null for feed_id
@@ -29,7 +29,7 @@ export const landingApi = {
     refreshSingleFeed: (feedId) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/rss/refresh", {
+                fetch("/api/dashboard/rss/refresh", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ feed_id: feedId }),
@@ -40,14 +40,14 @@ export const landingApi = {
 
     fetchIncompleteJobs: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/incomplete-jobs-count"),
+            apiCall: () => fetch("/api/patient/incomplete-jobs-count"),
             errorMessage: "Error fetching incomplete tasks count",
         }),
 
     addTodo: (task) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/todos", {
+                fetch("/api/dashboard/todos", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ task }),
@@ -59,7 +59,7 @@ export const landingApi = {
     toggleTodo: (id, completed, task) =>
         handleApiRequest({
             apiCall: () =>
-                fetch(`/api/todos/${id}`, {
+                fetch(`/api/dashboard/todos/${id}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ task, completed: !completed }), // Include both task and completed fields
@@ -70,7 +70,8 @@ export const landingApi = {
 
     deleteTodo: (id) =>
         handleApiRequest({
-            apiCall: () => fetch(`/api/todos/${id}`, { method: "DELETE" }),
+            apiCall: () =>
+                fetch(`/api/dashboard/todos/${id}`, { method: "DELETE" }),
             successMessage: "Todo deleted successfully",
             errorMessage: "Error deleting todo",
         }),
@@ -78,7 +79,7 @@ export const landingApi = {
     addFeed: (url) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/rss/add", {
+                fetch("/api/dashboard/rss/add", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ url }),
@@ -90,7 +91,9 @@ export const landingApi = {
     removeFeed: (feedId) =>
         handleApiRequest({
             apiCall: () =>
-                fetch(`/api/rss/remove/${feedId}`, { method: "DELETE" }),
+                fetch(`/api/dashboard/rss/remove/${feedId}`, {
+                    method: "DELETE",
+                }),
             successMessage: "Feed removed successfully",
             errorMessage: "Error removing feed",
         }),
@@ -98,7 +101,7 @@ export const landingApi = {
     fetchRssItems: (feeds) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/rss/fetch", {
+                fetch("/api/dashboard/rss/fetch", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ feeds }),
@@ -108,26 +111,28 @@ export const landingApi = {
 
     fetchAnalysis: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/analysis/latest"),
+            apiCall: () => fetch("/api/dashboard/analysis/latest"),
             errorMessage: "Error fetching analysis",
         }),
 
     refreshAnalysis: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/analysis/generate", { method: "POST" }),
+            apiCall: () =>
+                fetch("/api/dashboard/analysis/generate", { method: "POST" }),
             successMessage: "Analysis refreshed successfully",
             errorMessage: "Error refreshing analysis",
         }),
 
     fetchServerInfo: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/server/info"),
+            apiCall: () => fetch("/api/dashboard/server/info"),
             errorMessage: "Error fetching server information",
         }),
 
     refreshRssDigests: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/rss/digest/refresh", { method: "POST" }),
+            apiCall: () =>
+                fetch("/api/dashboard/rss/digest/refresh", { method: "POST" }),
             successMessage: "News digest refreshed successfully",
             errorMessage: "Error refreshing digest",
         }),

@@ -180,7 +180,7 @@ export const usePatient = (initialPatient = null) => {
     const searchPatient = async (urNumber, selectedDate) => {
         try {
             const response = await fetch(
-                `/api/search-patient?ur_number=${urNumber}`,
+                `/api/patient/search?ur_number=${urNumber}`,
             );
             if (!response.ok) throw new Error("Search failed");
 
@@ -202,7 +202,7 @@ export const usePatient = (initialPatient = null) => {
                 // Fetch the previous visit summary
                 try {
                     const summaryResponse = await fetch(
-                        `/api/patient-summary/${latestEncounter.id}`,
+                        `/api/patient/summary/${latestEncounter.id}`,
                     );
                     if (summaryResponse.ok) {
                         const summaryData = await summaryResponse.json();

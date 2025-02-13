@@ -4,30 +4,30 @@ import { handleApiRequest } from "../helpers/apiHelpers";
 export const settingsApi = {
     fetchUserSettings: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/user-settings"),
+            apiCall: () => fetch("/api/config/user"),
             errorMessage: "Failed to fetch user settings",
         }),
 
     fetchPrompts: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/prompts"),
+            apiCall: () => fetch("/api/config/prompts"),
             errorMessage: "Failed to fetch prompts",
         }),
 
     fetchConfig: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/config"),
+            apiCall: () => fetch("/api/config/global"),
             errorMessage: "Failed to fetch config",
         }),
 
     fetchOptions: () =>
         handleApiRequest({
-            apiCall: () => fetch("/api/options"),
+            apiCall: () => fetch("/api/config/ollama"),
             errorMessage: "Failed to fetch options",
         }),
 
     fetchModels: (ollamaBaseUrl) => {
-        const apiUrl = `/api/models?ollamaEndpoint=${encodeURIComponent(ollamaBaseUrl)}`;
+        const apiUrl = `/api/config/models?ollamaEndpoint=${encodeURIComponent(ollamaBaseUrl)}`;
         return handleApiRequest({
             apiCall: () => fetch(apiUrl),
             errorMessage: "Failed to fetch models",
@@ -37,7 +37,7 @@ export const settingsApi = {
     savePrompts: (prompts) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/prompts", {
+                fetch("/api/config/prompts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(prompts),
@@ -48,7 +48,7 @@ export const settingsApi = {
     saveConfig: (config) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/config", {
+                fetch("/api/config/global", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(config),
@@ -59,7 +59,7 @@ export const settingsApi = {
     saveOptions: (category, options) =>
         handleApiRequest({
             apiCall: () =>
-                fetch(`/api/options/${category}`, {
+                fetch(`/api/config/ollama/${category}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(options),
@@ -70,7 +70,7 @@ export const settingsApi = {
     saveUserSettings: (userSettings) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/user-settings", {
+                fetch("/api/config/user", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -163,7 +163,7 @@ export const settingsApi = {
     updateConfig: (config) =>
         handleApiRequest({
             apiCall: () =>
-                fetch("/api/config", {
+                fetch("/api/config/global", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

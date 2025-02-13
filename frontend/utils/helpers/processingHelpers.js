@@ -56,7 +56,7 @@ export const processDocument = async (
     });
 
     try {
-        const response = await fetch("/api/process-document", {
+        const response = await fetch("/api/transcribe/process-document", {
             method: "POST",
             body: formData,
         });

@@ -65,7 +65,7 @@ const LandingPage = () => {
 
     const fetchTodos = async () => {
         try {
-            const response = await fetch("/api/todos");
+            const response = await fetch("/api/dashboard/todos");
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }

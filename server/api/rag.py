@@ -20,7 +20,7 @@ router = APIRouter()
 chroma_manager = ChromaManager()
 
 
-@router.get("/rag/files")
+@router.get("/files")
 async def get_files():
     """API endpoint to retrieve the list of document collections."""
     try:
@@ -32,7 +32,7 @@ async def get_files():
         )
 
 
-@router.get("/rag/collection_files/{collection_name}")
+@router.get("/collection_files/{collection_name}")
 async def get_collection_files(collection_name: str):
     """API endpoint to retrieve files for a specific collection."""
     try:
@@ -45,7 +45,7 @@ async def get_collection_files(collection_name: str):
         )
 
 
-@router.post("/rag/modify")
+@router.post("/modify")
 async def modify_collection(request: ModifyCollectionRequest):
     """API endpoint to modify the name of a collection."""
     try:
@@ -63,7 +63,7 @@ async def modify_collection(request: ModifyCollectionRequest):
         )
 
 
-@router.delete("/rag/delete-collection/{name}")
+@router.delete("/delete-collection/{name}")
 async def delete_collection_endpoint(name: str):
     """API endpoint to delete a collection."""
     try:
@@ -79,7 +79,7 @@ async def delete_collection_endpoint(name: str):
         )
 
 
-@router.delete("/rag/delete-file")
+@router.delete("/delete-file")
 async def delete_file_endpoint(request: DeleteFileRequest):
     """API endpoint to delete a file from a collection."""
     try:
@@ -98,7 +98,7 @@ async def delete_file_endpoint(request: DeleteFileRequest):
         )
 
 
-@router.post("/rag/extract-pdf-info")
+@router.post("/extract-pdf-info")
 async def extract_pdf_info(file: UploadFile = File(...)):
     """API endpoint to extract information from a PDF."""
     try:
@@ -132,7 +132,7 @@ async def extract_pdf_info(file: UploadFile = File(...)):
         )
 
 
-@router.post("/rag/commit-to-vectordb")
+@router.post("/commit-to-vectordb")
 async def commit_to_db(request: CommitRequest):
     """API endpoint to commit data to the database."""
     try:
@@ -150,7 +150,7 @@ async def commit_to_db(request: CommitRequest):
         )
 
 
-@router.get("/rag/suggestions")
+@router.get("/suggestions")
 async def get_rag_suggestions():
     """Get specialty-specific RAG chat suggestions."""
     try:
@@ -162,7 +162,7 @@ async def get_rag_suggestions():
         )
 
 
-@router.post("/rag/clear-database")
+@router.post("/clear-database")
 async def clear_database():
     """API endpoint to clear the entire RAG database."""
     try:

@@ -5,7 +5,7 @@ export const patientApi = {
     savePatientData: async (patientData, toast, refreshSidebar) => {
         return handleApiRequest({
             apiCall: () =>
-                fetch(`/api/save-patient`, {
+                fetch(`/api/patient/save`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ patientData }),
@@ -25,7 +25,7 @@ export const patientApi = {
 
     searchPatient: async (urNumber, callbacks = {}) => {
         return handleApiRequest({
-            apiCall: () => fetch(`/api/search-patient?ur_number=${urNumber}`),
+            apiCall: () => fetch(`/api/patient/search?ur_number=${urNumber}`),
             onSuccess: (data) => {
                 if (data.length > 0) {
                     const latestEncounter = data[0];
@@ -54,7 +54,7 @@ export const patientApi = {
 
     fetchPatientDetails: async (patientId, setters) => {
         return handleApiRequest({
-            apiCall: () => fetch(`/api/patient/${patientId}`),
+            apiCall: () => fetch(`/api/patient/id/${patientId}`),
             onSuccess: (patientData) => {
                 if (setters.setPatient) {
                     setters.setPatient(patientData);
@@ -72,7 +72,7 @@ export const patientApi = {
     updateJobsList: async (patientId, jobsList) => {
         return handleApiRequest({
             apiCall: () =>
-                fetch(`/api/update-jobs-list`, {
+                fetch(`/api/patient/update-jobs-list`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ patientId, jobsList }),

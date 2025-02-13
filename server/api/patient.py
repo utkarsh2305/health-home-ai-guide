@@ -31,7 +31,7 @@ import logging
 
 router = APIRouter()
 
-@router.post("/save-patient")
+@router.post("/save")
 async def save_patient_data(request: SavePatientRequest):
     """Saves patient data."""
     patient = request.patientData
@@ -59,7 +59,7 @@ async def save_patient_data(request: SavePatientRequest):
         logging.error(f"Error processing patient data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/patients")
+@router.get("/list")
 async def get_patients(
     date: str,
     template_key: Optional[str] = None,
@@ -104,7 +104,7 @@ async def get_patients(
         logging.error(f"Error fetching patients: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/patient/{id}")
+@router.get("/id/{id}")
 async def get_patient(
     id: int,
     include_history: bool = False
@@ -128,7 +128,7 @@ async def get_patient(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.get("/patient/{id}/history")
+@router.get("/id/{id}/history")
 async def get_patient_history_endpoint(id: int) -> List[Patient]:
     """Get patient's historical encounters with persistent fields."""
     try:
@@ -142,7 +142,7 @@ async def get_patient_history_endpoint(id: int) -> List[Patient]:
         logging.error(f"Error fetching patient history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/search-patient")
+@router.get("/search")
 async def search_patient(ur_number: str) -> List[Patient]:
     """Search for patients by UR number."""
     try:
@@ -153,7 +153,7 @@ async def search_patient(ur_number: str) -> List[Patient]:
         logging.error(f"Error searching patients: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/patient-summary/{id}")
+@router.get("/summary/{id}")
 async def get_patient_summary(id: int):
     """Get patient summary."""
     try:
@@ -168,7 +168,7 @@ async def get_patient_summary(id: int):
         logging.error(f"Error getting patient summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/patients/{id}")
+@router.delete("/id/{id}")
 async def delete_patient(id: int):
     """Delete a patient record."""
     try:
@@ -218,7 +218,7 @@ async def update_patient_jobs(
         logging.error(f"Error updating patient jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/patients-with-jobs")
+@router.get("/with-jobs")
 async def get_patients_with_jobs():
     """Get all patients with outstanding jobs."""
     try:

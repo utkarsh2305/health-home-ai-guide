@@ -12,7 +12,7 @@ def _get_chat_engine():
     return ChatEngine()
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
 async def chat(
     chat_request: ChatRequest,
     chat_engine: ChatEngine = Depends(_get_chat_engine),

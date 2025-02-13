@@ -83,7 +83,7 @@ const Chat = ({
     useEffect(() => {
         const fetchUserSettings = async () => {
             try {
-                const response = await fetch("/api/user-settings");
+                const response = await fetch("/api/config/user");
                 if (!response.ok)
                     throw new Error("Failed to fetch user settings");
                 const data = await response.json();

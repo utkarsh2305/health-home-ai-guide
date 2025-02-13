@@ -195,7 +195,7 @@ const RagChat = ({
         const fetchSuggestions = async () => {
             try {
                 // First get user settings to know the specialty
-                const settingsResponse = await fetch("/api/user-settings");
+                const settingsResponse = await fetch("/api/config/user");
                 const userSettings = await settingsResponse.json();
                 if (userSettings.specialty) {
                     const response = await fetch(`/api/rag/suggestions`);

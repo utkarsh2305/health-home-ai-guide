@@ -14,7 +14,7 @@ from server.utils.document_processing import process_document_content
 router = APIRouter()
 
 
-@router.post("/transcribe", response_model=TranscribeResponse)
+@router.post("/audio", response_model=TranscribeResponse)
 async def transcribe(
     file: UploadFile = File(...),
     name: Optional[str] = Form(None),

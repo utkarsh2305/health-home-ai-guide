@@ -64,12 +64,12 @@ async def test_db():
 
 
 # Include routers
-app.include_router(patient.router, prefix="/api")
-app.include_router(transcribe.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-app.include_router(rag.router, prefix="/api")
-app.include_router(config.router, prefix="/api")
-app.include_router(chat.router, prefix="/api")
+app.include_router(patient.router, prefix="/api/patient")
+app.include_router(transcribe.router, prefix="/api/transcribe")
+app.include_router(dashboard.router, prefix="/api/dashboard")
+app.include_router(rag.router, prefix="/api/rag")
+app.include_router(config.router, prefix="/api/config")
+app.include_router(chat.router, prefix="/api/chat")
 app.include_router(templates.router, prefix="/api/templates")
 app.include_router(letter.router, prefix="/api/letter")
 

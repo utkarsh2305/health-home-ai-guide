@@ -12,7 +12,7 @@ const ClinicSummary = ({
     const fetchPatients = async (date, detailed = true) => {
         try {
             const response = await fetch(
-                `/api/patients?date=${date}&detailed=${detailed}`,
+                `/api/patient/list?date=${date}&detailed=${detailed}`,
             );
             if (!response.ok) {
                 throw new Error("Network response was not ok");
