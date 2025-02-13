@@ -11,12 +11,12 @@ from server.api.patient import router as patient_router
 
 # Create a minimal FastAPI app with the patient router.
 app = FastAPI()
-app.include_router(patient_router, prefix="/api")
+app.include_router(patient_router, prefix="/api/patient")
 client = TestClient(app)
 
 def test_get_patients():
     # Assumes that GET /api/patients?date=2023-06-15 returns a list (possibly empty)
-    response = client.get("/api/patients?date=2023-06-15")
+    response = client.get("/api/patient/list?date=2023-06-15")
     assert response.status_code == 200
     data = response.json()
     # Data should be a list
@@ -31,12 +31,12 @@ async def test_get_patient_not_found(monkeypatch):
 
     # Also need to import HTTPException in server/api/patient.py
     monkeypatch.setattr("server.database.patient.get_patient_by_id", fake_get_patient_by_id)
-    response = client.get("/api/patient/999999")
+    response = client.get("/api/patient/id/999999")
     assert response.status_code == 404
 
 def test_search_patient():
     # Query search-patient endpoint with a dummy UR number
-    response = client.get("/api/search-patient?ur_number=NON_EXISTENT")
+    response = client.get("/api/patient/search?ur_number=NON_EXISTENT")
     assert response.status_code == 200
     data = response.json()
     # Expect data to be a list
@@ -79,7 +79,7 @@ async def test_save_patient(monkeypatch):
         return 123
     monkeypatch.setattr("server.api.patient.save_patient", fake_save_patient)
 
-    response = client.post("/api/save-patient", json=payload)
+    response = client.post("/api/patient/save", json=payload)
     assert response.status_code == 200
 
 def test_delete_patient(monkeypatch):
@@ -90,7 +90,7 @@ def test_delete_patient(monkeypatch):
         return True
 
     monkeypatch.setattr("server.api.patient.delete_patient_by_id", fake_delete_patient_by_id)
-    response = client.delete("/api/patients/123")
+    response = client.delete("/api/patient/id/123")
     assert response.status_code == 200
     data = response.json()
     assert "message" in data

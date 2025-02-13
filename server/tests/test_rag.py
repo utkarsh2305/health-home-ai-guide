@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from server.api.rag import router as rag_router
 
 app = FastAPI()
-app.include_router(rag_router, prefix="/api")
+app.include_router(rag_router, prefix="/api/rag")
 client = TestClient(app)
 
 def test_get_files(monkeypatch):

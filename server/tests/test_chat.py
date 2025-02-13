@@ -13,7 +13,7 @@ from server.api.chat import router
 app = FastAPI()
 # Note: The chat router returns a StreamingResponse.
 # For testing we simulate reading the full streamed content.
-app.include_router(router, prefix="/api")
+app.include_router(router, prefix="/api/chat")
 client = TestClient(app)
 
 
