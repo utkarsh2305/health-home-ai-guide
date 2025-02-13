@@ -218,7 +218,7 @@ async def update_patient_jobs(
         logging.error(f"Error updating patient jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/with-jobs")
+@router.get("/outstanding-jobs")
 async def get_patients_with_jobs():
     """Get all patients with outstanding jobs."""
     try:
