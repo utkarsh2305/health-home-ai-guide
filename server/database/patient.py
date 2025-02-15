@@ -218,6 +218,26 @@ def update_patient(patient: Patient) -> None:
     )
     db.commit()
 
+def update_patient_reasoning(patient_id: int, reasoning_output: dict) -> None:
+    """
+    Update the reasoning_output field for the specified patient.
+
+    Args:
+        patient_id (int): The ID of the patient.
+        reasoning_output (dict): The reasoning output data.
+    """
+    try:
+        reasoning_output_json = json.dumps(reasoning_output)
+        db.cursor.execute(
+            "UPDATE patients SET reasoning_output = ? WHERE id = ?",
+            (reasoning_output_json, patient_id)
+        )
+        db.commit()
+    except Exception as e:
+        db.db.rollback()
+        logging.error(f"Error updating patient reasoning: {e}")
+        raise
+
 def get_patients_by_date(
     date: str,
     template_key: Optional[str] = None,
@@ -241,7 +261,7 @@ def get_patients_by_date(
 
         # Add additional fields if detailed information is requested
         if include_data:
-            query += ", template_data, jobs_list, encounter_summary"
+            query += ", template_data, jobs_list, encounter_summary, reasoning_output"
 
         query += " FROM patients WHERE encounter_date = ?"
         params = [date]
@@ -276,6 +296,13 @@ def get_patients_by_date(
                     except json.JSONDecodeError:
                         patient["jobs_list"] = []
 
+                # Process reasoning output if present
+                if patient.get("reasoning_output"):
+                    try:
+                        patient["reasoning_output"] = json.loads(patient["reasoning_output"])
+                    except json.JSONDecodeError:
+                        patient["reasoning_output"] = None
+
             patients.append(patient)
         return patients
     except Exception as e:
@@ -302,6 +329,12 @@ def get_patient_by_id(patient_id: int) -> Optional[Dict[str, Any]]:
             patient = dict(row)
             if patient["template_data"]:
                 patient["template_data"] = json.loads(patient["template_data"])
+
+            if patient.get("reasoning_output"):
+                try:
+                    patient["reasoning_output"] = json.loads(patient["reasoning_output"])
+                except json.JSONDecodeError:
+                    patient["reasoning_output"] = None
             return patient
         return None
     except Exception as e:

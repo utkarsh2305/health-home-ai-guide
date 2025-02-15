@@ -27,7 +27,6 @@ def generate_jobs_list_from_plan(plan):
         logging.error(f"Error generating jobs list: {e}")
         return "[]"
 
-
 def are_all_jobs_completed(jobs_list):
     """Checks if all jobs in a jobs list are completed."""
     logging.info("Checking if all jobs are completed")
@@ -44,8 +43,6 @@ def are_all_jobs_completed(jobs_list):
         logging.error(f"Error checking jobs completion: {e}")
         return False
 
-
-
 def get_patients_with_outstanding_jobs():
     """Retrieve patients with outstanding (incomplete) jobs.
 
@@ -56,7 +53,7 @@ def get_patients_with_outstanding_jobs():
         db.cursor.execute(
             """
             SELECT id, name, ur_number, dob, encounter_date,
-                   encounter_summary, jobs_list
+                   encounter_summary, jobs_list, reasoning_output
             FROM patients
             WHERE all_jobs_completed = 0
             """
@@ -73,13 +70,18 @@ def get_patients_with_outstanding_jobs():
                 except json.JSONDecodeError:
                     patient["jobs_list"] = []
 
+            # Process reasoning output
+            if patient.get("reasoning_output"):
+                try:
+                    patient["reasoning_output"] = json.loads(patient["reasoning_output"])
+                except json.JSONDecodeError:
+                    patient["reasoning_output"] = None
             patients.append(patient)
 
         return patients
     except Exception as e:
         logging.error(f"Error fetching patients with outstanding jobs: {e}")
         raise
-
 
 def update_patient_jobs_list(patient_id: int, jobs_list: list):
     """Updates a patient's jobs list in the database."""
@@ -110,7 +112,6 @@ def update_patient_jobs_list(patient_id: int, jobs_list: list):
     except Exception as e:
         logging.error(f"Error updating jobs list: {e}")
         raise
-
 
 def count_incomplete_jobs():
     """Counts the number of incomplete jobs across all patients."""

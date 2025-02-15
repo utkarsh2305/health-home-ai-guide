@@ -16,37 +16,6 @@ Phlox is an open-source, local-first clinical tool with the following features:
 - Customizable templates and LLM settings
 - All data stays on your machine
 
-## Important Notes
-
-- LLMs can generate incorrect information
-- All outputs require verification against medical sources
-- Tool for assistance, not replacement of clinical judgment
-- Designed to help surface information and streamline documentation
-
-## Usage Warning
-
-This is an experimental tool. Verify all outputs and exercise appropriate clinical judgment. LLMs can present incorrect information convincingly.
-
-I like some of the philosophy section
-
-# Phlox Overview
-
-## What is Phlox?
-
-Phlox is an open-source, local-first clinical tool with the following features:
-
-- **Patient Records:** Basic database for patient demographics and history
-- **Medical Transcription:** Uses Whisper + Ollama to convert audio to structured notes
-- **Task Management:** Extracts action items from clinical notes
-- **RSS Reader:** Aggregates and summarizes medical news using LLMs
-- **Decision Support:** RAG system using ChromaDB for case discussions with reference to medical documents
-
-## Design
-
-- Runs locally on standard hardware
-- Customizable templates and LLM settings
-- All data stays on your machine
-
 ## Philosophy
 
 The core idea is to use LLMs to expand clinical consideration sets by:

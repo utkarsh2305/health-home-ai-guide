@@ -19,3 +19,12 @@ class FieldResponse(BaseModel):
     key_points: List[str] = Field(
         description="Individual discussion points extracted from the transcript"
     )
+
+# Reasoning
+
+class ClinicalReasoning(BaseModel):
+    thinking: str
+    summary: str
+    differentials: List[str]
+    investigations: List[str]
+    clinical_considerations: List[str]

@@ -22,6 +22,7 @@ const PromptSettingsPanel = ({
     handlePromptChange,
     options,
     handleOptionChange,
+    config,
 }) => {
     const [
         isClinicalHistoryPromptCollapsed,
@@ -36,6 +37,8 @@ const PromptSettingsPanel = ({
     const [isLetterPromptCollapsed, setIsLetterPromptCollapsed] =
         useState(true);
     const [isPromptOptionsCollapsed, setIsPromptOptionsCollapsed] =
+        useState(true);
+    const [isReasoningPromptCollapsed, setIsReasoningPromptCollapsed] =
         useState(true);
 
     return (
@@ -228,6 +231,58 @@ const PromptSettingsPanel = ({
                             />
                         </Collapse>
                     </Box>
+                    {config?.REASONING_ENABLED && ( // Only show if reasoning is enabled
+                        <Box mt="4">
+                            <IconButton
+                                icon={
+                                    isReasoningPromptCollapsed ? (
+                                        <ChevronRightIcon />
+                                    ) : (
+                                        <ChevronDownIcon />
+                                    )
+                                }
+                                onClick={() =>
+                                    setIsReasoningPromptCollapsed(
+                                        !isReasoningPromptCollapsed,
+                                    )
+                                }
+                                aria-label="Toggle Reasoning Prompt"
+                                variant="outline"
+                                size="10"
+                                mr="2"
+                                className="collapse-toggle"
+                            />
+                            <Tooltip label="System prompt used for clinical reasoning analysis">
+                                <Text
+                                    fontSize="sm"
+                                    mb="1"
+                                    mt="4"
+                                    display="inline"
+                                >
+                                    Reasoning Prompt
+                                </Text>
+                            </Tooltip>
+                            <Collapse
+                                in={!isReasoningPromptCollapsed}
+                                animateOpacity
+                            >
+                                <Textarea
+                                    size="sm"
+                                    value={prompts?.reasoning?.system}
+                                    onChange={(e) =>
+                                        handlePromptChange(
+                                            "reasoning",
+                                            "system",
+                                            e.target.value,
+                                        )
+                                    }
+                                    rows={10}
+                                    mt="4"
+                                    className="textarea-style"
+                                />
+                            </Collapse>
+                        </Box>
+                    )}
                     <Box mt="4">
                         <IconButton
                             icon={
@@ -333,6 +388,67 @@ const PromptSettingsPanel = ({
                                         </NumberInput>
                                     </Box>
                                 </Box>
+                                {config?.REASONING_ENABLED && (
+                                    <Box mt="4">
+                                        <Text fontSize="md" fontWeight="bold">
+                                            Reasoning Options
+                                        </Text>
+                                        <Flex gap="4" align="center">
+                                            <Box>
+                                                <Tooltip label="Context window size for the reasoning model">
+                                                    <Text fontSize="sm">
+                                                        num_ctx
+                                                    </Text>
+                                                </Tooltip>
+                                                <NumberInput
+                                                    size="sm"
+                                                    value={
+                                                        options?.reasoning
+                                                            ?.num_ctx
+                                                    }
+                                                    onChange={(newValue) =>
+                                                        handleOptionChange(
+                                                            "reasoning",
+                                                            "num_ctx",
+                                                            newValue,
+                                                        )
+                                                    }
+                                                >
+                                                    <NumberInputField
+                                                        className="input-style"
+                                                        width="100px"
+                                                    />
+                                                </NumberInput>
+                                            </Box>
+                                            <Box>
+                                                <Tooltip label="Temperature setting for the reasoning model">
+                                                    <Text fontSize="sm">
+                                                        temperature
+                                                    </Text>
+                                                </Tooltip>
+                                                <NumberInput
+                                                    size="sm"
+                                                    value={
+                                                        options?.reasoning
+                                                            ?.temperature
+                                                    }
+                                                    onChange={(newValue) =>
+                                                        handleOptionChange(
+                                                            "reasoning",
+                                                            "temperature",
+                                                            newValue,
+                                                        )
+                                                    }
+                                                >
+                                                    <NumberInputField
+                                                        className="input-style"
+                                                        width="100px"
+                                                    />
+                                                </NumberInput>
+                                            </Box>
+                                        </Flex>
+                                    </Box>
+                                )}
                             </HStack>
                         </Collapse>
                     </Box>

@@ -14,10 +14,6 @@ Welcome to the Phlox documentation! This site provides comprehensive information
     - [Dashboard with RSS Reader](./features/dashboard.md)
 - [Architecture Overview](./architecture.md)
 - [Setup and Installation](./setup.md)
-- [Usage Guides](#usage-guides)
-    - [Medical Transcription Feature Usage](./usage/transcription.md)
-    - [Template Management and Customization](./usage/templates.md)
-    - [Task Manager Usage](./usage/task_manager.md)
 - [Warnings, Limitations, and Regulatory Considerations](./warnings.md)
 
 ## Getting Started

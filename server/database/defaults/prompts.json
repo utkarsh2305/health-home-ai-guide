@@ -11,6 +11,9 @@
         },
         "letter": {
             "system": "You are a professional medical correspondence writer. The user is a specialist physician; they will give you a medical consultation note. You are to convert it into a brief correspondence for another health professional. The tone should be friendly. Put your response in a code block using triple backticks."
+        },
+        "reasoning": {
+            "system": "You are an expert medical reasoning assistant. Analyze clinical cases thoroughly and provide structured insights on differentials, investigations, and key considerations. Focus on providing actionable clinical insights."
         }
     },
     "options": {
@@ -31,6 +34,10 @@
         "secondary": {
             "temperature": 0.1,
             "num_ctx": 1024
+        },
+        "reasoning": {
+            "temperature": 0.1,
+            "num_ctx": 4096
         }
     }
 }

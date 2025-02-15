@@ -102,8 +102,8 @@ export const buttonStyles = (props) => ({
         cursor: "pointer",
     },
     ".template-select-button": {
-        borderRadius: "md !important", // Or 'sm', adjust as needed
-        fontWeight: "normal", // Or 'medium' if you prefer
+        borderRadius: "md !important",
+        fontWeight: "normal",
 
         border:
             props.colorMode === "light"

@@ -3,8 +3,11 @@ import logging
 from datetime import datetime, timedelta
 from ollama import AsyncClient as AsyncOllamaClient
 from server.database.connection import PatientDatabase
+from server.database.patient import get_patients_by_date
+from server.utils.helpers import run_clinical_reasoning
 from server.database.config import config_manager
 import random
+import asyncio
 
 db = PatientDatabase()
 logger = logging.getLogger(__name__)
@@ -256,4 +259,92 @@ async def generate_previous_visit_summary(patient_data):
         return summary
     except Exception as e:
         logger.error(f"Error generating previous visit summary: {e}")
+        raise
+
+async def run_nightly_reasoning():
+    """Run reasoning analysis on patients from yesterday and today."""
+    logging.info("Starting nightly reasoning job")
+
+    if not config_manager.get_config().get("REASONING_ENABLED", False):
+        logging.info("Reasoning analysis is disabled")
+        return
+
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        patients = get_patients_by_date(yesterday, include_data=True) + get_patients_by_date(today, include_data=True)
+        logging.info(f"Found {len(patients)} patients to process for dates {yesterday} and {today}")
+
+        patients_to_process = [
+            patient for patient in patients
+            if not patient.get("reasoning_output") and patient.get("template_data")
+        ]
+
+        if not patients_to_process:
+            logging.info("No patients need reasoning analysis")
+            return
+
+        MAX_CONCURRENT_REQUESTS = 5
+        sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+        async def process_patient(patient):
+            patient_id = patient["id"]
+            async with sem:
+                try:
+                    reasoning_output = await run_clinical_reasoning(patient["template_data"])
+                    return {
+                        "patient_id": patient_id,
+                        "success": True,
+                        "reasoning": reasoning_output
+                    }
+                except Exception as e:
+                    logging.error(f"Error processing reasoning for patient {patient_id}: {str(e)}")
+                    return {
+                        "patient_id": patient_id,
+                        "success": False,
+                        "error": str(e)
+                    }
+
+        results = await asyncio.gather(
+            *[process_patient(patient) for patient in patients_to_process]
+        )
+
+        db = PatientDatabase()
+        successful_updates = 0
+        failed_updates = 0
+
+        for result in results:
+            patient_id = result["patient_id"]
+            if result["success"]:
+                try:
+                    db.cursor.execute(
+                        "UPDATE patients SET reasoning_output = ? WHERE id = ?",
+                        (
+                            json.dumps(result["reasoning"].dict()),
+                            patient_id
+                        )
+                    )
+                    successful_updates += 1
+                except Exception as e:
+                    failed_updates += 1
+                    logging.error(f"Database update failed for patient {patient_id}: {str(e)}")
+            else:
+                failed_updates += 1
+
+        try:
+            db.commit()
+        except Exception as e:
+            logging.error(f"Error committing database updates: {str(e)}")
+            raise
+
+        total_processed = len(patients_to_process)
+        logging.info(
+            f"Nightly reasoning completed. "
+            f"Processed {total_processed} patients: "
+            f"{successful_updates} successful, {failed_updates} failed"
+        )
+
+    except Exception as e:
+        logging.error(f"Fatal error in nightly reasoning job: {str(e)}")
         raise

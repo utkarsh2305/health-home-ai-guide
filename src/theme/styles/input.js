@@ -156,4 +156,61 @@ export const inputStyles = (props) => ({
             } !important`,
         },
     },
+    ".reason-button": {
+        backgroundColor: "transparent !important",
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textTertiary} !important`
+                : `${colors.dark.invertedText} !important`,
+        fontSize: "sm !important",
+        borderLeftRadius: "lg !important",
+        borderRightRadius: "none !important",
+        height: "30px !important",
+        fontWeight: "medium !important",
+        _active: {
+            transform: "none !important",
+        },
+        "&:hover": {
+            backgroundColor: `${
+                props.colorMode === "light"
+                    ? lightenColor(colors.light.crust)
+                    : lightenColor(colors.dark.crust)
+            } !important`,
+        },
+    },
+    ".reason-button-active": {
+        backgroundColor: `${
+            props.colorMode === "light" ? colors.light.crust : colors.dark.base
+        } !important`,
+    },
+    ".reason-button-active-patient-table": {
+        backgroundColor: `${
+            props.colorMode === "light" ? colors.light.crust : colors.dark.crust
+        } !important`,
+    },
+    ".scroll-container": {
+        marginLeft: "-5px",
+        scrollbarWidth: "thin",
+        scrollbarColor: `${
+            props.colorMode === "light"
+                ? `${colors.light.overlay0} ${colors.light.surface}`
+                : `${colors.dark.overlay0} ${colors.dark.surface}`
+        }`,
+        "&::-webkit-scrollbar": {
+            width: "4px",
+        },
+        "&::-webkit-scrollbar-track": {
+            backgroundColor:
+                props.colorMode === "light"
+                    ? colors.light.surface
+                    : colors.dark.surface,
+        },
+        "&::-webkit-scrollbar-thumb": {
+            backgroundColor:
+                props.colorMode === "light"
+                    ? colors.light.overlay0
+                    : colors.dark.overlay0,
+            borderRadius: "4px",
+        },
+    },
 });

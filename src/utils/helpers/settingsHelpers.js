@@ -10,6 +10,10 @@ export const settingsHelpers = {
         letter: {
             temperature: data?.letter?.temperature || 0,
         },
+        reasoning: {
+            temperature: data?.reasoning?.temperature || 0,
+            num_ctx: data?.reasoning?.num_ctx || 0,
+        },
     }),
 
     showSuccessToast: (toast, message) => {

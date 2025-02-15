@@ -9,6 +9,7 @@ from server.database.patient import (
     search_patient_by_ur_number,
     save_patient,
     update_patient,
+    update_patient_reasoning,
     get_patients_by_date,
     get_patient_by_id,
     get_patient_history
@@ -25,7 +26,7 @@ from server.database.jobs import (
     count_incomplete_jobs,
 )
 
-from server.utils.helpers import summarize_encounter
+from server.utils.helpers import summarize_encounter, run_clinical_reasoning
 from server.database.analysis import generate_previous_visit_summary
 import logging
 
@@ -67,11 +68,8 @@ async def get_patients(
 ) -> List[Patient]:
     """Get patients for a specific date."""
     try:
-        # Use detailed parameter for backward compatibility
         include_data = detailed and detailed.lower() == "true"
-
         patients = get_patients_by_date(date, template_key, include_data)
-
 
         if include_data:
             return JSONResponse(content=[
@@ -86,6 +84,7 @@ async def get_patients(
                     ),
                     "encounter_summary": patient.get("encounter_summary", ""),
                     "dob": patient["dob"],
+                    "reasoning": patient.get("reasoning_output"),  # Add this line
                 }
                 for patient in patients
             ])
@@ -232,12 +231,14 @@ async def get_patients_with_jobs():
                 "encounter_summary": patient.get("encounter_summary", ""),
                 "dob": patient["dob"],
                 "encounter_date": patient["encounter_date"],
+                "reasoning": patient.get("reasoning_output"),  # Add this line
             }
             for patient in patients
         ])
     except Exception as e:
         logging.error(f"Error fetching patients with jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/incomplete-jobs-count")
 async def get_incomplete_jobs_count():
@@ -250,4 +251,26 @@ async def get_incomplete_jobs_count():
     except Exception as e:
         logging.error(f"Error counting incomplete jobs: {e}")
         print("TRACEBACK:", traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{patient_id}/reasoning")
+async def generate_reasoning(patient_id: int):
+    """Run reasoning analysis on a completed patient note."""
+    try:
+        patient = get_patient_by_id(patient_id)
+        if not patient:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
+        reasoning_output = await run_clinical_reasoning(
+            patient["template_data"],
+            patient["dob"],
+            patient["encounter_date"],
+            patient["gender"]
+        )
+
+        update_patient_reasoning(patient_id, reasoning_output.dict())
+
+        return JSONResponse(content=reasoning_output.dict())
+    except Exception as e:
+        logging.error(f"Reasoning error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

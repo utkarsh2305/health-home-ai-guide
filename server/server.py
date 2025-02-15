@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from server.api import chat, config, dashboard, patient, rag, transcribe, templates, letter
 from server.database.config import ConfigManager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from server.database.analysis import generate_daily_analysis
+from server.database.analysis import generate_daily_analysis, run_nightly_reasoning
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +18,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+app = FastAPI(
+    title="Phlox",
+    version="0.2-pre"
+)
 
 scheduler = AsyncIOScheduler()
 
@@ -38,9 +41,11 @@ BUILD_DIR = Path("/usr/src/app/build")
 IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 
-# Schedule daily analysis at 3 AM
+# Schedule daily analysis
 scheduler.add_job(generate_daily_analysis, "cron", hour=3)
 
+# Schedule reasoning analysis
+scheduler.add_job(run_nightly_reasoning, "cron", hour=4)
 
 # Start the scheduler when the app starts
 @app.on_event("startup")

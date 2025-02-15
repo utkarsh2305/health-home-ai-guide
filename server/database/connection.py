@@ -8,7 +8,7 @@ from server.database.defaults.templates import DefaultTemplates
 from server.database.defaults.letters import DefaultLetters
 
 class PatientDatabase:
-    SCHEMA_VERSION = 1  # Current schema version
+    SCHEMA_VERSION = 2  # Current schema version
 
     def connect_to_database(self):
         """Establish encrypted database connection."""
@@ -174,6 +174,7 @@ class PatientDatabase:
                     )
                     if migration_method:
                         logging.info(f"Running migration to version {version}")
+                        print(f"Running migration to version {version}")
                         migration_method()
 
                 # Update schema version
@@ -359,6 +360,56 @@ class PatientDatabase:
             )
         """
         )
+        # Load initial data from JSON files
+        json_path = os.path.join(
+            os.path.dirname(__file__),
+            'defaults',
+            'prompts.json'
+        )
+        with open(json_path) as f:
+            prompts_data = json.load(f)
+
+    # Initialize config with default entries
+        default_config = {
+            "WHISPER_BASE_URL": "&nbsp;",
+            "WHISPER_MODEL": "&nbsp;",
+            "WHISPER_KEY": "&nbsp;",
+            "OLLAMA_BASE_URL": "&nbsp;",
+            "PRIMARY_MODEL": "&nbsp;",
+            "SECONDARY_MODEL": "&nbsp;",
+            "EMBEDDING_MODEL": "&nbsp;",
+            "DAILY_SUMMARY": "&nbsp;"
+        }
+
+        for key, value in default_config.items():
+            self.cursor.execute(
+                "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                (key, json.dumps(value)),
+            )
+            for key, prompt in prompts_data["prompts"].items():
+                    if key != "reasoning":  # Skip reasoning prompt for v1
+                        self.cursor.execute(
+                            """
+                            INSERT OR REPLACE INTO prompts
+                            (key, system)
+                            VALUES (?, ?)
+                            """,
+                            (
+                                key,
+                                prompt.get("system", ""),
+                            ),
+                        )
+
+        default_options = prompts_data["options"].get("general", {})
+        for category, options in prompts_data["options"].items():
+            if category != "reasoning":
+                for key, value in options.items():
+                    actual_value = options.get(key, default_options.get(key))
+                    if actual_value is not None:
+                        self.cursor.execute(
+                            "INSERT OR REPLACE INTO options (category, key, value) VALUES (?, ?, ?)",
+                            (category, key, json.dumps(actual_value)),
+                        )
 
         letter_templates = DefaultLetters.get_default_letter_templates()
         for letter_templates in letter_templates:
@@ -366,6 +417,73 @@ class PatientDatabase:
                 INSERT INTO letter_templates (id, name, instructions, created_at)
                 VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             """, letter_templates)
+
+    def _migrate_to_v2(self):
+        """Add reasoning analysis support"""
+        try:
+            # Add reasoning_output column to patients table
+            self.cursor.execute(
+                """
+                ALTER TABLE patients
+                ADD COLUMN reasoning_output JSON
+                """
+            )
+
+            # Add index for encounter_date to optimize nightly processing
+            self.cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_reasoning_date
+                ON patients(encounter_date, reasoning_output)
+                """
+            )
+
+            # Add configuration for reasoning model and toggle
+            self.cursor.execute(
+                """
+                INSERT OR IGNORE INTO config (key, value)
+                VALUES
+                    ('REASONING_MODEL', ?),
+                    ('REASONING_ENABLED', ?)
+                """,
+                (json.dumps("&nbsp;"), json.dumps(False))
+            )
+
+            json_path = os.path.join(
+                os.path.dirname(__file__),
+                'defaults',
+                'prompts.json'
+            )
+            with open(json_path) as f:
+                defaults = json.load(f)
+
+            # Add new reasoning prompt
+            reasoning_prompt = defaults["prompts"]["reasoning"]["system"]
+            self.cursor.execute(
+                """
+                INSERT OR IGNORE INTO prompts (key, system)
+                VALUES (?, ?)
+                """,
+                ("reasoning", reasoning_prompt)
+            )
+
+            # Add reasoning options
+            reasoning_options = defaults["options"]["reasoning"]
+            for key, value in reasoning_options.items():
+                self.cursor.execute(
+                    """
+                    INSERT OR IGNORE INTO options (category, key, value)
+                    VALUES (?, ?, ?)
+                    """,
+                    ("reasoning", key, str(value))
+                )
+
+            self.db.commit()
+            logging.info("Successfully migrated to schema version 2")
+
+        except Exception as e:
+            logging.error(f"Error during v2 migration: {e}")
+            self.db.rollback()
+            raise
 
     def test_database(self):
         """Test database functionality with sample data."""

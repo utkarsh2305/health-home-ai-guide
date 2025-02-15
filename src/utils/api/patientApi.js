@@ -63,6 +63,7 @@ export const patientApi = {
                     setters.setSelectedDate(patientData.encounter_date);
                     setters.setIsFromOutstandingJobs(false);
                 }
+                console.log(patientData);
                 return patientData;
             },
             errorMessage: "Failed to fetch patient details",
@@ -78,6 +79,19 @@ export const patientApi = {
                     body: JSON.stringify({ patientId, jobsList }),
                 }),
             errorMessage: "Failed to update jobs list",
+        });
+    },
+
+    generateReasoning: async (patientId, toast) => {
+        return handleApiRequest({
+            apiCall: () =>
+                fetch(`/api/patient/${patientId}/reasoning`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                }),
+            successMessage: "Clinical reasoning generated successfully.",
+            errorMessage: "Error running clinical reasoning",
+            toast,
         });
     },
 };

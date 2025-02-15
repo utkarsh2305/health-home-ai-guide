@@ -6,7 +6,7 @@ services:
         ports:
             - "5000:5000"
         environment:
-            - DB_ENCRYPTION_KEY= # Replace with your key
+            - DB_ENCRYPTION_KEY= ${DB_ENCRYPTION_KEY}
             - REACT_APP_BACKEND_URL= # Replace with your desired URL
             - TZ= # Replace with your timezone
         volumes:

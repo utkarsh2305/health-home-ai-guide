@@ -3,10 +3,12 @@ from datetime import datetime
 from ollama import AsyncClient
 from server.schemas.patient import Patient, Condition
 from server.database.config import config_manager
+from server.schemas.grammars import ClinicalReasoning
 import logging
 import asyncio
 from pydantic import BaseModel
 from typing import Optional
+import json
 
 
 async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
@@ -105,6 +107,50 @@ async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
 
     return summary, condition
 
+async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: str, gender: str):
+    config = config_manager.get_config()
+    prompts = config_manager.get_prompts_and_options()
+    client = AsyncClient(host=config["OLLAMA_BASE_URL"])
+
+    age = calculate_age(dob, encounter_date)
+    reasoning_options = prompts["options"].get("reasoning", {})
+    reasoning_prompt = prompts["prompts"]["reasoning"]["system"] # Assuming this structure
+
+    # Format the clinical note more naturally
+    formatted_note = ""
+    for section_name, content in template_data.items():
+        if content:
+            # Convert snake_case to Title Case for section names
+            section_title = section_name.replace('_', ' ').title()
+            formatted_note += f"{section_title}:\n{content}\n\n"
+
+    prompt = f"""{reasoning_prompt}
+
+    Please analyze this case:
+
+    Demographics: {age} year old {'male' if gender == 'M' else 'female'}
+
+    Clinical Note:
+    ```
+    {formatted_note}
+    ```
+
+    Consider:
+    1. A brief, one-sentence summary of the clinical encounter.
+    2. Differential diagnoses
+    3. Recommended investigations
+    4. Key clinical considerations
+
+    Structure your response using JSON; do your <thinking> (raw reasoning) in the 'thinking' field. Then proceed to generate keywords for 'differentials' (top 3),'investigations' (5-7 items), and 'clinical_considerations' (3-5 items) in the respective JSON field."""
+
+    response = await client.chat(
+        model=config["REASONING_MODEL"],
+        messages=[{"role": "user", "content": prompt}],
+        format=ClinicalReasoning.model_json_schema(),
+        options=reasoning_options
+    )
+
+    return ClinicalReasoning.model_validate_json(response.message.content)
 
 def calculate_age(dob: str, encounter_date: str = None) -> int:
     """

@@ -13,7 +13,7 @@ import {
     useTemplateSelection,
 } from "../utils/templates/templateContext";
 import PatientInfoBar from "../components/patient/PatientInfoBar";
-import Transcription from "../components/patient/Transcription";
+import Scribe from "../components/patient/Scribe";
 import Summary from "../components/patient/Summary";
 import Chat from "../components/patient/Chat";
 import Letter from "../components/patient/Letter";
@@ -504,7 +504,7 @@ const PatientDetails = ({
                     isSearchedPatient={isSearchedPatient}
                 />
 
-                <Transcription
+                <Scribe
                     isTranscriptionCollapsed={transcription.isCollapsed}
                     toggleTranscriptionCollapse={transcription.toggle}
                     mode={mode}
@@ -523,6 +523,8 @@ const PatientDetails = ({
                     setLoading={setLoading}
                     previousVisitSummary={patient.previous_visit_summary}
                     template={currentTemplate}
+                    patientId={patient.id}
+                    reasoning={patient.reasoning_output || null}
                 />
 
                 <Summary

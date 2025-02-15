@@ -111,29 +111,31 @@ class ConfigManager:
 
     def update_options(self, category, new_options):
         """Updates options for a specific category in the database."""
-        # Load current options
-
         if category not in self.options:
             self.options[category] = {}
 
-        # Update only if the key is present
+        # Update only if the key is present and convert types
         for key, value in new_options.items():
-            if (
-                key in self.options[category]
-                or key == "num_ctx"
-                or key == "temperature"
-            ):
+            if (key in self.options[category] or
+                key == "num_ctx" or
+                key == "temperature"):
+
+                # Convert types before saving
+                if key == "temperature":
+                    value = float(value)
+                elif key == "num_ctx":
+                    value = int(value)
+
                 self.options[category][key] = value
 
-        for key, value in new_options.items():
-
-            self.db.cursor.execute(
-                "INSERT OR REPLACE INTO options (category, key, value) VALUES (?, ?, ?)",
-                (category, key, json.dumps(value)),
-            )
+                # Save to database with converted value
+                self.db.cursor.execute(
+                    "INSERT OR REPLACE INTO options (category, key, value) VALUES (?, ?, ?)",
+                    (category, key, json.dumps(value)),
+                )
 
         self.db.commit()
-        self._load_configs()  # Reload to ensure consistency
+        self._load_configs()
 
     def reset_to_defaults(self):
         """Resets prompts and options to their default values."""
@@ -145,61 +147,11 @@ class ConfigManager:
         self._initialize_database()
 
     def _initialize_database(self):
-        """Initializes the database with default configurations, prompts, and options."""
+        """Initialize database if empty (now just a check)"""
         self.db.cursor.execute("SELECT COUNT(*) FROM config")
         config_count = self.db.cursor.fetchone()[0]
         if config_count == 0:
-            # Initialize config with default entries
-            default_config = {
-                "WHISPER_BASE_URL": "&nbsp;",
-                "WHISPER_MODEL": "&nbsp;",
-                "WHISPER_KEY": "&nbsp;",
-                "OLLAMA_BASE_URL": "&nbsp;",
-                "PRIMARY_MODEL": "&nbsp;",
-                "SECONDARY_MODEL": "&nbsp;",
-                "EMBEDDING_MODEL": "&nbsp;",
-                "DAILY_SUMMARY": "&nbsp;",
-            }
-            for key, value in default_config.items():
-                self.db.cursor.execute(
-                    "INSERT INTO config (key, value) VALUES (?, ?)",
-                    (key, json.dumps(value)),
-                )
-
-        # Load initial data from JSON files
-        prompts_path = "/usr/src/app/server/database/defaults/prompts.json"
-
-        with open(prompts_path, "r") as f:
-            prompts_data = json.load(f)
-
-        # Populate database tables
-        # Prompts
-        for key, prompt in prompts_data["prompts"].items():
-            self.db.cursor.execute(
-                """
-                INSERT OR REPLACE INTO prompts
-                (key, system)
-                VALUES (?, ?)
-                """,
-                (
-                    key,
-                    prompt.get("system", ""),
-                ),
-            )
-
-        # Options
-        default_options = prompts_data["options"].get("general", {})
-        for category, options in prompts_data["options"].items():
-            for key, value in options.items():
-                actual_value = options.get(key, default_options.get(key))
-                if actual_value is not None:
-                    self.db.cursor.execute(
-                        "INSERT OR REPLACE INTO options (category, key, value) VALUES (?, ?, ?)",
-                        (category, key, json.dumps(actual_value)),
-                    )
-
-        self.db.commit()
-        self._load_configs()
+            self._load_configs()  # Just load whatever is there
 
     def get_user_settings(self):
         """Retrieves user settings from the database."""
