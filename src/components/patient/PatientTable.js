@@ -388,7 +388,7 @@ const PatientTable = ({
                         return acc;
                     }, {}),
                 )
-                    .sort((a, b) => a.id - b.id)
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
                     .map(([date, patients]) => (
                         <Box key={date} mb={8}>
                             <Text as="h3" mb={2}>
@@ -407,7 +407,7 @@ const PatientTable = ({
                                     </Thead>
                                     <Tbody>
                                         {patients
-                                            .sort((a, b) => a.id - b.id)
+                                            .sort((a, b) => b.id - a.id)
                                             .map((patient, index) =>
                                                 renderPatientRow(
                                                     patient,

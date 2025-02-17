@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/public/readme_logo.webp" width="300" alt="Phlox Logo">
+  <img src="/docs/images/readme_logo.png" width="300" alt="Phlox Logo">
 </p>
 
 <div align="center">
@@ -23,6 +23,7 @@ Phlox is an open-source patient management system integrating AI-powered medical
 - **✅ Task Manager:**  Parse clinical plans into actionable task lists with AI-generated summaries.
 - **✉️  Correspondence Generation:**  One-click generation of patient letters based on clinical notes.
 - **🤖 AI-chat/RAG:** Chat with an LLM about cases, backed by a local document knowledge base (ChromaDB).
+- **🧠 Clinical Reasoning:**  AI-assisted differential diagnosis and investigation planning
 - **📰 Dashboard with RSS Reader:** Stay updated with LLM-summarized articles from medical RSS feeds.
 
 ## Stack 🛠️
@@ -39,7 +40,7 @@ Phlox is an open-source patient management system integrating AI-powered medical
 1. **Prerequisites:** Podman/Docker, Ollama, Whisper endpoint.
 2. **Clone:** `git clone https://github.com/bloodworks-io/phlox.git && cd phlox`
 3. **Build:** `podman build -t phlox:latest .`
-4. **Environment:** Create `.env` in `phlox-dev/` (see example in documentation).
+4. **Environment:** Create `.env` in `phlox/` (see example in documentation).
 5. **Run:** `podman-compose up` (Production) or `podman-compose -f podman-compose.dev.yml up` (Development).
 6. **Access:** http://localhost:5000
 

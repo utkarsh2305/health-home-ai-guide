@@ -10,7 +10,7 @@ Welcome to the Phlox documentation! This site provides comprehensive information
     - [Flexible Template System](./features/templates.md)
     - [Task Manager](./features/task_manager.md)
     - [Correspondence Generation](./features/correspondence.md)
-    - [Decision-Support/RAG](./features/rag.md)
+    - [AI Features](./features/ai.md)
     - [Dashboard with RSS Reader](./features/dashboard.md)
 - [Architecture Overview](./architecture.md)
 - [Setup and Installation](./setup.md)

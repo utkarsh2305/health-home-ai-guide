@@ -292,7 +292,12 @@ async def run_nightly_reasoning():
             patient_id = patient["id"]
             async with sem:
                 try:
-                    reasoning_output = await run_clinical_reasoning(patient["template_data"])
+                    reasoning_output = await run_clinical_reasoning(
+                                    patient["template_data"],
+                                    patient["dob"],
+                                    patient["encounter_date"],
+                                    patient["gender"]
+                                )
                     return {
                         "patient_id": patient_id,
                         "success": True,
