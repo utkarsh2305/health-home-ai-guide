@@ -25,5 +25,5 @@ Create and manage letter templates in Settings:
 - Set default template for quick generation
 
 <p align="center">
-<img src="../images/correspondence.png" width="500px" alt="Document Chat"/>
+<img src="../images/correspondence.png" width="500px" alt="Letter Generation"/>
 </p>
