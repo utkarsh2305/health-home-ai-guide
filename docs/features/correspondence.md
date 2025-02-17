@@ -23,3 +23,7 @@ Create and manage letter templates in Settings:
 - Default templates included
 - Custom templates with specific instructions
 - Set default template for quick generation
+
+<p align="center">
+<img src="../images/correspondence.png" width="500px" alt="Document Chat"/>
+</p>
