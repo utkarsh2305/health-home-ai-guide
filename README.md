@@ -43,9 +43,9 @@ Phlox is an open-source patient management system integrating AI-powered medical
 
 1. **Prerequisites:** Podman/Docker, Ollama, Whisper endpoint.
 2. **Clone:** `git clone https://github.com/bloodworks-io/phlox.git && cd phlox`
-3. **Build:** `podman build -t phlox:latest .`
+3. **Build:** `docker build -t phlox:latest .`
 4. **Environment:** Create `.env` in `phlox/` (see example in documentation).
-5. **Run:** `podman-compose up` (Production) or `podman-compose -f podman-compose.dev.yml up` (Development).
+5. **Run:** `docker-compose up` (Production) or `docker-compose -f docker-compose.dev.yml up` (Development).
 6. **Access:** http://localhost:5000
 
 **For detailed setup, feature explanations, and important warnings, please see the [Documentation](./docs/README.md).**
