@@ -1,7 +1,7 @@
 # Architecture Overview
-
-<img src="images/architecture.png" width="500" alt="Phlox Architecture"/>
-
+<p align="center">
+<img src="images/architecture.png" alt="Phlox Architecture"/>
+</p>p>
 ## Components
 
 ### Frontend (React/Chakra UI)
