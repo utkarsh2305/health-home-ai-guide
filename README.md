@@ -26,6 +26,10 @@ Phlox is an open-source patient management system integrating AI-powered medical
 - **🧠 Clinical Reasoning:**  AI-assisted differential diagnosis and investigation planning
 - **📰 Dashboard with RSS Reader:** Stay updated with LLM-summarized articles from medical RSS feeds.
 
+<p align="center">
+  <img src="/docs/images/transcription.png" width="500" alt="Phlox Logo">
+</p>
+
 ## Stack 🛠️
 
 - **Frontend:** React/Chakra UI
