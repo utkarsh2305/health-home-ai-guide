@@ -8,7 +8,7 @@ Phlox is an open-source, local-first clinical tool with the following features:
 - **Medical Transcription:** Uses Whisper + Ollama to convert audio to structured notes
 - **Task Management:** Extracts action items from clinical notes
 - **RSS Reader:** Aggregates and summarizes medical news using LLMs
-- **Decision Support:** RAG system using ChromaDB for case discussions with reference to medical documents
+- **AI Assistant:** RAG system using ChromaDB for case discussions with reference to medical documents. Reasoning model interface.
 
 ## Design
 
