@@ -2,6 +2,7 @@
 <p align="center">
 <img src="images/architecture.png" width="500px" alt="Phlox Architecture"/>
 </p>
+
 ## Components
 
 ### Frontend (React/Chakra UI)
