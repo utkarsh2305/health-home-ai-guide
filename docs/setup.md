@@ -10,7 +10,7 @@ Before you begin, ensure you have the following prerequisites installed and conf
 
 2.  **Ollama Instance:** Phlox relies on Ollama to run Large Language Models. You need a running Ollama instance, either:
     - **Locally:** [Install Ollama](https://ollama.com/) on your machine and ensure it's running.  You'll likely want to pull models like `llama3.3`, `mistral`, or similar using `ollama pull <model_name>`.
-    - **Remotely:** If you have a server with Ollama running, you can configure Phlox to connect to it.
+    - **Remotely:** If you have a remote server with Ollama running, you can configure Phlox to connect to it.
 
 3.  **Whisper-compatible Transcription Service:** Phlox needs a service to transcribe audio into text. You have a few options:
     - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speeches-ai/speaches) is a self-hostable, open-source Whisper server.  Follow their instructions to set up an instance. This is recommended for local, privacy-focused setups.
@@ -60,7 +60,7 @@ Follow these steps for a quick installation:
     Open your web browser and navigate to [http://localhost:3000](http://localhost:5000).
 
 6.  **Initial Configuration:**
-    Once Phlox is running, access the **Settings** page within the application (usually found in a user menu or navigation bar). Configure the following:
+    Once Phlox is running, access the **Settings** page within the application:
     - **Ollama Endpoint:**  Verify or update the Ollama API URL if needed.
     - **Transcription Endpoint:** **Ensure the Whisper API URL is correctly configured to match your transcription service.** Test the connection if possible. Depending on your endpoint configuration, you may need to specify a model and an API-key.
     - **Model Selection:**  Model selection options will depend on the models available in your Ollama instance.
