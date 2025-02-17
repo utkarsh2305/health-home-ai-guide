@@ -20,3 +20,7 @@ Plan:
 3. Mark tasks complete by clicking checkboxes
 
 No setup needed - tasks are auto-generated when saving notes. The sidebar shows a count of incomplete tasks.
+
+<p align="center">
+<img src="../images/jobs.png" width="500px" alt="Task Manager"/>
+</p>
