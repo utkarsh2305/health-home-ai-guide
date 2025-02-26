@@ -12,7 +12,6 @@ export const sidebarStyles = (props) => ({
             props.colorMode === "light"
                 ? colors.light.sidebar.background
                 : colors.dark.sidebar.background,
-        padding: "5px",
         color: colors.light.sidebar.text,
         boxShadow: "lg",
         display: "flex",
@@ -27,7 +26,7 @@ export const sidebarStyles = (props) => ({
                 ? colors.light.sidebar.item
                 : colors.dark.sidebar.item,
         color: colors.light.invertedText,
-        height: "35px",
+        height: "32px",
         fontSize: "1rem !important",
         fontWeight: "normal",
     },
@@ -58,7 +57,7 @@ export const sidebarStyles = (props) => ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        height: "35px",
+        height: "32px",
         fontWeight: "normal",
     },
     ".new-patient:hover": {
