@@ -40,6 +40,7 @@ const Sidebar = ({
     handleNavigation,
     isCollapsed,
     toggleSidebar,
+    isSmallScreen,
 }) => {
     const [patients, setPatients] = useState([]);
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -131,27 +132,34 @@ const Sidebar = ({
             display="flex"
             flexDirection="column"
             w={isCollapsed ? "50px" : "200px"}
-            transition="width 0.3s ease, padding 0.3s ease"
+            transition="all 0.3s ease"
             zIndex="100"
+            transform={
+                isSmallScreen && isCollapsed
+                    ? "translateX(-100%)"
+                    : "translateX(0)"
+            }
         >
-            {/* Toggle button */}
-            <Tooltip
-                label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                placement="right"
-            >
-                <IconButton
-                    icon=<HamburgerIcon />
-                    onClick={toggleSidebar}
-                    position="absolute"
-                    top="5px"
-                    right={isCollapsed ? "10px" : "5px"}
-                    size="sm"
-                    borderRadius="sm"
-                    aria-label="Toggle sidebar"
-                    zIndex="200"
-                    className="sidebar-toggle"
-                />
-            </Tooltip>
+            {/* Only show the internal toggle button on larger screens */}
+            {!isSmallScreen && (
+                <Tooltip
+                    label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                    placement="right"
+                >
+                    <IconButton
+                        icon={<HamburgerIcon />}
+                        onClick={toggleSidebar}
+                        position="absolute"
+                        top="5px"
+                        left="8px"
+                        size="sm"
+                        borderRadius="sm"
+                        aria-label="Toggle sidebar"
+                        zIndex="200"
+                        className="sidebar-toggle"
+                    />
+                </Tooltip>
+            )}
 
             {!isCollapsed && (
                 <VStack
@@ -170,6 +178,7 @@ const Sidebar = ({
                         display="flex"
                         justifyContent="center"
                         width="100%"
+                        mt="5px" // Added margin-top to account for the toggle button spacing
                     >
                         <Image
                             src="/logo.webp"

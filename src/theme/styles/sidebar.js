@@ -101,6 +101,6 @@ export const sidebarStyles = (props) => ({
     },
 
     ".sidebar-toggle:hover": {
-        backgroundColor: "var(--chakra-colors-gray-100)",
+        background: "none",
     },
 });

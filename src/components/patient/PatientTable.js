@@ -149,6 +149,7 @@ const PatientTable = ({
                         className="green-button"
                         size="sm"
                         onClick={() => handleSelectPatient(patient)}
+                        maxW="200px"
                     >
                         Go to Encounter
                     </Button>

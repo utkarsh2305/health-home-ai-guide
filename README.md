@@ -18,6 +18,7 @@ Phlox is an open-source patient management system integrating AI-powered medical
 
 ## Key Features ✨
 
+- **🔒 100% Local & Private:** Runs entirely on your machine with no third-party services - all data stays local, using only free, open-source tools.
 - **🎤 AI Medical Transcription & Summarization:** Convert audio to structured clinical notes using customizable templates.
 - **📝 Flexible Template System:**  Structure clinical notes to your preferences, with versioning and automated template generation from example notes.
 - **✅ Task Manager:**  Parse clinical plans into actionable task lists with AI-generated summaries.
@@ -25,6 +26,7 @@ Phlox is an open-source patient management system integrating AI-powered medical
 - **🤖 AI-chat/RAG:** Chat with an LLM about cases, backed by a local document knowledge base (ChromaDB).
 - **🧠 Clinical Reasoning:**  AI-assisted differential diagnosis and investigation planning
 - **📰 Dashboard with RSS Reader:** Stay updated with LLM-summarized articles from medical RSS feeds.
+- **🆓 Free & Libre Software:** Completely free (as in freedom) - study, modify, and share as you wish.
 
 <p align="center">
   <img src="/docs/images/transcription.png" width="500" alt="Phlox Logo">

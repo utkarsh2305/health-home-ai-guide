@@ -7,7 +7,7 @@ import {
     IconButton,
     useToast,
 } from "@chakra-ui/react";
-import { SunIcon, MoonIcon } from "@chakra-ui/icons";
+import { SunIcon, MoonIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { useState, useEffect, useCallback } from "react";
 import { TemplateProvider } from "./utils/templates/templateContext";
 import Sidebar from "./components/layout/Sidebar";
@@ -24,6 +24,7 @@ import {
     handleFetchPatientLetter,
 } from "./utils/patient/patientHandlers";
 import { usePatient } from "./utils/hooks/usePatient";
+import { useBreakpointValue } from "@chakra-ui/react";
 
 function AppContent() {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -36,7 +37,6 @@ function AppContent() {
     const { colorMode, toggleColorMode } = useColorMode();
     const [isFromOutstandingJobs, setIsFromOutstandingJobs] = useState(false);
     const [resetLetter, setResetLetter] = useState(null);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     // Use the patient hook for all patient-related state
     const {
@@ -149,12 +149,66 @@ function AppContent() {
             window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [isModified]);
 
+    // Sidebar Items
     const toggleSidebar = useCallback(() => {
         setIsSidebarCollapsed((prev) => !prev);
     }, []);
 
+    // This will return true for "base" and "sm" breakpoints, false for larger screens
+    const defaultCollapsed = useBreakpointValue({
+        base: true,
+        sm: true,
+        md: false,
+    });
+
+    // Initialize sidebar state with the breakpoint-dependent value
+    const [isSidebarCollapsed, setIsSidebarCollapsed] =
+        useState(defaultCollapsed);
+
+    const isSmallScreen = useBreakpointValue({ base: true, md: false });
+
+    const sidebarShouldHover = isSmallScreen && !isSidebarCollapsed;
+
+    // Update sidebar state whenever the breakpoint changes
+    useEffect(() => {
+        if (defaultCollapsed !== undefined) {
+            setIsSidebarCollapsed(defaultCollapsed);
+        }
+    }, [defaultCollapsed]);
+
     return (
-        <Flex>
+        <Flex position="relative">
+            {/* Floating hamburger button for small screens */}
+            {isSmallScreen && (
+                <IconButton
+                    icon={<HamburgerIcon />}
+                    onClick={toggleSidebar}
+                    position="fixed"
+                    top="10px"
+                    left="10px"
+                    zIndex="101"
+                    aria-label="Toggle sidebar"
+                    size="md"
+                    boxShadow="md"
+                    borderRadius="md"
+                />
+            )}
+
+            {/* Overlay when sidebar is expanded */}
+            {isSmallScreen && !isSidebarCollapsed && (
+                <Box
+                    position="fixed"
+                    top="0"
+                    left="0"
+                    right="0"
+                    bottom="0"
+                    bg="blackAlpha.600"
+                    zIndex="90"
+                    onClick={toggleSidebar}
+                    transition="all 0.3s"
+                />
+            )}
+
             <Sidebar
                 onNewPatient={handleNewPatient}
                 onSelectPatient={handleSelectPatient}
@@ -162,16 +216,16 @@ function AppContent() {
                 setSelectedDate={setSelectedDate}
                 refreshKey={refreshKey}
                 handleNavigation={handleNavigation}
-                refreshSidebar={refreshSidebar}
                 isCollapsed={isSidebarCollapsed}
                 toggleSidebar={toggleSidebar}
+                isSmallScreen={isSmallScreen}
             />
 
             <Box
                 flex="1"
-                ml={isSidebarCollapsed ? "50px" : "200px"}
-                mr="0"
-                p="0"
+                ml={isSmallScreen ? "0" : isSidebarCollapsed ? "50px" : "200px"}
+                p={isSmallScreen ? "6" : "0"}
+                pt={isSmallScreen ? "50px" : "0"}
                 className="main-bg"
                 minH="100vh"
                 transition="margin-left 0.3s ease"
