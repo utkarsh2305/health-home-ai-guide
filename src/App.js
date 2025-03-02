@@ -36,6 +36,7 @@ function AppContent() {
     const { colorMode, toggleColorMode } = useColorMode();
     const [isFromOutstandingJobs, setIsFromOutstandingJobs] = useState(false);
     const [resetLetter, setResetLetter] = useState(null);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     // Use the patient hook for all patient-related state
     const {
@@ -148,6 +149,10 @@ function AppContent() {
             window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [isModified]);
 
+    const toggleSidebar = useCallback(() => {
+        setIsSidebarCollapsed((prev) => !prev);
+    }, []);
+
     return (
         <Flex>
             <Sidebar
@@ -158,15 +163,18 @@ function AppContent() {
                 refreshKey={refreshKey}
                 handleNavigation={handleNavigation}
                 refreshSidebar={refreshSidebar}
+                isCollapsed={isSidebarCollapsed}
+                toggleSidebar={toggleSidebar}
             />
 
             <Box
                 flex="1"
-                ml="200px"
+                ml={isSidebarCollapsed ? "50px" : "200px"}
                 mr="0"
                 p="0"
                 className="main-bg"
                 minH="100vh"
+                transition="margin-left 0.3s ease"
             >
                 <IconButton
                     position="absolute"

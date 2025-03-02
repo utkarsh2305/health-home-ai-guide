@@ -312,7 +312,7 @@ const Summary = forwardRef(
 
         return (
             <>
-                <Box p="4" borderRadius="sm" className="panels-bg">
+                <Box p={[2, 3, 4]} borderRadius="sm" className="panels-bg">
                     <Flex align="center" justify="space-between">
                         <Flex align="center">
                             <IconButton
@@ -344,8 +344,6 @@ const Summary = forwardRef(
                             aria-label="Template Selector Tooltip"
                         >
                             <Box>
-                                {" "}
-                                {/* Add this wrapper Box */}
                                 <Flex alignItems="center">
                                     <FaFileAlt
                                         style={{ marginRight: "8px" }}
@@ -360,7 +358,7 @@ const Summary = forwardRef(
                                         }
                                         onChange={handleTemplateChange}
                                         size="sm"
-                                        width="200px"
+                                        width={["100px", "150px", "200px"]}
                                         className="input-style"
                                         isDisabled={!isNewPatient}
                                     >

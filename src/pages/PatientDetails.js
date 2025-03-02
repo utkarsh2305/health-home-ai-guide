@@ -492,8 +492,8 @@ const PatientDetails = ({
     }
 
     return (
-        <Box p="5" borderRadius="sm" w="100%">
-            <VStack spacing="5" align="stretch">
+        <Box p={[2, 4, 5]} borderRadius="sm" w="100%">
+            <VStack spacing={[3, 4, 5]} align="stretch">
                 <PatientInfoBar
                     patient={patient}
                     setPatient={setPatient}

@@ -1,4 +1,3 @@
-// Specific styles for the sidebar component.
 import { colors } from "../colors";
 
 export const sidebarStyles = (props) => ({
@@ -20,6 +19,7 @@ export const sidebarStyles = (props) => ({
         fontSize: "1rem !important",
         fontWeight: "700",
     },
+
     ".sidebar-patient-items": {
         backgroundColor:
             props.colorMode === "light"
@@ -90,5 +90,17 @@ export const sidebarStyles = (props) => ({
     ".settings:hover": {
         background: "gray.600",
         cursor: "pointer",
+    },
+    ".sidebar-toggle": {
+        background:
+            props.colorMode === "light"
+                ? `${colors.light.sidebar.background} !important`
+                : `${colors.dark.sidebar.background} !important`,
+        color: `${colors.dark.textTertiary} !important`,
+        zIndex: "200",
+    },
+
+    ".sidebar-toggle:hover": {
+        backgroundColor: "var(--chakra-colors-gray-100)",
     },
 });
