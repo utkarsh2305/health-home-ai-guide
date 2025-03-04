@@ -1,3 +1,4 @@
+from numpy import cos
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
@@ -6,6 +7,7 @@ import re
 from server.database.config import config_manager
 import logging
 import asyncio
+import sys
 
 class ChatEngine:
     """
@@ -62,7 +64,7 @@ class ChatEngine:
         """
         return chromadb.PersistentClient(
             path="/usr/src/app/data/chroma",
-            settings=Settings(anonymized_telemetry=False),
+            settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
 
     def _initialize_embedding_model(self):
@@ -74,7 +76,7 @@ class ChatEngine:
         """
         return OllamaEmbeddingFunction(
             url=f"{self.BASE_URL}/api/embeddings",
-            model_name="mxbai-embed-large:latest",
+            model_name=f"{self.config['EMBEDDING_MODEL']}",
         )
 
     def sanitizer(self, disease_name: str) -> str:
@@ -105,26 +107,25 @@ class ChatEngine:
             str: Relevant literature excerpts or a message if no literature is found.
         """
 
-        collections = self.chroma_client.list_collections()
-        collection_names = collections
+        collection_names = self.chroma_client.list_collections()
 
         sanitized_disease_name = self.sanitizer(disease_name)
 
         if sanitized_disease_name in collection_names:
-            print("Relevant collection exists")
+
             try:
                 collection = self.chroma_client.get_collection(
                     name=sanitized_disease_name,
-                    embedding_function=self.embedding_model,
+                    embedding_function=self.embedding_model
                 )
                 context = collection.query(
                     query_texts=[question],
                     n_results=3,
-                    include=["documents", "metadatas"],
+                    include=["documents", "metadatas", "distances"]
                 )
-                print("Relevant context found")
+                print(context, flush=True)
+
             except Exception as e:
-                print("No relevant literature available")
                 return "No relevant literature available"
 
             output_strings = []
@@ -146,8 +147,7 @@ class ChatEngine:
         Generate a streaming response based on the conversation history and relevant literature.
         """
         prompts = config_manager.get_prompts_and_options()
-        collections = self.chroma_client.list_collections()
-        collection_names = collections
+        collection_names = self.chroma_client.list_collections()
         collection_names_string = ", ".join(collection_names)
 
         context_question_options = prompts["options"]["chat"]

@@ -28,7 +28,7 @@ class ChromaManager:
         self.ollama_client = ollamaClient(host=self.config["OLLAMA_BASE_URL"])
         self.chroma_client = chromadb.PersistentClient(
             path="/usr/src/app/data/chroma",
-            settings=Settings(anonymized_telemetry=False),
+            settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
         self.extracted_text_store = None
 
@@ -56,7 +56,7 @@ class ChromaManager:
 
             chunker = ClusterSemanticChunker(
                 embedding_function=self.embedding_model,
-                max_chunk_size=800,
+                max_chunk_size=500,
                 min_chunk_size=150,
             )
             texts = chunker.split_text(self.extracted_text_store)
@@ -64,6 +64,7 @@ class ChromaManager:
             collection = self.chroma_client.get_or_create_collection(
                 name=disease_name, embedding_function=self.embedding_model
             )
+
             metadatas = [
                 {
                     "disease_name": disease_name,
@@ -119,7 +120,8 @@ class ChromaManager:
         """
         try:
             formatted_name = self.format_to_collection_name(collection_name)
-            collection = self.chroma_client.get_collection(name=formatted_name)
+            collection = self.chroma_client.get_collection(name=formatted_name,
+            embedding_function=self.embedding_model)
             context = collection.get(
                 where={"disease_name": formatted_name}, include=["metadatas"]
             )
@@ -144,7 +146,8 @@ class ChromaManager:
         """
         try:
             formatted_name = self.format_to_collection_name(collection_name)
-            collection = self.chroma_client.get_collection(name=formatted_name)
+            collection = self.chroma_client.get_collection(name=formatted_name,
+            embedding_function=self.embedding_model)
             result = collection.get(
                 where={"disease_name": formatted_name}, include=["metadatas"]
             )
@@ -184,7 +187,7 @@ class ChromaManager:
             old_name_formatted = self.format_to_collection_name(old_name)
             new_name_formatted = self.format_to_collection_name(new_name)
             collection = self.chroma_client.get_collection(
-                name=old_name_formatted
+                name=old_name_formatted, embedding_function=self.embedding_model
             )
             collection.modify(name=new_name_formatted)
             print(
@@ -482,3 +485,24 @@ class ChromaManager:
             )
 
         return document_source
+
+    def reset_database(self):
+        """
+        Completely resets the Chroma database.
+
+        Returns:
+            bool: True if reset was successful, False otherwise.
+        """
+        try:
+            # First delete all collections individually
+            collections = self.list_collections()
+            for collection in collections:
+                self.delete_collection(collection)
+
+            # Then reset the entire Chroma client
+            self.chroma_client.reset()
+            print("Chroma database reset successfully")
+            return True
+        except Exception as e:
+            print(f"Error resetting Chroma database: {e}")
+            return False

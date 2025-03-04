@@ -166,10 +166,11 @@ async def get_rag_suggestions():
 async def clear_database():
     """API endpoint to clear the entire RAG database."""
     try:
-        # Delete all collections
-        collections = chroma_manager.list_collections()
-        for collection in collections:
-            chroma_manager.delete_collection(collection)
+        success = chroma_manager.reset_database()
+        if not success:
+            raise HTTPException(
+                status_code=500, detail="Failed to reset RAG database"
+            )
         return {"message": "RAG database cleared successfully"}
     except Exception as e:
         raise HTTPException(
