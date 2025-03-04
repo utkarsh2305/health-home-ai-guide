@@ -15,7 +15,6 @@ server/logs/
 node_modules/
 server/node_modules/
 server/venv
-package-lock.json
 
 # Environment and IDE settings
 .env
