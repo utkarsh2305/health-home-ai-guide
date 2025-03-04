@@ -270,8 +270,7 @@ class ChromaManager:
         Returns:
             str: Determined disease name.
         """
-        collections = self.chroma_client.list_collections()
-        collection_names = [collection.name for collection in collections]
+        collection_names = self.chroma_client.list_collections()
         collection_names_string = ", ".join(collection_names)
 
         words = text.split()

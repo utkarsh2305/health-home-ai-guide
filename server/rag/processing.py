@@ -29,8 +29,7 @@ def extract_pdf_information(pdf_path):
     extracted_text = extract_text_from_pdf(pdf_path)
     extracted_text_store = extracted_text
 
-    collections = chroma_client.list_collections()
-    collection_names = [collection.name for collection in collections]
+    collection_names = chroma_client.list_collections()
     collection_names_string = ", ".join(collection_names)
 
     words = extracted_text.split()
