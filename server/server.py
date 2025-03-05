@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Phlox",
-    version="0.2-pre"
+    version="0.2.1-pre"
 )
 
 scheduler = AsyncIOScheduler()

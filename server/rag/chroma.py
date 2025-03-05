@@ -62,7 +62,7 @@ class ChromaManager:
             texts = chunker.split_text(self.extracted_text_store)
 
             collection = self.chroma_client.get_or_create_collection(
-                name=disease_name, embedding_function=self.embedding_model
+                name=disease_name, embedding_function=self.embedding_model, metadata={"hnsw:space": "cosine"}
             )
 
             metadatas = [

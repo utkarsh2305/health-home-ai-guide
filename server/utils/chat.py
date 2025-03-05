@@ -120,23 +120,32 @@ class ChatEngine:
                 )
                 context = collection.query(
                     query_texts=[question],
-                    n_results=3,
+                    n_results=5,
                     include=["documents", "metadatas", "distances"]
                 )
-                print(context, flush=True)
+
 
             except Exception as e:
                 return "No relevant literature available"
 
             output_strings = []
+
+            # Apply distance threshold filter
+            distance_threshold = 0.3
+
             for i, doc_list in enumerate(context["documents"]):
                 for j, doc in enumerate(doc_list):
-                    source = context["metadatas"][i][j]["source"]
-                    formatted_source = source.replace("_", " ").title()
-                    cleaned_doc = doc.strip().replace("\n", " ")
-                    output_strings.append(
-                        f'According to {formatted_source}:\n\n"...{cleaned_doc}..."\n'
-                    )
+
+                    if context["distances"][i][j] > distance_threshold:
+                        source = context["metadatas"][i][j]["source"]
+                        formatted_source = source.replace("_", " ").title()
+                        cleaned_doc = doc.strip().replace("\n", " ")
+                        output_strings.append(
+                            f'According to {formatted_source}:\n\n"...{cleaned_doc}..."\n'
+                        )
+
+            if not output_strings:
+                return "No relevant literature matching your query was found"
 
             return output_strings
         else:
@@ -180,7 +189,7 @@ class ChatEngine:
                             "type": "object",
                             "properties": {
                                 "disease_name": {"type": "string", "description": f"The disease that this question is referring to (must be one of: {collection_names_string}, other)"},
-                                "question": {"type": "string", "description": "The question to be answered. Try and be specific."},
+                                "question": {"type": "string", "description": "The question to be answered. Try and be specific and succinct."},
                             },
                             "required": ["disease_name", "question"],
                         },
