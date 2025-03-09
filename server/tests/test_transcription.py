@@ -16,6 +16,7 @@ from server.utils.transcription import (
     process_transcription,
     process_template_field,
     refine_field_content,
+    _detect_audio_format,
 )
 
 # A simple asynchronous test for transcribe_audio
@@ -134,34 +135,35 @@ async def test_template_field_processing_and_refinement(monkeypatch):
 
 # Test for the audio format detection function
 def test_detect_audio_format():
-    with patch('magic.Magic') as mock_magic:
-        # Setup the mock
-        mock_instance = MagicMock()
-        mock_magic.return_value = mock_instance
+    # Test MP3 detection
+    mp3_data = b'ID3dummy data'
+    filename, content_type = _detect_audio_format(mp3_data)
+    assert filename == 'recording.mp3'
+    assert content_type == 'audio/mpeg'
 
-        # Test MP3 detection
-        mock_instance.from_buffer.return_value = 'audio/mpeg'
-        filename, content_type = _detect_audio_format(b'fake mp3 data')
-        assert filename == 'recording.mp3'
-        assert content_type == 'audio/mpeg'
+    # Test WAV detection
+    wav_data = b'RIFFdummy WAVEdata'
+    filename, content_type = _detect_audio_format(wav_data)
+    assert filename == 'recording.wav'
+    assert content_type == 'audio/wav'
 
-        # Test WAV detection
-        mock_instance.from_buffer.return_value = 'audio/wav'
-        filename, content_type = _detect_audio_format(b'fake wav data')
-        assert filename == 'recording.wav'
-        assert content_type == 'audio/wav'
+    # Test OGG detection
+    ogg_data = b'OggSdummy data'
+    filename, content_type = _detect_audio_format(ogg_data)
+    assert filename == 'recording.ogg'
+    assert content_type == 'audio/ogg'
 
-        # Test M4A detection
-        mock_instance.from_buffer.return_value = 'audio/mp4'
-        filename, content_type = _detect_audio_format(b'fake m4a data')
-        assert filename == 'recording.m4a'
-        assert content_type == 'audio/mp4'
+    # Test M4A detection
+    m4a_data = b'dummyftypdata'
+    filename, content_type = _detect_audio_format(m4a_data)
+    assert filename == 'recording.m4a'
+    assert content_type == 'audio/mp4'
 
-        # Test unrecognized format (should default to WAV)
-        mock_instance.from_buffer.return_value = 'audio/unknown'
-        filename, content_type = _detect_audio_format(b'fake unknown data')
-        assert filename == 'recording.wav'
-        assert content_type == 'audio/wav'
+    # Test unrecognized format (should default to WAV)
+    unknown_data = b'unknown format data'
+    filename, content_type = _detect_audio_format(unknown_data)
+    assert filename == 'recording.wav'
+    assert content_type == 'audio/wav'
 
 # Test for API error handling with detailed error messages
 @pytest.mark.asyncio
@@ -180,6 +182,7 @@ async def test_transcribe_audio_api_error():
         fake_response = AsyncMock()
         fake_response.status = 400
         fake_response.text = AsyncMock(return_value='{"error": "Invalid request parameters"}')
+        fake_response.json = AsyncMock(side_effect=ValueError("Invalid request parameters"))
 
         # Create a fake context manager for session.post that returns fake_response
         fake_post_context = AsyncMock()

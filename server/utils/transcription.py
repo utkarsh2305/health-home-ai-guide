@@ -61,12 +61,14 @@ async def transcribe_audio(audio_buffer: bytes) -> Dict[str, Union[str, float]]:
                 transcription_duration = transcription_end - transcription_start
 
                 if response.status != 200:
-                    raise ValueError(
-                        "Transcription failed, no text in response"
-                    )
+                    error_text = await response.text()
+                    raise ValueError(f"Transcription failed: {error_text}")
 
-                data = await response.json()
-                print(data)
+                try:
+                    data = await response.json()
+                except Exception as e:
+                    raise ValueError(f"Failed to parse response: {e}")
+
                 if "text" not in data:
                     raise ValueError(
                         "Transcription failed, no text in response"

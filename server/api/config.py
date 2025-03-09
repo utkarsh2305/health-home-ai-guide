@@ -62,7 +62,8 @@ async def validate_url(
                         return {"valid": False, "status_code": response.status_code}
                 except Exception as e:
                     # If we get a connection error, the URL might be wrong
-                    return {"valid": False, "error": str(e)}
+                    logging.error(f"Error validating Whisper URL: {str(e)}")
+                    return {"valid": False, "error": "An internal error has occurred while validating the URL."}
             elif type == "ollama":
                 # For Ollama, try to access the tags endpoint
                 validate_url = f"{url}/api/tags"
@@ -76,8 +77,8 @@ async def validate_url(
                 return {"valid": False, "status_code": response.status_code}
 
     except Exception as e:
-        logging.error(f"Error validating URL: {e}")
-        return {"valid": False, "error": str(e)}
+        logging.error(f"Error validating URL: {str(e)}")
+        return {"valid": False, "error": "An internal error has occurred while validating the URL."}
 
 @router.get("/ollama")
 async def get_all_options():
@@ -158,7 +159,7 @@ async def get_models(
 async def get_whisper_models(
     whisperEndpoint: str = Query(..., description="The endpoint for Whisper API")
 ):
-    """Fetch available Whisper models from the configured endpoint."""
+    """Fetch available Whisper models from the configured endpoint. Only works if the instance has a /v1/models endpoint (eg Speaches); otherwise returns an empty list"""
     try:
         # First try to fetch models from the endpoint
         async with httpx.AsyncClient() as client:
