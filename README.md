@@ -44,13 +44,25 @@ Phlox is an open-source patient management system integrating AI-powered medical
 ## Quick Start 🚀
 
 1. **Prerequisites:** Podman/Docker, Ollama, Whisper endpoint.
-2. **Clone:** `git clone https://github.com/bloodworks-io/phlox.git && cd phlox`
-3. **Build:** `docker build -t phlox:latest .`
-4. **Environment:** Create `.env` in `phlox/` (see example in documentation).
-5. **Run:** `docker-compose up` (Production) or `docker-compose -f docker-compose.dev.yml up` (Development).
-6. **Access:** http://localhost:5000
+2. **Hardware Requirements:** For reasonable performance, a GPU (CUDA, ROCm) or Apple M-Series chip is strongly recommended. Without these, especially with larger models, the system will run extremely slowly.
+3. **Clone:** `git clone https://github.com/bloodworks-io/phlox.git && cd phlox`
+4. **Build:** `docker build -t phlox:latest .`
+5. **Environment:** Create `.env` in `phlox/` (see example in documentation).
+6. **Run:** `docker-compose up` (Production) or `docker-compose -f docker-compose.dev.yml up` (Development).
+7. **Access:** http://localhost:5000
 
 **For detailed setup, feature explanations, and important warnings, please see the [Documentation](./docs/README.md).**
+
+## Roadmap 🗺️
+
+Here's what's coming next for Phlox:
+
+- [x] Use structured JSON outputs for managing LLM responses
+- [ ] Add support for OpenAI-compatible endpoints
+- [ ] Create Electron app packaging for desktop use
+- [ ] Develop Progressive Web App (PWA) version
+- [ ] Introduce advanced template version control
+- [ ] Meeting and multi-disciplinary meeting scribing
 
 ## Usage Warning ⚠️
 

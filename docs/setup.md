@@ -16,8 +16,13 @@ Before you begin, ensure you have the following prerequisites installed and conf
     - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speeches-ai/speaches) is a self-hostable, open-source Whisper server.  Follow their instructions to set up an instance. This is recommended for local, privacy-focused setups.
     - **Cloud-based Whisper API:** You can use cloud-based Whisper APIs if you prefer (ensure you understand their privacy and cost implications). You'll need to configure Phlox with the API endpoint and necessary credentials.
 
-4.  **Basic Familiarity (Optional but Recommended):**
-    - Basic understanding of Python, React, and working with LLMs can be helpful if you intend to customize or contribute to Phlox.
+4.  **Hardware Considerations:**
+    - **For best performance:** A GPU (CUDA, ROCm) or Apple M-Series chip is strongly recommended
+    - **Without GPU/Apple silicon:** The system will run but will be unusably slow, especially with larger models
+    - **RAM Requirements:**
+      - 8GB minimum for smaller models
+      - 16GB+ recommended for better performance
+      - 32GB+ for large models like llama3:70b
 
 ## Quick Start Instructions
 
