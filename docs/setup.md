@@ -9,12 +9,19 @@ Before you begin, ensure you have the following prerequisites installed and conf
 1.  **Podman or Docker:**  Phlox uses containerization for easy deployment. Install either [Podman](https://podman.io/) or [Docker](https://www.docker.com/).
 
 2.  **Ollama Instance:** Phlox relies on Ollama to run Large Language Models. You need a running Ollama instance, either:
-    - **Locally:** [Install Ollama](https://ollama.com/) on your machine and ensure it's running.  You'll likely want to pull models like `llama3.3`, `mistral`, or similar using `ollama pull <model_name>`.
+    - **Locally:** [Install Ollama](https://ollama.com/) on your machine and ensure it's running. You'll likely want to pull models like `llama3.3`, `mistral`, or similar using `ollama pull <model_name>`. Recommended models:
+      - **Standard Hardware:** Use `llama3:8b` (smaller, faster, suitable for most systems)
+      - **Performance-Optimized:** Bigger models like `llama3:70b` will provide better results but at the expense of speed. They are only practical for powerful machines with lots of VRAM.
     - **Remotely:** If you have a remote server with Ollama running, you can configure Phlox to connect to it.
 
 3.  **Whisper-compatible Transcription Service:** Phlox needs a service to transcribe audio into text. You have a few options:
-    - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speeches-ai/speaches) is a self-hostable, open-source Whisper server.  Follow their instructions to set up an instance. This is recommended for local, privacy-focused setups.
-    - **Cloud-based Whisper API:** You can use cloud-based Whisper APIs if you prefer (ensure you understand their privacy and cost implications). You'll need to configure Phlox with the API endpoint and necessary credentials.
+    - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speeches-ai/speaches) is a self-hostable, open-source Whisper server.
+      - Recommended model: `Systran/faster-distil-whisper-medium.en` ( smaller and faster but still accurate)
+      - Follow their instructions to set up an instance. This is recommended for local, privacy-focused setups.
+    - **Cloud-based Whisper API:**
+      - If you are using the official OpenAI Whisper endpoint you must specify `whisper-1` as the model.
+      - Ensure you understand their privacy and cost implications.
+      - You'll need to configure Phlox with the API endpoint and necessary credentials.
 
 4.  **Hardware Considerations:**
     - **For best performance:** A GPU (CUDA, ROCm) or Apple M-Series chip is strongly recommended
