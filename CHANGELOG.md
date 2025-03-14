@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/bloodworks-io/phlox/compare/v0.4.0...v0.4.1) (2025-03-14)
+
+
+### Bug Fixes
+
+* Version not appearing in sidebar ([1cdd9ad](https://github.com/bloodworks-io/phlox/commit/1cdd9ad769d776e25098ec32bf54a71c4652b768))
+
 ## [0.4.0](https://github.com/bloodworks-io/phlox/compare/v0.4.0-pre...v0.4.0) (2025-03-14)
 
 
