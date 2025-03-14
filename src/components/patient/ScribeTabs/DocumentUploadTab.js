@@ -1,289 +1,364 @@
 import {
     Box,
-    VStack,
-    Flex,
     Button,
-    HStack,
-    Text,
+    Flex,
+    Input,
     Spinner,
+    Text,
+    VStack,
+    HStack,
     useToast,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalBody,
-    Textarea,
+    Alert,
+    AlertIcon,
+    AlertTitle,
+    AlertDescription,
+    ButtonGroup,
+    Divider,
+    Badge,
+    IconButton,
     Tooltip,
+    SimpleGrid,
+    Spacer,
 } from "@chakra-ui/react";
-import { AttachmentIcon, CloseIcon } from "@chakra-ui/icons";
-import { MdTextFields } from "react-icons/md";
-import { useState, useRef, useEffect } from "react";
-import { processDocument } from "../../../utils/helpers/processingHelpers";
+import {
+    FaFileUpload,
+    FaRedo,
+    FaExclamationTriangle,
+    FaRedoAlt,
+    FaArrowRight,
+    FaArrowLeft,
+} from "react-icons/fa";
+import { CheckIcon } from "@chakra-ui/icons";
+import { useState } from "react";
+import { useTranscription } from "../../../utils/hooks/useTranscription";
 
 const DocumentUploadTab = ({
     handleDocumentComplete,
+    toggleDocumentField,
+    replacedFields,
+    extractedDocData,
+    resetDocumentState,
     name,
     dob,
     gender,
     setLoading,
+    template,
+    docFileName,
+    setDocFileName,
 }) => {
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [isTextModalOpen, setIsTextModalOpen] = useState(false);
-    const [textInput, setTextInput] = useState("");
-    const [isProcessingDocument, setIsProcessingDocument] = useState(false);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [showConfirmUpload, setShowConfirmUpload] = useState(false);
-    const fileInputRef = useRef(null);
+    const [file, setFile] = useState(null);
+
+    const [processingError, setProcessingError] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
     const toast = useToast();
 
-    const handleFileChange = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            setSelectedFile(file);
-            setShowConfirmUpload(true);
-            toast({
-                title: "File selected",
-                description: `${file.name} has been selected`,
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-            });
+    const { processDocument, isTranscribing } = useTranscription(
+        null,
+        setLoading,
+    );
+
+    const handleFileChange = (e) => {
+        if (e.target.files.length > 0) {
+            setFile(e.target.files[0]);
+            setDocFileName(e.target.files[0].name); // Use parent state
+            setProcessingError(null);
         }
     };
 
-    const handleConfirmDocumentUpload = async () => {
-        setIsProcessingDocument(true);
-        setLoading(true);
+    const handleUpload = async () => {
+        if (!file) {
+            toast({
+                title: "No file selected",
+                description: "Please select a file to upload",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        setIsProcessing(true);
+        setProcessingError(null);
 
         try {
-            await processDocument(
-                selectedFile,
-                { name, dob, gender },
-                (data) => {
-                    // Create a wrapper function that handles the data and passes it to handleDocumentComplete
-                    const processedData = {
-                        primaryHistory: data.primaryHistory,
-                        additionalHistory: data.additionalHistory,
-                        investigations: data.investigations,
-                        processDuration: data.processDuration,
-                    };
-
-                    // Call handleDocumentComplete with the processed data
-                    handleDocumentComplete(processedData);
-
-                    setSelectedFile(null);
-                    setShowConfirmUpload(false);
-
-                    toast({
-                        title: "Success",
-                        description: "Document processed successfully",
-                        status: "success",
-                        duration: null,
-                        isClosable: true,
-                    });
+            const result = await processDocument(
+                file,
+                {
+                    name,
+                    dob,
+                    gender,
+                    templateKey: template?.template_key,
                 },
-                (error) => {
-                    toast({
-                        title: "Error",
-                        description: error.message,
-                        status: "error",
-                        duration: 3000,
-                        isClosable: true,
-                    });
+                {
+                    handleComplete: (data) => {
+                        // Pass the data up to parent - don't manage state locally
+                        handleDocumentComplete(data);
+                        setIsProcessing(false);
+                    },
+                    handleError: (error) => {
+                        setProcessingError({
+                            message:
+                                error.message || "Failed to process document",
+                        });
+                        setIsProcessing(false);
+                    },
                 },
             );
+
+            return result;
         } catch (error) {
             console.error("Error processing document:", error);
-            toast({
-                title: "Error",
-                description: "Failed to process document",
-                status: "error",
-                duration: null,
-                isClosable: true,
+            setProcessingError({
+                message:
+                    error.message ||
+                    "An unexpected error occurred while processing the document",
             });
-        } finally {
-            setIsProcessingDocument(false);
-            setLoading(false);
+            setIsProcessing(false);
         }
     };
 
-    const handleClearDocument = () => {
-        if (!showClearConfirm) {
-            setShowClearConfirm(true);
-            return;
-        }
-        setSelectedFile(null);
-        setTextInput("");
-        setShowConfirmUpload(false);
-        setShowClearConfirm(false);
-    };
-
-    const handleTextSubmit = () => {
-        if (!textInput.trim()) {
-            toast({
-                title: "No text entered",
-                description: "Please enter some text to process",
-                status: "warning",
-                duration: 3000,
-                isClosable: true,
+    const retryProcessing = async () => {
+        if (!file) {
+            setProcessingError({
+                message:
+                    "No document available to retry. Please upload a file again.",
             });
             return;
         }
-        const textFile = new File([textInput], "uploaded-text.txt", {
-            type: "text/plain",
-        });
-        setSelectedFile(textFile);
-        setShowConfirmUpload(true);
-        setIsTextModalOpen(false);
+
+        setIsProcessing(true);
+        setProcessingError(null);
+        resetDocumentState(); // Reset in parent
+
+        try {
+            await handleUpload();
+        } catch (error) {
+            console.error("Error retrying document processing:", error);
+            setProcessingError({
+                message:
+                    "Processing retry failed. The server might be experiencing issues.",
+            });
+            setIsProcessing(false);
+        }
     };
 
-    useEffect(() => {
-        let timeoutId;
-        if (showClearConfirm) {
-            timeoutId = setTimeout(() => {
-                setShowClearConfirm(false);
-            }, 3000); // Reset after 3 seconds
-        }
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-        };
-    }, [showClearConfirm]);
+    const startNewUpload = () => {
+        setFile(null);
+        setDocFileName("");
+        setProcessingError(null);
+        resetDocumentState(); // Reset in parent
+    };
 
+    // If there's a processing error, show the error UI
+    if (processingError) {
+        return (
+            <Box width="100%">
+                <Alert
+                    status="error"
+                    variant="subtle"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    textAlign="center"
+                    borderRadius="sm"
+                >
+                    <Flex mb={2}>
+                        <AlertIcon as={FaExclamationTriangle} mr={2} />
+                        <AlertTitle>Processing Error</AlertTitle>
+                    </Flex>
+                    <AlertDescription maxWidth="lg">
+                        {processingError.message}
+                    </AlertDescription>
+                    <ButtonGroup mt={4} spacing={3}>
+                        <Button
+                            leftIcon={<FaRedoAlt />}
+                            onClick={retryProcessing}
+                            className="green-button"
+                            isDisabled={isProcessing}
+                        >
+                            {isProcessing ? <Spinner size="sm" mr={2} /> : null}
+                            Resend Document
+                        </Button>
+                        <Button
+                            leftIcon={<FaRedo />}
+                            onClick={startNewUpload}
+                            className="blue-button"
+                        >
+                            Upload New Document
+                        </Button>
+                    </ButtonGroup>
+                </Alert>
+            </Box>
+        );
+    }
+
+    // Upload UI with optional field toggles
     return (
         <Box className="tab-panel-container">
-            <VStack spacing={4} align="stretch">
-                <Flex justify="space-between" align="center" direction="column">
-                    {selectedFile && !isProcessingDocument && (
-                        <Text fontSize="sm" color="gray.500" mb={2}>
-                            Selected: {selectedFile.name}
-                        </Text>
-                    )}
-                    {showConfirmUpload && isProcessingDocument && (
-                        <VStack>
-                            <Spinner />
-                            <Text fontSize="sm" color="gray.500">
-                                Processing document...
-                            </Text>
-                        </VStack>
-                    )}
-                    {showConfirmUpload && !isProcessingDocument && (
-                        <Text fontSize="sm" color="gray.500">
-                            Ready to Upload?
-                        </Text>
-                    )}
-                </Flex>
-
-                {!showConfirmUpload && (
-                    <HStack spacing={4} justify="center">
-                        <VStack>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                style={{ display: "none" }}
-                            />
-                            <Tooltip label="Upload Document (PDF, Word, Images)">
-                                <Button
-                                    leftIcon={<AttachmentIcon />}
-                                    className="blue-button"
-                                    size="lg"
-                                    height="35px !important"
-                                    width="150px"
-                                    onClick={() =>
-                                        fileInputRef.current?.click()
-                                    }
-                                >
-                                    <VStack spacing={1}>
-                                        <Text>Upload File</Text>
-                                    </VStack>
-                                </Button>
-                            </Tooltip>
-                        </VStack>
-                        <Text fontSize="lg" color="gray.500">
-                            or
-                        </Text>
-                        <Tooltip label="Paste Text Content">
-                            <Button
-                                leftIcon={<MdTextFields />}
-                                className="switch-mode"
-                                size="lg"
-                                height="35px"
-                                width="150px"
-                                onClick={() => setIsTextModalOpen(true)}
-                            >
-                                <VStack spacing={1}>
-                                    <Text>Paste Text</Text>
-                                </VStack>
-                            </Button>
-                        </Tooltip>
-                    </HStack>
-                )}
-                {showConfirmUpload && !isProcessingDocument && (
-                    <Flex
-                        align="center"
-                        justify="center"
-                        direction="column"
-                        gap={2}
-                    >
-                        <Flex justify="center" gap={4}>
-                            {selectedFile && (
-                                <Button
-                                    onClick={handleConfirmDocumentUpload}
-                                    className="green-button"
-                                >
-                                    Submit Document
-                                </Button>
-                            )}
-                            <Button
-                                onClick={handleClearDocument}
-                                leftIcon={<CloseIcon />}
-                                className="red-button"
-                            >
-                                {showClearConfirm ? "Are you sure?" : "Clear"}
-                            </Button>
-                        </Flex>
-                    </Flex>
-                )}
-
-                {/* Text Input Modal */}
-                <Modal
-                    isOpen={isTextModalOpen}
-                    onClose={() => setIsTextModalOpen(false)}
-                    size="xl"
+            {isProcessing || isTranscribing ? (
+                <Flex
+                    justify="center"
+                    align="center"
+                    height="100px"
+                    direction="column"
                 >
-                    <ModalOverlay />
-                    <ModalContent className="modal-style">
-                        <ModalHeader>Upload Text</ModalHeader>
-                        <ModalBody>
-                            <Textarea
-                                value={textInput}
-                                onChange={(e) => setTextInput(e.target.value)}
-                                placeholder="Paste your text here..."
-                                size="lg"
-                                minHeight="400px"
-                                className="textarea-style"
-                            />
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button
-                                className="red-button"
-                                mr={3}
-                                onClick={() => setIsTextModalOpen(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                className="green-button"
-                                onClick={handleTextSubmit}
-                            >
-                                Submit
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-            </VStack>
+                    <Spinner size="xl" mb={4} />
+                    <Text>Processing document...</Text>
+                </Flex>
+            ) : (
+                <VStack spacing={4} width="full" align="stretch">
+                    {!extractedDocData ? (
+                        // Initial upload UI
+                        <>
+                            <Text textAlign="center">
+                                Upload a referral letter or other document to
+                                extract information.
+                            </Text>
+
+                            <VStack width="full" align="center">
+                                <Input
+                                    type="file"
+                                    onChange={handleFileChange}
+                                    display="none"
+                                    id="file-upload"
+                                    accept=".pdf,.doc,.docx,.txt"
+                                    className="input-style"
+                                />
+                                <Button
+                                    px="10"
+                                    leftIcon={<FaFileUpload />}
+                                    onClick={() =>
+                                        document
+                                            .getElementById("file-upload")
+                                            .click()
+                                    }
+                                    className="blue-button"
+                                >
+                                    Choose Document
+                                </Button>
+                                {docFileName && (
+                                    <Text fontSize="sm">{docFileName}</Text>
+                                )}
+                            </VStack>
+
+                            {file && (
+                                <Flex justifyContent="center">
+                                    <Button
+                                        colorScheme="blue"
+                                        onClick={handleUpload}
+                                        isDisabled={!file}
+                                        className="green-button"
+                                        width="auto"
+                                        px={6}
+                                    >
+                                        Process Document
+                                    </Button>
+                                </Flex>
+                            )}
+                        </>
+                    ) : (
+                        // Document processed UI with toggle buttons
+                        <>
+                            <Flex justify="space-between" align="center">
+                                <Text fontWeight="bold">
+                                    Document: {docFileName}
+                                </Text>
+                                <Button
+                                    leftIcon={<FaFileUpload />}
+                                    onClick={startNewUpload}
+                                    size="sm"
+                                    className="blue-button"
+                                >
+                                    Upload New Document
+                                </Button>
+                            </Flex>
+
+                            <Divider my={3} />
+
+                            <Text fontStyle="italic" fontSize="sm" mb={3}>
+                                Click buttons to toggle document content
+                            </Text>
+
+                            <SimpleGrid columns={[1, 2, 3, 4]} spacing={3}>
+                                {template?.fields?.map((field) => {
+                                    const fieldKey = field.field_key;
+                                    const hasContent = Boolean(
+                                        extractedDocData?.fields[
+                                            fieldKey
+                                        ]?.trim(),
+                                    );
+                                    const isReplaced = replacedFields[fieldKey];
+
+                                    return (
+                                        <Box
+                                            key={fieldKey}
+                                            p={2}
+                                            borderWidth="1px"
+                                            borderRadius="sm"
+                                        >
+                                            <Flex
+                                                justify="space-between"
+                                                align="center"
+                                            >
+                                                <Text
+                                                    fontWeight="medium"
+                                                    fontSize="sm"
+                                                    isTruncated
+                                                    maxWidth="50%"
+                                                    title={field.field_name}
+                                                >
+                                                    {field.field_name}
+                                                </Text>
+
+                                                {!hasContent ? (
+                                                    <Badge
+                                                        colorScheme="yellow"
+                                                        fontSize="xs"
+                                                    >
+                                                        No content
+                                                    </Badge>
+                                                ) : (
+                                                    <Button
+                                                        size="xs"
+                                                        onClick={() =>
+                                                            toggleDocumentField(
+                                                                fieldKey,
+                                                            )
+                                                        }
+                                                        isDisabled={!hasContent}
+                                                        borderRadius="sm !important"
+                                                        className={
+                                                            isReplaced
+                                                                ? "green-button"
+                                                                : "template-select-button"
+                                                        }
+                                                        variant={
+                                                            isReplaced
+                                                                ? "solid"
+                                                                : "outline"
+                                                        }
+                                                        leftIcon={
+                                                            isReplaced ? (
+                                                                <CheckIcon boxSize="3" />
+                                                            ) : null
+                                                        }
+                                                        height="24px !important"
+                                                        minWidth="80px"
+                                                    >
+                                                        {isReplaced
+                                                            ? "Using doc"
+                                                            : "Use doc"}
+                                                    </Button>
+                                                )}
+                                            </Flex>
+                                        </Box>
+                                    );
+                                })}
+                            </SimpleGrid>
+                        </>
+                    )}
+                </VStack>
+            )}
         </Box>
     );
 };

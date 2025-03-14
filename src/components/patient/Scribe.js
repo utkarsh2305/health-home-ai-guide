@@ -37,6 +37,14 @@ const Scribe = ({
     template,
     patientId,
     reasoning,
+    rawTranscription,
+    isTranscribing,
+    toggleDocumentField,
+    replacedFields,
+    extractedDocData,
+    resetDocumentState,
+    docFileName,
+    setDocFileName,
 }) => {
     const [tabIndex, setTabIndex] = useState(0);
     const [mode, setMode] = useState("record");
@@ -63,6 +71,23 @@ const Scribe = ({
         prompts,
         setLoading,
         templateKey: template?.template_key,
+    };
+
+    const documentProps = {
+        handleDocumentComplete: (data) => {
+            handleDocumentComplete(data);
+        },
+        name,
+        dob,
+        gender,
+        setLoading,
+        template,
+        docFileName,
+        setDocFileName,
+        toggleDocumentField,
+        replacedFields,
+        extractedDocData,
+        resetDocumentState,
     };
 
     return (
@@ -144,6 +169,12 @@ const Scribe = ({
                                 recordingProps={recordingProps}
                                 transcriptionDuration={transcriptionDuration}
                                 processDuration={processDuration}
+                                rawTranscription={rawTranscription}
+                                onTranscriptionComplete={
+                                    handleTranscriptionComplete
+                                }
+                                isTranscribing={isTranscribing}
+                                setLoading={setLoading}
                             />
                         </TabPanel>
 
@@ -154,6 +185,8 @@ const Scribe = ({
                                 dob={dob}
                                 gender={gender}
                                 setLoading={setLoading}
+                                template={template}
+                                {...documentProps}
                             />
                         </TabPanel>
 

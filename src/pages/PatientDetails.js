@@ -46,6 +46,12 @@ const PatientDetails = ({
     const [saveLoading, setSaveLoading] = useState(false);
     const [isLetterModified, setIsLetterModified] = useState(false);
     const [isSummaryModified, setIsSummaryModified] = useState(false);
+    const previousTranscriptionRef = useRef(null);
+    const [docFileName, setDocFileName] = useState("");
+
+    const [originalContent, setOriginalContent] = useState({});
+    const [replacedFields, setReplacedFields] = useState({});
+    const [extractedDocData, setExtractedDocData] = useState(null);
 
     const { showWarningToast } = useToastMessage();
 
@@ -252,12 +258,22 @@ const PatientDetails = ({
 
     useEffect(() => {
         // Reset component states when patient changes
-        transcription.setIsCollapsed(false);
-        summary.setIsCollapsed(false);
-        letter.setIsCollapsed(true);
-        chat.setChatExpanded(false);
+        if (isNewPatient) {
+            // For new patients, show transcription and hide others
+            transcription.setIsCollapsed(false);
+            summary.setIsCollapsed(false);
+            letter.setIsCollapsed(true);
+            chat.setChatExpanded(false);
+        } else {
+            // For existing patients, keep current behavior
+            transcription.setIsCollapsed(true);
+            summary.setIsCollapsed(false);
+            letter.setIsCollapsed(true);
+            chat.setChatExpanded(false);
+        }
         chat.clearChat();
-    }, [patient?.id, currentTemplate]);
+        resetDocumentState();
+    }, [patient?.id, currentTemplate, isNewPatient]);
 
     useEffect(() => {
         if (patient?.id) {
@@ -280,6 +296,12 @@ const PatientDetails = ({
     }, [toast]);
 
     const handleTranscriptionComplete = (data, triggerResize = false) => {
+        // Track if this is a new transcription, reprocessing, or restoration
+        const isReprocessing = !!patient?.raw_transcription;
+        const isRestoration = data.isRestoration === true;
+        // Store current transcription state before updating
+        previousTranscriptionRef.current = patient?.raw_transcription;
+
         handleProcessingComplete(data, {
             setLoading,
             setters: {
@@ -309,11 +331,114 @@ const PatientDetails = ({
                         process_duration: data.processDuration,
                     })),
             },
-            setIsSourceCollapsed: () => transcription.setIsCollapsed(true),
+            // Only collapse transcription in specific scenarios
+            setIsSourceCollapsed: () => {
+                // For restoration or reprocessing, never collapse
+                if (isRestoration || isReprocessing) {
+                    transcription.setIsCollapsed(false);
+                }
+                // For new transcription with content, collapse to show summary
+                else if (data.rawTranscription) {
+                    transcription.setIsCollapsed(true);
+                }
+                // For clearing transcription, keep it open
+                else {
+                    transcription.setIsCollapsed(false);
+                }
+            },
             setIsSummaryCollapsed: () => summary.setIsCollapsed(false),
             triggerResize,
             summaryRef,
         });
+    };
+
+    const handleDocumentComplete = (data) => {
+        // When initial document processing completes, save original content and extracted data
+        if (!data.fieldByField) {
+            // Save original content if this is the first time processing
+            if (!extractedDocData) {
+                // Take a snapshot of current field values
+                setOriginalContent({ ...patient.template_data });
+            }
+
+            // Store extracted data for future toggle operations
+            setExtractedDocData(data);
+
+            // Don't immediately update patient data - wait for field toggles
+            toast({
+                title: "Document processed",
+                description: "Use the toggle buttons to update fields",
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+            });
+        } else {
+            // This is a field toggle operation
+            const fieldKey = Object.keys(data.fields)[0]; // Get the field being toggled
+
+            // Update replaced fields tracking
+            setReplacedFields((prev) => ({
+                ...prev,
+                [fieldKey]: !prev[fieldKey],
+            }));
+
+            // Update the patient data
+            setPatient((prev) => ({
+                ...prev,
+                template_data: {
+                    ...prev.template_data,
+                    ...data.fields,
+                },
+            }));
+
+            setIsModified(true);
+        }
+    };
+
+    const toggleDocumentField = (fieldKey) => {
+        if (!extractedDocData) return;
+
+        // Check if field has content in extracted data
+        const hasExtractedContent = Boolean(
+            extractedDocData.fields[fieldKey]?.trim(),
+        );
+        if (!hasExtractedContent) {
+            toast({
+                title: "No content available",
+                description:
+                    "This field doesn't have any content in the uploaded document",
+                status: "info",
+                duration: 2000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        // Check if field is currently using document content
+        const isCurrentlyReplaced = replacedFields[fieldKey];
+
+        // Determine content to use (original or document)
+        let fieldContent;
+        if (isCurrentlyReplaced) {
+            // Restore original content
+            fieldContent = originalContent[fieldKey] || "";
+        } else {
+            // Use extracted content
+            fieldContent = extractedDocData.fields[fieldKey] || "";
+        }
+
+        // Update patient data with single field
+        handleDocumentComplete({
+            fields: { [fieldKey]: fieldContent },
+            fieldByField: true,
+        });
+    };
+
+    const resetDocumentState = () => {
+        setExtractedDocData(null);
+        setReplacedFields({});
+        setOriginalContent({});
+        setDocFileName("");
     };
 
     const handleGenerateLetterClick = async (additionalInstructions) => {
@@ -525,6 +650,15 @@ const PatientDetails = ({
                     template={currentTemplate}
                     patientId={patient.id}
                     reasoning={patient.reasoning_output || null}
+                    rawTranscription={patient.raw_transcription}
+                    isTranscribing={loading}
+                    handleDocumentComplete={handleDocumentComplete}
+                    toggleDocumentField={toggleDocumentField}
+                    replacedFields={replacedFields}
+                    extractedDocData={extractedDocData}
+                    resetDocumentState={resetDocumentState}
+                    docFileName={docFileName}
+                    setDocFileName={setDocFileName}
                 />
 
                 <Summary
@@ -575,7 +709,12 @@ const PatientDetails = ({
                     userInput={chat.userInput}
                     setUserInput={chat.setUserInput}
                     handleChat={(userInput) =>
-                        chat.sendMessage(userInput, patient, currentTemplate)
+                        chat.sendMessage(
+                            userInput,
+                            patient,
+                            currentTemplate,
+                            patient.raw_transcription,
+                        )
                     }
                     showSuggestions={chat.showSuggestions}
                     setShowSuggestions={chat.setShowSuggestions}
