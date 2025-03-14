@@ -13,9 +13,6 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Copy root CHANGELOG.md to public/ if it exists
-RUN if [ -f "CHANGELOG.md" ]; then cp CHANGELOG.md public/CHANGELOG.md; fi
-
 # Build the React app
 RUN npm run build
 
@@ -33,6 +30,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the build output and Python server files
 COPY --from=build /usr/src/app/build ./build
+COPY --from=build /usr/src/app/CHANGELOG.md ./CHANGELOG.md
 COPY server/ ./server
 RUN mkdir -p /usr/src/app/data
 RUN mkdir -p /usr/src/app/static

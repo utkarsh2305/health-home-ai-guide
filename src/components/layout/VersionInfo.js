@@ -31,7 +31,7 @@ const VersionInfo = ({ isCollapsed }) => {
     });
 
     useEffect(() => {
-        // Fetch version from package.json
+        // Fetch version from backend
         fetch("/api/config/version")
             .then((res) => res.json())
             .then((data) => {
@@ -40,11 +40,10 @@ const VersionInfo = ({ isCollapsed }) => {
             .catch((err) => console.error("Error fetching version:", err));
 
         // Fetch changelog
-        fetch("/CHANGELOG.md")
-            .then((res) => res.text())
-            .then((text) => {
-                // Just store the raw markdown text
-                setChangelog(text);
+        fetch("/api/config/changelog")
+            .then((res) => res.json())
+            .then((data) => {
+                setChangelog(data.content);
             })
             .catch((err) => console.error("Error fetching changelog:", err));
 
@@ -67,52 +66,6 @@ const VersionInfo = ({ isCollapsed }) => {
 
         return () => clearInterval(intervalId);
     }, []);
-
-    // Simple parser for changelog markdown
-    const parseChangelog = (markdown) => {
-        const lines = markdown.split("\n");
-        const versions = [];
-        let currentVersion = null;
-
-        for (const line of lines) {
-            if (line.startsWith("## ")) {
-                // New version section
-                if (currentVersion) {
-                    versions.push(currentVersion);
-                }
-                const versionMatch = line.match(/## \[(.*?)\]/);
-                const dateMatch = line.match(/- (.*)$/);
-                currentVersion = {
-                    version: versionMatch
-                        ? versionMatch[1]
-                        : line.replace("## ", ""),
-                    date: dateMatch ? dateMatch[1] : "",
-                    changes: [],
-                };
-            } else if (line.startsWith("### ") && currentVersion) {
-                // Section within version
-                currentVersion.changes.push({
-                    type: line.replace("### ", ""),
-                    items: [],
-                });
-            } else if (
-                line.startsWith("- ") &&
-                currentVersion &&
-                currentVersion.changes.length > 0
-            ) {
-                // Change item
-                const lastChangeType =
-                    currentVersion.changes[currentVersion.changes.length - 1];
-                lastChangeType.items.push(line.replace("- ", ""));
-            }
-        }
-
-        if (currentVersion) {
-            versions.push(currentVersion);
-        }
-
-        return versions;
-    };
 
     // Combined status icon
     const StatusIcon = () => {
@@ -223,21 +176,31 @@ const VersionInfo = ({ isCollapsed }) => {
 
 // Separate component for the changelog modal
 const ChangelogModal = ({ isOpen, onClose, version, changelog }) => {
+    const cleanChangelog = changelog.replace(/^# Changelog\s*\n/, "");
+    const releases = cleanChangelog
+        .split(/(?=## \[)/)
+        .filter((release) => release.trim() !== "");
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} size="lg">
             <ModalOverlay />
             <ModalContent className="modal-style">
-                <ModalHeader>Phlox v{version} - Changelog</ModalHeader>
+                <ModalHeader>Phlox - Changelog</ModalHeader>
                 <ModalCloseButton />
                 <ModalBody
                     maxH="70vh"
                     overflowY="auto"
                     className="custom-scrollbar"
+                    px={10}
                 >
-                    {changelog ? (
-                        <Box className="markdown-content">
-                            <ReactMarkdown>{changelog}</ReactMarkdown>
-                        </Box>
+                    {releases.length > 0 ? (
+                        releases.map((release, index) => (
+                            <Box key={index} mb={10}>
+                                {" "}
+                                {/* Add mb={10} here */}
+                                <ReactMarkdown>{release}</ReactMarkdown>
+                            </Box>
+                        ))
                     ) : (
                         <Text>Loading changelog...</Text>
                     )}

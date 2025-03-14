@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import httpx
 from server.database.config import config_manager
 import logging
-import json
+import re
 
 router = APIRouter()
 
@@ -211,17 +211,35 @@ async def update_user_settings(data: dict):
     config_manager.update_user_settings(data)
     return {"message": "User settings updated successfully"}
 
+@router.get("/changelog")
+async def get_changelog():
+    """Retrieve the full changelog content."""
+    try:
+        path = '/usr/src/app/CHANGELOG.md'
+        with open(path, 'r') as f:
+            content = f.read()
+        return {"content": content}
+    except Exception as e:
+        logging.error(f"Error retrieving changelog: {str(e)}")
+        return {"content": "Error retrieving changelog."}
+
 @router.get("/version")
 async def get_version():
     """Retrieve the current version of the application."""
-    # Get version from package.json
     try:
-        with open('/usr/src/app/package.json') as f:
-            package_data = json.load(f)
-            version = package_data.get('version', 'unknown')
+        path = '/usr/src/app/CHANGELOG.md'
+        with open(path, 'r') as f:
+            changelog = f.read()
+
+        match = re.search(r"## \[(.*?)\].*?\n", changelog)
+        if match:
+            version = match.group(1)
             return {"version": version}
+        else:
+            logging.warning("Version number not found in CHANGELOG.md")
+            return {"version": "unknown"}
     except Exception as e:
-        logging.error(f"Error getting version: {str(e)}")
+        logging.error(f"Error getting version from CHANGELOG.md: {str(e)}")
         return {"version": "unknown"}
 
 @router.get("/status")
