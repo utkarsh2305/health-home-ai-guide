@@ -1,6 +1,5 @@
 import logging
 import os
-import json
 from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -18,14 +17,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_version():
-    with open('/usr/src/app/package.json') as f:
-        package_data = json.load(f)
-        return package_data.get('version', '0.0.0')
-
 app = FastAPI(
     title="Phlox",
-    version=get_version()
 )
 
 scheduler = AsyncIOScheduler()
