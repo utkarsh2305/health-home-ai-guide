@@ -1,8 +1,9 @@
+import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import {
     Box,
     Text,
     Flex,
-    IconButton,
     useDisclosure,
     Modal,
     ModalOverlay,
@@ -16,7 +17,6 @@ import {
     VStack,
     HStack,
 } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
 import { FaGithub } from "react-icons/fa";
 import { TbVersions } from "react-icons/tb";
 import { BsCheck2All, BsExclamationTriangle } from "react-icons/bs";
@@ -24,7 +24,7 @@ import { BsCheck2All, BsExclamationTriangle } from "react-icons/bs";
 const VersionInfo = ({ isCollapsed }) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [version, setVersion] = useState("");
-    const [changelog, setChangelog] = useState([]);
+    const [changelog, setChangelog] = useState("");
     const [serverStatus, setServerStatus] = useState({
         whisper: false,
         ollama: false,
@@ -43,9 +43,8 @@ const VersionInfo = ({ isCollapsed }) => {
         fetch("/CHANGELOG.md")
             .then((res) => res.text())
             .then((text) => {
-                // Parse changelog markdown to structured data
-                const parsedChangelog = parseChangelog(text);
-                setChangelog(parsedChangelog);
+                // Just store the raw markdown text
+                setChangelog(text);
             })
             .catch((err) => console.error("Error fetching changelog:", err));
 
@@ -235,47 +234,10 @@ const ChangelogModal = ({ isOpen, onClose, version, changelog }) => {
                     overflowY="auto"
                     className="custom-scrollbar"
                 >
-                    {changelog.length > 0 ? (
-                        changelog.map((release, idx) => (
-                            <Box key={idx} mb={6}>
-                                <Flex align="baseline" mb={2}>
-                                    <Text fontWeight="bold" fontSize="lg">
-                                        v{release.version}
-                                    </Text>
-                                    {release.date && (
-                                        <Text
-                                            ml={2}
-                                            fontSize="sm"
-                                            color="gray.500"
-                                        >
-                                            ({release.date})
-                                        </Text>
-                                    )}
-                                </Flex>
-
-                                {release.changes.map((changeType, typeIdx) => (
-                                    <Box key={typeIdx} ml={4} mb={3}>
-                                        <Text fontWeight="bold" fontSize="md">
-                                            {changeType.type}
-                                        </Text>
-                                        <VStack
-                                            align="start"
-                                            ml={4}
-                                            spacing={1}
-                                            mt={1}
-                                        >
-                                            {changeType.items.map(
-                                                (item, itemIdx) => (
-                                                    <Text key={itemIdx}>
-                                                        {item}
-                                                    </Text>
-                                                ),
-                                            )}
-                                        </VStack>
-                                    </Box>
-                                ))}
-                            </Box>
-                        ))
+                    {changelog ? (
+                        <Box className="markdown-content">
+                            <ReactMarkdown>{changelog}</ReactMarkdown>
+                        </Box>
                     ) : (
                         <Text>Loading changelog...</Text>
                     )}
