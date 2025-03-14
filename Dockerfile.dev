@@ -16,6 +16,9 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
+# Copy root CHANGELOG.md to public/ if it exists
+RUN if [ -f "CHANGELOG.md" ]; then cp CHANGELOG.md public/CHANGELOG.md; fi
+
 # Make the application directories
 RUN mkdir -p /usr/src/app/data
 RUN mkdir -p /usr/src/app/static

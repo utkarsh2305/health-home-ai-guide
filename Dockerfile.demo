@@ -13,6 +13,9 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
+# Copy root CHANGELOG.md to public/ if it exists
+RUN if [ -f "CHANGELOG.md" ]; then cp CHANGELOG.md public/CHANGELOG.md; fi
+
 # Build the React app
 RUN npm run build
 
