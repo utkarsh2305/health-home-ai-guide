@@ -226,7 +226,7 @@ async def refine_field_content(
     field: TemplateField
 ) -> Union[str, Dict]:
     """
-    Refine the content of a single field.
+    Refine the content of a single field using style examples and format schema.
 
     Args:
         content (Union[str, Dict]): The raw content to refine.
@@ -240,84 +240,31 @@ async def refine_field_content(
         if isinstance(content, dict):
             return content
 
+        # Get configuration and client
         config = config_manager.get_config()
         client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
         prompts = config_manager.get_prompts_and_options()
         options = prompts["options"]["general"]
 
-        # Determine the response format and system prompt based on field format_schema
-        format_type = None
-        if field.format_schema and "type" in field.format_schema:
-            format_type = field.format_schema["type"]
+        # Determine format details
+        format_details = _determine_format_details(field, prompts)
 
-            if format_type == "narrative":
-                response_format = NarrativeResponse.model_json_schema()
-                system_prompt = "Format the following content as a cohesive narrative paragraph."
-            else:
-                response_format = RefinedResponse.model_json_schema()
+        # Build system prompt with style example if available
+        system_prompt = _build_system_prompt(field, format_details, prompts)
 
-                # Add format guidance to the system prompt
-                format_guidance = ""
-                if format_type == "numbered":
-                    format_guidance = "Format the key points as a numbered list (1., 2., etc.)."
-                elif format_type == "bullet":
-                    format_guidance = "Format the key points as a bulleted list (•) prefixes)."
-
-                system_prompt = prompts["prompts"]["refinement"]["system"] + "\n" + format_guidance
-        else:
-            # Default to RefinedResponse
-            response_format = RefinedResponse.model_json_schema()
-            system_prompt = prompts["prompts"]["refinement"]["system"]
-
-        # Override with custom refinement rules if specified
-        if field.refinement_rules:
-            # Check if rules are provided and exist in the prompts configuration
-            for rule in field.refinement_rules:
-                if rule in prompts["prompts"]["refinement"]:
-                    system_prompt = prompts["prompts"]["refinement"][rule]
-                    break
-
-        request_body = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content},
-        ]
-
+        # Execute the model call
         response = await client.chat(
             model=config["PRIMARY_MODEL"],
-            messages=request_body,
-            format=response_format,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content},
+            ],
+            format=format_details["response_format"],
             options=options
         )
 
-        # Process response based on format type
-        if format_type == "narrative":
-            narrative_response = NarrativeResponse.model_validate_json(response['message']['content'])
-            return narrative_response.narrative
-        else:
-            refined_response = RefinedResponse.model_validate_json(response['message']['content'])
-
-            # Apply formatting based on format_type
-            if format_type == "numbered":
-                formatted_key_points = []
-                for i, point in enumerate(refined_response.key_points):
-                    # Strip any existing numbering
-                    cleaned_point = re.sub(r'^\d+\.\s*', '', point.strip())
-                    formatted_key_points.append(f"{i+1}. {cleaned_point}")
-                return "\n".join(formatted_key_points)
-            elif format_type == "bullet":
-                bullet_char = "•"  # Default bullet character
-                if field.format_schema and "bullet_char" in field.format_schema:
-                    bullet_char = field.format_schema["bullet_char"]
-
-                formatted_key_points = []
-                for point in refined_response.key_points:
-                    # Strip any existing bullets
-                    cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
-                    formatted_key_points.append(f"{bullet_char} {cleaned_point}")
-                return "\n".join(formatted_key_points)
-            else:
-                # No specific formatting required
-                return "\n".join(refined_response.key_points)
+        # Format the response appropriately
+        return _format_refined_response(response, field, format_details)
 
     except Exception as e:
         logger.error(f"Error refining field {field.field_key}: {e}")
@@ -362,3 +309,113 @@ def _detect_audio_format(audio_buffer):
         return "recording.m4a", "audio/mp4"
     # Default to WAV if we can't determine
     return "recording.wav", "audio/wav"
+
+def _determine_format_details(field: TemplateField, prompts: dict) -> dict:
+    """Determine response format and format type based on field schema."""
+    format_type = None
+    if field.format_schema and "type" in field.format_schema:
+        format_type = field.format_schema["type"]
+
+        if format_type == "narrative":
+            return {
+                "format_type": "narrative",
+                "response_format": NarrativeResponse.model_json_schema(),
+                "base_prompt": "Format the following content as a cohesive narrative paragraph."
+            }
+
+    # Default to RefinedResponse for non-narrative formats
+    format_guidance = ""
+    if format_type == "numbered":
+        format_guidance = "Format the key points as a numbered list (1., 2., etc.)."
+    elif format_type == "bullet":
+        format_guidance = "Format the key points as a bulleted list (•) prefixes)."
+
+    return {
+        "format_type": format_type,
+        "response_format": RefinedResponse.model_json_schema(),
+        "base_prompt": prompts["prompts"]["refinement"]["system"],
+        "format_guidance": format_guidance
+    }
+
+def _build_system_prompt(field: TemplateField, format_details: dict, prompts: dict) -> str:
+    """Build the system prompt using format guidance and style examples."""
+    # Check if field has style_example and prioritize it
+    if hasattr(field, 'style_example') and field.style_example:
+        return f"""
+        You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy.
+
+        STYLE EXAMPLE:
+        {field.style_example}
+
+        FORMATTING INSTRUCTIONS:
+        1. Analyze the STYLE EXAMPLE and match it EXACTLY, including:
+        - Format elements (bullet style, indentation, paragraph structure)
+        - Sentence structure (fragments vs. complete sentences)
+        - Capitalization and punctuation patterns
+        - Abbreviation conventions and medical terminology style
+        - Tense (past/present) and perspective (first/third person)
+
+        2. IMPORTANT CONSTRAINTS:
+        - Preserve ALL clinical details and values from the original text
+        - Do not add information not present in the input
+        - RETURN JSON IN THE REQUESTED FORMAT
+        - If the style example uses abbreviations like "SNT" or "HSM", use similar appropriate medical abbreviations
+
+        FORMAT THE FOLLOWING MEDICAL INFORMATION:"""
+
+    # If no style example, start with base prompt
+    system_prompt = format_details["base_prompt"]
+
+    # Add format guidance if available
+    if "format_guidance" in format_details and format_details["format_guidance"]:
+        system_prompt += "\n" + format_details["format_guidance"]
+
+    # Apply custom refinement rules if specified and no style example exists
+    if field.refinement_rules:
+        for rule in field.refinement_rules:
+            if rule in prompts["prompts"]["refinement"]:
+                system_prompt = prompts["prompts"]["refinement"][rule]
+                break
+    print(system_prompt)
+    return system_prompt
+
+def _format_refined_response(response: dict, field: TemplateField, format_details: dict) -> str:
+    """Format the model response according to field requirements."""
+    format_type = format_details["format_type"]
+
+    if format_type == "narrative":
+        narrative_response = NarrativeResponse.model_validate_json(response['message']['content'])
+        return narrative_response.narrative
+
+    # Handle non-narrative formats
+    refined_response = RefinedResponse.model_validate_json(response['message']['content'])
+
+    if format_type == "numbered":
+        return _format_numbered_list(refined_response.key_points)
+    elif format_type == "bullet":
+        return _format_bulleted_list(refined_response.key_points, field)
+    else:
+        # No specific formatting required
+        return "\n".join(refined_response.key_points)
+
+def _format_numbered_list(key_points: List[str]) -> str:
+    """Format key points as a numbered list."""
+    formatted_key_points = []
+    for i, point in enumerate(key_points):
+        # Strip any existing numbering
+        cleaned_point = re.sub(r'^\d+\.\s*', '', point.strip())
+        formatted_key_points.append(f"{i+1}. {cleaned_point}")
+    return "\n".join(formatted_key_points)
+
+def _format_bulleted_list(key_points: List[str], field: TemplateField) -> str:
+    """Format key points as a bulleted list."""
+    bullet_char = "•"  # Default bullet character
+    if field.format_schema and "bullet_char" in field.format_schema:
+        bullet_char = field.format_schema["bullet_char"]
+
+    formatted_key_points = []
+    for point in key_points:
+        # Strip any existing bullets
+        cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
+        formatted_key_points.append(f"{bullet_char} {cleaned_point}")
+    return "\n".join(formatted_key_points)

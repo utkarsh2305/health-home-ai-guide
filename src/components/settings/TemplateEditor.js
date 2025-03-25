@@ -417,6 +417,32 @@ const FieldEditor = ({ field, idx, updateField, removeField }) => {
                                             )}
                                         </Box>
                                     </Tooltip>
+
+                                    {/* Add the new Style Example field here */}
+                                    <Tooltip label="Example of how this field should look">
+                                        <Box width="full">
+                                            <Text fontSize="sm" mb={1}>
+                                                Style Example
+                                            </Text>
+                                            <Textarea
+                                                size="sm"
+                                                value={
+                                                    field.style_example || ""
+                                                }
+                                                onChange={(e) => {
+                                                    updateField(
+                                                        idx,
+                                                        "style_example",
+                                                        e.target.value,
+                                                    );
+                                                }}
+                                                className="textarea-style"
+                                                placeholder="Enter an example of how this field should be formatted..."
+                                                rows={4}
+                                            />
+                                        </Box>
+                                    </Tooltip>
+
                                     <Tooltip label="Rules for refining the AI's response">
                                         <Box width="full">
                                             <Text fontSize="sm" mb={1}>
@@ -498,6 +524,7 @@ const TemplateEditor = ({ isOpen, onClose, template, templateKey, onSave }) => {
                     initial_prompt: "",
                     format_schema: null,
                     refinement_rules: "default",
+                    style_example: "",
                 },
             ],
         }));
