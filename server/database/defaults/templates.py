@@ -52,9 +52,9 @@ class DefaultTemplates:
                         "field_name": "Investigations",
                         "field_type": "text",
                         "persistent": True,
-                        "system_prompt": "Extract and format investigation results.",
+                        "system_prompt": "Extract and format investigation results in the following format. Only include the most recent investigations:\n<Name of pathology company (eg Dorevitch)> <Date of test DD/MM/YY>:\nFBE Hb/WCC/Plt\n\nUEC Na/K/Cr (eGFR)\n\nOther relevant investigations such as calcium level.\n\nRelevant imaging should appear like so:\n<Type of scan eg CT-Brain> <Imaging Company eg Lumus> <Date of scan DD/MM/YY>\n- <key point from scan report>",
                         "initial_prompt": "Results:\n",
-                        "style_example": "Hb 120 g/L (↓), WCC 15.2 x10^9/L (↑), Plts 145 x10^9/L\nLymphocytes 12.4 x10^9/L (↑)\nCreat 82 μmol/L, eGFR >90 mL/min\nLFTs normal\nPET scan (Mar 2023): No evidence of disease progression"
+                        "style_example": "Melbourne Pathology 15/06/23:\nFBE Hb 120/WCC 15.2/Plt 145\n\nUEC Na 138/K 4.2/Cr 82 (eGFR >90)\n\nLFTs normal\nCalcium 2.35\n\nPET-CT Melbourne Imaging 28/03/23:\n- No evidence of disease progression\n- No new FDG-avid lesions identified"
                     },
                     {
                         "field_key": "clinical_history",
