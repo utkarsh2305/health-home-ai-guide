@@ -43,7 +43,7 @@ async def transcribe_audio(audio_buffer: bytes) -> Dict[str, Union[str, float]]:
             form_data.add_field("language", "en")
             form_data.add_field("temperature", "0.1")
             form_data.add_field("vad_filter", "true")
-            form_data.add_field("response_format", "json")
+            form_data.add_field("response_format", "verbose_json")
             form_data.add_field("timestamp_granularities[]", "segment")
 
             transcription_start = time.perf_counter()
