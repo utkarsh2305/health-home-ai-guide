@@ -83,6 +83,9 @@ async def transcribe_audio(audio_buffer: bytes) -> Dict[str, Union[str, float]]:
                 else:
                     transcript_text = data["text"]
 
+                # Clean repetitive text patterns
+                transcript_text = _clean_repetitive_text(transcript_text)
+
                 return {
                     "text": transcript_text,
                     "transcriptionDuration": float(f"{transcription_duration:.2f}"),
@@ -291,6 +294,28 @@ def _build_patient_context(context: Dict[str, str]) -> str:
         context_parts.append(f"DOB: {context['dob']}")
 
     return " ".join(context_parts)
+
+def _clean_repetitive_text(text: str) -> str:
+    """
+    Clean up repetitive text patterns that might appear in transcripts.
+
+    Args:
+        text (str): The text to clean
+
+    Returns:
+        str: Cleaned text
+    """
+    # Pattern to find repetitions of the same word/phrase 3+ times in succession
+    pattern = r'(\b\w+[\s\w]*?\b)(\s+\1){3,}'
+
+    # Replace with just two instances
+    cleaned_text = re.sub(pattern, r'\1 \1', text)
+
+    # If the text changed, recursively clean again (for nested repetitions)
+    if cleaned_text != text:
+        return _clean_repetitive_text(cleaned_text)
+
+    return cleaned_text
 
 def _detect_audio_format(audio_buffer):
     """
