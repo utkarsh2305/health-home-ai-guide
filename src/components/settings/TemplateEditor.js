@@ -33,9 +33,6 @@ import { colors } from "../../theme/colors";
 
 const FieldEditor = ({ field, idx, updateField, removeField }) => {
     const [showAdvanced, setShowAdvanced] = useState(false);
-    // New state for showing system prompt for persistent fields
-    const [showPersistentSystemPrompt, setShowPersistentSystemPrompt] =
-        useState(false);
     const isPlanField = field.field_name?.toLowerCase() === "plan";
 
     return (
@@ -180,303 +177,173 @@ const FieldEditor = ({ field, idx, updateField, removeField }) => {
                 </HStack>
             </Flex>
             <VStack spacing={3} align="stretch">
-                {/* For persistent fields, show a button to expose system prompt */}
-                {field.persistent && (
-                    <Box mt={4}>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            leftIcon={
-                                showPersistentSystemPrompt ? (
-                                    <ChevronDownIcon />
-                                ) : (
-                                    <ChevronRightIcon />
-                                )
-                            }
-                            onClick={() =>
-                                setShowPersistentSystemPrompt(
-                                    !showPersistentSystemPrompt,
-                                )
-                            }
-                            mb={2}
-                        >
-                            {showPersistentSystemPrompt ? "Hide" : "Show"}{" "}
+                {/* System prompt for all fields (persistent and dynamic) */}
+                <Tooltip label="Instructions for the AI on how to process this field">
+                    <Box width="full" mt={4}>
+                        <Text fontSize="sm" mb={1}>
                             System Prompt
-                        </Button>
+                        </Text>
+                        <Textarea
+                            value={field.system_prompt || ""}
+                            rows={6}
+                            onChange={(e) =>
+                                updateField(
+                                    idx,
+                                    "system_prompt",
+                                    e.target.value,
+                                )
+                            }
+                            sx={{ overflowY: "auto !important" }}
+                            style={{
+                                lineHeight: "1.5",
+                                overflowY: "auto !important",
+                            }}
+                            className="input-style"
+                            placeholder={
+                                field.persistent
+                                    ? "Enter system prompt for this persistent field..."
+                                    : "Enter system prompt for this dynamic field..."
+                            }
+                        />
+                    </Box>
+                </Tooltip>
 
-                        <Collapse
-                            in={showPersistentSystemPrompt}
-                            animateOpacity
-                        >
-                            <Box width="full">
-                                <Text fontSize="sm" mb={1}>
-                                    System Prompt
-                                </Text>
-                                <Tooltip label="Instructions for the AI on how to process this persistent field (for example, in document processing)">
+                {/* Advanced settings for both persistent and dynamic fields */}
+                <Box mt="4">
+                    <IconButton
+                        icon={
+                            showAdvanced ? (
+                                <ChevronDownIcon />
+                            ) : (
+                                <ChevronRightIcon />
+                            )
+                        }
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        aria-label="Toggle Advanced Settings"
+                        variant="outline"
+                        size="10"
+                        mr="2"
+                        className="collapse-toggle"
+                    />
+                    <Text fontSize="sm" mb="1" mt="4" display="inline">
+                        Advanced Settings
+                    </Text>
+                    <Collapse in={showAdvanced} animateOpacity>
+                        <VStack spacing={3} mt="4">
+                            <Tooltip label="Specify the format structure for the response">
+                                <Box width="full">
+                                    <Text fontSize="sm" mb={1}>
+                                        Format Schema
+                                    </Text>
+                                    <Select
+                                        size="sm"
+                                        className="input-style"
+                                        value={
+                                            field.format_schema?.type || "none"
+                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === "none") {
+                                                updateField(
+                                                    idx,
+                                                    "format_schema",
+                                                    null,
+                                                );
+                                            } else {
+                                                let schema = {
+                                                    type: value,
+                                                };
+                                                if (value === "bullet") {
+                                                    schema.bullet_char = "•"; // Default bullet
+                                                }
+                                                updateField(
+                                                    idx,
+                                                    "format_schema",
+                                                    schema,
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <option value="none">Free Text</option>
+                                        <option value="bullet">
+                                            Bullet List
+                                        </option>
+                                        <option value="numbered">
+                                            Numbered List
+                                        </option>
+                                        <option value="narrative">
+                                            Narrative Paragraph
+                                        </option>
+                                    </Select>
+
+                                    {/* Show bullet character selector if bullet format is selected */}
+                                    {field.format_schema?.type === "bullet" && (
+                                        <Box mt={2}>
+                                            <Text fontSize="sm" mb={1}>
+                                                Bullet Character
+                                            </Text>
+                                            <Select
+                                                size="sm"
+                                                className="input-style"
+                                                value={
+                                                    field.format_schema
+                                                        ?.bullet_char || "•"
+                                                }
+                                                onChange={(e) => {
+                                                    updateField(
+                                                        idx,
+                                                        "format_schema",
+                                                        {
+                                                            ...field.format_schema,
+                                                            bullet_char:
+                                                                e.target.value,
+                                                        },
+                                                    );
+                                                }}
+                                            >
+                                                <option value="•">
+                                                    • (Bullet)
+                                                </option>
+                                                <option value="-">
+                                                    - (Dash)
+                                                </option>
+                                                <option value="*">
+                                                    * (Asterisk)
+                                                </option>
+                                                <option value="→">
+                                                    → (Arrow)
+                                                </option>
+                                            </Select>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Tooltip>
+
+                            {/* Add the Style Example field */}
+                            <Tooltip label="Example of how this field should look">
+                                <Box width="full">
+                                    <Text fontSize="sm" mb={1}>
+                                        Style Example
+                                    </Text>
                                     <Textarea
-                                        value={field.system_prompt || ""}
-                                        rows={6}
-                                        onChange={(e) =>
+                                        size="sm"
+                                        value={field.style_example || ""}
+                                        onChange={(e) => {
                                             updateField(
                                                 idx,
-                                                "system_prompt",
+                                                "style_example",
                                                 e.target.value,
-                                            )
-                                        }
-                                        sx={{ overflowY: "auto !important" }}
-                                        style={{
-                                            lineHeight: "1.5",
-                                            overflowY: "auto !important",
+                                            );
                                         }}
-                                        className="textarea-style"
-                                        placeholder="Enter system prompt for this persistent field (for example, in document processing)..."
+                                        className="input-style"
+                                        placeholder="Enter an example of how this field should be formatted..."
+                                        rows={4}
                                     />
-                                </Tooltip>
-                            </Box>
-                        </Collapse>
-                    </Box>
-                )}
-
-                {/* For dynamic fields, show all the existing fields */}
-                {!field.persistent && (
-                    <>
-                        <Tooltip label="The type of content this field will contain"></Tooltip>
-                        <Tooltip label="Instructions for the AI on how to process this field">
-                            <Box width="full">
-                                <Text fontSize="sm" mb={1}>
-                                    System Prompt
-                                </Text>
-                                <Textarea
-                                    value={field.system_prompt || ""}
-                                    rows={6}
-                                    onChange={(e) =>
-                                        updateField(
-                                            idx,
-                                            "system_prompt",
-                                            e.target.value,
-                                        )
-                                    }
-                                    sx={{ overflowY: "auto !important" }}
-                                    style={{
-                                        lineHeight: "1.5",
-                                        overflowY: "auto !important",
-                                    }}
-                                    className="textarea-style"
-                                />
-                            </Box>
-                        </Tooltip>
-
-                        <Box mt="4">
-                            <IconButton
-                                icon={
-                                    showAdvanced ? (
-                                        <ChevronDownIcon />
-                                    ) : (
-                                        <ChevronRightIcon />
-                                    )
-                                }
-                                onClick={() => setShowAdvanced(!showAdvanced)}
-                                aria-label="Toggle Advanced Settings"
-                                variant="outline"
-                                size="10"
-                                mr="2"
-                                className="collapse-toggle"
-                            />
-                            <Text fontSize="sm" mb="1" mt="4" display="inline">
-                                Advanced Settings
-                            </Text>
-                            <Collapse in={showAdvanced} animateOpacity>
-                                <VStack spacing={3} mt="4">
-                                    <Tooltip label="Initial text to guide the AI's response format">
-                                        <Box width="full">
-                                            <Text fontSize="sm" mb={1}>
-                                                Initial Prompt
-                                            </Text>
-                                            <Textarea
-                                                size="sm"
-                                                value={
-                                                    field.initial_prompt
-                                                        ? field.initial_prompt.replace(
-                                                              /\n/g,
-                                                              "\\n",
-                                                          )
-                                                        : ""
-                                                }
-                                                onChange={(e) => {
-                                                    // Replace \\n with actual newlines when saving
-                                                    const value =
-                                                        e.target.value.replace(
-                                                            /\\n/g,
-                                                            "\n",
-                                                        );
-                                                    updateField(
-                                                        idx,
-                                                        "initial_prompt",
-                                                        value,
-                                                    );
-                                                }}
-                                                className="textarea-style"
-                                            />
-                                        </Box>
-                                    </Tooltip>
-                                    <Tooltip label="Specify the format structure for the response">
-                                        <Box width="full">
-                                            <Text fontSize="sm" mb={1}>
-                                                Format Schema
-                                            </Text>
-                                            <Select
-                                                size="sm"
-                                                className="input-style"
-                                                value={
-                                                    field.format_schema?.type ||
-                                                    "none"
-                                                }
-                                                onChange={(e) => {
-                                                    const value =
-                                                        e.target.value;
-                                                    if (value === "none") {
-                                                        updateField(
-                                                            idx,
-                                                            "format_schema",
-                                                            null,
-                                                        );
-                                                    } else {
-                                                        let schema = {
-                                                            type: value,
-                                                        };
-                                                        if (
-                                                            value === "bullet"
-                                                        ) {
-                                                            schema.bullet_char =
-                                                                "•"; // Default bullet
-                                                        }
-                                                        updateField(
-                                                            idx,
-                                                            "format_schema",
-                                                            schema,
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                <option value="none">
-                                                    Free Text
-                                                </option>
-                                                <option value="bullet">
-                                                    Bullet List
-                                                </option>
-                                                <option value="numbered">
-                                                    Numbered List
-                                                </option>
-                                                <option value="narrative">
-                                                    Narrative Paragraph
-                                                </option>
-                                            </Select>
-
-                                            {/* Show bullet character selector if bullet format is selected */}
-                                            {field.format_schema?.type ===
-                                                "bullet" && (
-                                                <Box mt={2}>
-                                                    <Text fontSize="sm" mb={1}>
-                                                        Bullet Character
-                                                    </Text>
-                                                    <Select
-                                                        size="sm"
-                                                        className="input-style"
-                                                        value={
-                                                            field.format_schema
-                                                                ?.bullet_char ||
-                                                            "•"
-                                                        }
-                                                        onChange={(e) => {
-                                                            updateField(
-                                                                idx,
-                                                                "format_schema",
-                                                                {
-                                                                    ...field.format_schema,
-                                                                    bullet_char:
-                                                                        e.target
-                                                                            .value,
-                                                                },
-                                                            );
-                                                        }}
-                                                    >
-                                                        <option value="•">
-                                                            • (Bullet)
-                                                        </option>
-                                                        <option value="-">
-                                                            - (Dash)
-                                                        </option>
-                                                        <option value="*">
-                                                            * (Asterisk)
-                                                        </option>
-                                                        <option value="→">
-                                                            → (Arrow)
-                                                        </option>
-                                                    </Select>
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </Tooltip>
-
-                                    {/* Add the new Style Example field here */}
-                                    <Tooltip label="Example of how this field should look">
-                                        <Box width="full">
-                                            <Text fontSize="sm" mb={1}>
-                                                Style Example
-                                            </Text>
-                                            <Textarea
-                                                size="sm"
-                                                value={
-                                                    field.style_example || ""
-                                                }
-                                                onChange={(e) => {
-                                                    updateField(
-                                                        idx,
-                                                        "style_example",
-                                                        e.target.value,
-                                                    );
-                                                }}
-                                                className="textarea-style"
-                                                placeholder="Enter an example of how this field should be formatted..."
-                                                rows={4}
-                                            />
-                                        </Box>
-                                    </Tooltip>
-
-                                    <Tooltip label="Rules for refining the AI's response">
-                                        <Box width="full">
-                                            <Text fontSize="sm" mb={1}>
-                                                Refinement Rules
-                                            </Text>
-                                            <Select
-                                                size="sm"
-                                                className="input-style"
-                                                value={
-                                                    field.refinement_rules ||
-                                                    "default"
-                                                }
-                                                onChange={(e) =>
-                                                    updateField(
-                                                        idx,
-                                                        "refinement_rules",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            >
-                                                <option value="default">
-                                                    Default Rules
-                                                </option>
-                                                <option value="custom">
-                                                    Custom Rules
-                                                </option>
-                                            </Select>
-                                        </Box>
-                                    </Tooltip>
-                                </VStack>
-                            </Collapse>
-                        </Box>
-                    </>
-                )}
+                                </Box>
+                            </Tooltip>
+                        </VStack>
+                    </Collapse>
+                </Box>
             </VStack>
         </Box>
     );
