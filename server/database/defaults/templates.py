@@ -96,7 +96,7 @@ class DefaultTemplates:
                             "bullet_char": "-",
                             "type": "bullet",
                         },
-                        "style_example": "S:\n- 45yo F presents with 2 week Hx of worsening SOB\n- Reports difficulty climbing stairs and walking >100m\n- Associated with non-productive cough, worse at night\n- No fever, chest pain, or hemoptysis\n- PMHx: Asthma (diagnosed age 12), well controlled until recent exacerbation\n- Meds: Salbutamol PRN (using 6-8 puffs/day recently, up from 2-3/week)"
+                        "style_example": "- 45yo F presents with 2 week Hx of worsening SOB\n- Reports difficulty climbing stairs and walking >100m\n- Associated with non-productive cough, worse at night\n- No fever, chest pain, or hemoptysis\n- PMHx: Asthma (diagnosed age 12), well controlled until recent exacerbation\n- Meds: Salbutamol PRN (using 6-8 puffs/day recently, up from 2-3/week)"
                     },
                     {
                         "field_key": "objective",
@@ -109,7 +109,7 @@ class DefaultTemplates:
                             "bullet_char": "-",
                             "type": "bullet",
                         },
-                        "style_example": "O:\n- Vitals: HR 92, BP 132/78, T 37.1, RR 20, O2 sat 95% RA\n- Alert, mild respiratory distress with speech\n- Chest: Bilateral expiratory wheeze, prolonged expiratory phase\n- No accessory muscle use, no cyanosis\n- PEFR: 280 L/min (predicted 420 L/min)\n- CXR: Hyperinflation, no infiltrates or consolidation"
+                        "style_example": "- Vitals: HR 92, BP 132/78, T 37.1, RR 20, O2 sat 95% RA\n- Alert, mild respiratory distress with speech\n- Chest: Bilateral expiratory wheeze, prolonged expiratory phase\n- No accessory muscle use, no cyanosis\n- PEFR: 280 L/min (predicted 420 L/min)\n- CXR: Hyperinflation, no infiltrates or consolidation"
                     },
                     {
                         "field_key": "assessment",
@@ -122,7 +122,7 @@ class DefaultTemplates:
                             "bullet_char": "-",
                             "type": "bullet",
                         },
-                        "style_example": "A:\n- Moderate asthma exacerbation\n- Likely triggered by recent respiratory infection\n- Suboptimal control with current medication regimen\n- No signs of pneumonia or other complications at this time"
+                        "style_example": "- Moderate asthma exacerbation\n- Likely triggered by recent respiratory infection\n- Suboptimal control with current medication regimen\n- No signs of pneumonia or other complications at this time"
                     },
                     cls.get_plan_field()  # Add standard plan field
                 ]
@@ -142,7 +142,7 @@ class DefaultTemplates:
                             "bullet_char": "-",
                             "type": "bullet",
                         },
-                        "style_example": "Interval History:\n- Last seen 3 months ago for AML post-induction\n- Completed consolidation cycle 2 weeks ago\n- Initially tolerated well but developed neutropenic fever day +10\n- Admitted for 5 days, treated with IV antibiotics\n- Blood cultures negative, resp viral panel +ve for rhinovirus"
+                        "style_example": "- Last seen 3 months ago for AML post-induction\n- Completed consolidation cycle 2 weeks ago\n- Initially tolerated well but developed neutropenic fever day +10\n- Admitted for 5 days, treated with IV antibiotics\n- Blood cultures negative, resp viral panel +ve for rhinovirus"
                     },
                     {
                         "field_key": "current_status",
@@ -155,7 +155,7 @@ class DefaultTemplates:
                             "bullet_char": "-",
                             "type": "bullet",
                         },
-                        "style_example": "Current Status:\n- Now day +21 post-chemo, feeling much improved\n- Ongoing fatigue but able to perform ADLs independently\n- Appetite returning, regained 1kg since discharge\n- No fevers, night sweats, or bleeding\n- Latest FBC shows count recovery with ANC 1.2, Hb 105, Plts 75\n- Examination: No significant findings. ECOG PS 1"
+                        "style_example": "- Now day +21 post-chemo, feeling much improved\n- Ongoing fatigue but able to perform ADLs independently\n- Appetite returning, regained 1kg since discharge\n- No fevers, night sweats, or bleeding\n- Latest FBC shows count recovery with ANC 1.2, Hb 105, Plts 75\n- Examination: No significant findings. ECOG PS 1"
                     },
                     cls.get_plan_field()  # Add standard plan field
                 ]
