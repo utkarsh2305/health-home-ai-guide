@@ -28,6 +28,7 @@ export const templateService = {
             throw error;
         }
     },
+
     setDefaultTemplate: async (templateKey, toast) => {
         try {
             await settingsApi.setDefaultTemplate(templateKey);
@@ -67,6 +68,42 @@ export const templateService = {
             return template;
         } catch (error) {
             console.error(`Failed to fetch template ${templateKey}:`, error);
+            throw error;
+        }
+    },
+
+    isDefaultTemplate: (templateKey) => {
+        const DEFAULT_TEMPLATE_KEYS = ["phlox_", "soap_", "progress_"];
+        return DEFAULT_TEMPLATE_KEYS.some((prefix) =>
+            templateKey.startsWith(prefix),
+        );
+    },
+
+    // Add a function to delete a template
+    deleteTemplate: async (templateKey) => {
+        try {
+            const response = await fetch(`/api/templates/${templateKey}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorData = await response
+                    .json()
+                    .catch(() => ({ message: "Unknown error" }));
+                throw new Error(
+                    errorData.message ||
+                        `Failed to delete template: ${response.status}`,
+                );
+            }
+
+            // Remove from cache if it exists
+            if (templateCache.has(templateKey)) {
+                templateCache.delete(templateKey);
+            }
+
+            return true;
+        } catch (error) {
+            console.error(`Failed to delete template ${templateKey}:`, error);
             throw error;
         }
     },

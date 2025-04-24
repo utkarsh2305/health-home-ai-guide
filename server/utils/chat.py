@@ -188,10 +188,8 @@ class ChatEngine:
                         "description": "Use this tool ONLY if the user explicitly asks about something from the transcript, interview, or conversation with the patient. This will search the transcript for relevant information.",
                         "parameters": {
                             "type": "object",
-                            "properties": {
-                                "query": {"type": "string", "description": "The specific question or information to extract from the transcript"},
-                            },
-                            "required": ["query"],
+                            "properties": {},
+                            "required": [],
                         },
                     },
                 },
@@ -264,11 +262,11 @@ class ChatEngine:
                         if 'message' in chunk and 'content' in chunk['message']:
                             yield {"type": "chunk", "content": chunk['message']['content']}
                 else:
-                    self.logger.info(f"Searching transcript for query: {tool['function']['arguments']['query'][:50]}...")
+                    self.logger.info("Searching transcript for query...")
                     yield {"type": "status", "content": "Searching through transcript..."}
 
                     # Create a query to extract information from the transcript
-                    query = tool["function"]["arguments"]["query"]
+                    query = conversation_history[-1]["content"]
 
                     # Create a new message list with the transcript and query
                     transcript_query_messages = [

@@ -1,10 +1,11 @@
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 import json
+import re
 import logging
 from server.database.connection import PatientDatabase
 from server.database.defaults.templates import DefaultTemplates
-from server.schemas.templates import ClinicalTemplate, TemplateField, ExtractedTemplate
+from server.schemas.templates import FormatStyle, ClinicalTemplate, TemplateField, ExtractedTemplate
 from server.database.config import config_manager
 import time
 from ollama import AsyncClient as AsyncOllamaClient
@@ -510,15 +511,16 @@ async def generate_template_from_note(example_note: str) -> ClinicalTemplate:
         You are a medical documentation expert that analyzes clinical notes and creates structured templates.
         For each section:
         1. Determine the format style (bullets, numbered, narrative, etc)
-        2. Identify the exact bullet/numbering pattern used (-, 1., etc), if any.
-        3. Create an appropriate section starter that matches the format
-        4. The section starter should include the heading and initial format marker
+        2. Identify the exact bullet/numbering pattern used (-, 1., •, *, etc), if any
+        3. Create an appropriate section starter that matches the format (include heading and initial format marker if any)
+        4. Extract the section text from the example note verbatim to serve as a style example
 
-        Examples:
-        - For bullet points: "Current Status:\n-"
-        - For numbered items: "Plan:\n1."
-        - For lab values: "Results:\n"
-        - For narrative sections: "Assessment:\n"
+        Each section should clearly indicate:
+        - field_name (e.g., "History of Present Illness")
+        - format_style (one of: bullets, numbered, narrative, heading_with_bullets, lab_values)
+        - bullet_type (e.g., "-", "•", "*") if format uses bullets
+        - section_starter (e.g., "HPI:\n-")
+        - example_text (the actual text from the note for this section)
         """
 
         messages = [
@@ -543,8 +545,24 @@ async def generate_template_from_note(example_note: str) -> ClinicalTemplate:
         # Add all extracted sections except plan
         for section in extracted.sections:
             field_key = generate_field_key(section.field_name)
-
             if field_key != "plan":
+                # Create format_schema based on format_style
+                format_schema = None
+                if section.format_style == FormatStyle.BULLETS:
+                    format_schema = {
+                        "type": "bullet",
+                        "bullet_char": section.bullet_type or "-"
+                    }
+                elif section.format_style == FormatStyle.NUMBERED:
+                    format_schema = {
+                        "type": "numbered"
+                    }
+                elif section.format_style == FormatStyle.HEADING_WITH_BULLETS:
+                    format_schema = {
+                        "type": "heading_with_bullets",
+                        "bullet_char": section.bullet_type or "-"
+                    }
+
                 field = TemplateField(
                     field_key=field_key,
                     field_name=section.field_name,
@@ -552,23 +570,32 @@ async def generate_template_from_note(example_note: str) -> ClinicalTemplate:
                     required=section.required,
                     persistent=section.persistent,
                     system_prompt=f"Provide information for {section.field_name} using {section.format_style.value} format.",
-                    initial_prompt=section.section_starter,
-                    format_schema=None,
-                    refinement_rules=["default"]
+                    style_example=section.example_text,  # Use example text
+                    format_schema=format_schema,
+                    refinement_rules=["default"] # Deprecated
                 )
                 template_fields.append(field)
 
-        # Add plan field
-        plan_field = DefaultTemplates.get_plan_field()
-        # Find plan section by generating field_key from field_name
-        plan_section = next((s for s in extracted.sections
-                           if generate_field_key(s.field_name) == "plan"), None)
-        if plan_section:
-            plan_field["initial_prompt"] = plan_section.section_starter
+        # Update plan field's style example
+        plan_section = next(
+            (s for s in extracted.sections if generate_field_key(s.field_name) == "plan"),
+            None
+        )
 
-        # Ensure plan field has list for refinement_rules
-        if isinstance(plan_field.get("refinement_rules"), str):
-            plan_field["refinement_rules"] = [plan_field["refinement_rules"]]
+        plan_field = DefaultTemplates.get_plan_field()
+        if plan_section:
+            # Extract the example text and ensure it's in numbered format
+            plan_example = plan_section.example_text
+
+            # Check if the example is already in a numbered format
+            if not re.match(r'^\s*\d+\.', plan_example.lstrip()):
+                # Convert to numbered format if it's not already
+                lines = [line.strip() for line in plan_example.split('\n') if line.strip()]
+                plan_example = '\n'.join(f"{i+1}. {line.lstrip('- •*').strip()}"
+                                        for i, line in enumerate(lines))
+
+            plan_field["style_example"] = plan_example
+            plan_field["format_schema"] = {"type": "numbered"}
 
         template_fields.append(TemplateField(**plan_field))
 

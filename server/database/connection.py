@@ -225,6 +225,7 @@ class PatientDatabase:
             raise
 
     def _migrate_to_v1(self):
+        from server.database.defaults.prompts import DEFAULT_PROMPTS
         """Initial schema setup"""
         self.cursor.execute(
             """
@@ -392,16 +393,10 @@ class PatientDatabase:
             )
         """
         )
-        # Load initial data from JSON files
-        json_path = os.path.join(
-            os.path.dirname(__file__),
-            'defaults',
-            'prompts.json'
-        )
-        with open(json_path) as f:
-            prompts_data = json.load(f)
 
-    # Initialize config with default entries
+        prompts_data = DEFAULT_PROMPTS
+
+        # Initialize config with default entries
         default_config = {
             "WHISPER_BASE_URL": "&nbsp;",
             "WHISPER_MODEL": "&nbsp;",
@@ -452,6 +447,7 @@ class PatientDatabase:
 
     def _migrate_to_v2(self):
         """Add reasoning analysis support"""
+        from server.database.defaults.prompts import DEFAULT_PROMPTS
         try:
             # Add reasoning_output column to patients table
             self.cursor.execute(
@@ -480,13 +476,7 @@ class PatientDatabase:
                 (json.dumps("&nbsp;"), json.dumps(False))
             )
 
-            json_path = os.path.join(
-                os.path.dirname(__file__),
-                'defaults',
-                'prompts.json'
-            )
-            with open(json_path) as f:
-                defaults = json.load(f)
+            defaults = DEFAULT_PROMPTS
 
             # Add new reasoning prompt
             reasoning_prompt = defaults["prompts"]["reasoning"]["system"]

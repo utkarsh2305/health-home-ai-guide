@@ -3,7 +3,8 @@ import asyncio
 import logging
 from ollama import AsyncClient as AsyncOllamaClient
 from server.database.config import config_manager
-from server.utils.helpers import calculate_age
+from server.utils.helpers import calculate_age, refine_field_content
+from server.schemas.templates import TemplateResponse
 import fitz  # PyMuPDF for PDF processing
 import io
 import pytesseract
@@ -228,84 +229,130 @@ async def process_document_with_template(
             "investigations": investigations
         }
 
-    # Process each template field
-    results = {}
-    client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
+    try:
+        # Process all template fields concurrently
+        raw_results = await asyncio.gather(*[
+            process_document_field(
+                extracted_text,
+                field,
+                patient_context
+            )
+            for field in template_fields
+        ])
 
-    for field in template_fields:
-        try:
-            # Access the field attributes directly, not using get()
-            field_name = field.field_name
-            field_key = field.field_key
+        # Refine all results concurrently
+        refined_results = await asyncio.gather(*[
+            refine_field_content(
+                result.content,
+                field
+            )
+            for result, field in zip(raw_results, template_fields)
+        ])
+
+        # Combine results into a dictionary
+        results = {
+            field.field_key: refined_content
+            for field, refined_content in zip(template_fields, refined_results)
+        }
+
+        logger.info(f"Successfully processed {len(results)} template fields")
+        return results
+
+    except Exception as e:
+        logger.error(f"Error processing document with template: {str(e)}")
+        raise
 
 
-            # Handle system_prompt - use empty string as default if not present
-            system_prompt = ""
-            if hasattr(field, 'system_prompt'):
-                system_prompt = field.system_prompt or ""
+async def process_document_field(
+    document_text: str,
+    field: Any,
+    patient_context: Dict[str, Any]
+) -> TemplateResponse:
+    """Process a single document field by extracting key points from the document text.
 
-            # If no system prompt is provided, create a default one
-            if not system_prompt:
-                system_prompt = f"You are a medical documentation assistant. Extract the {field_name} from the provided medical document."
+    Args:
+        document_text (str): The extracted text from the document to be analyzed.
+        field (Any): The template field configuration containing prompts.
+        patient_context (Dict[str, Any]): Patient context details.
 
-            # Add formatting guidance if available
-            format_instructions = ""
-            if hasattr(field, 'format_schema') and field.format_schema:
+    Returns:
+        TemplateResponse: An object containing the field key and the formatted key points.
+    """
+    try:
+        config = config_manager.get_config()
+        client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
+        options = config_manager.get_prompts_and_options()["options"]["general"].copy()
 
-                format_type = field.format_schema.get('type')
-                if format_type == 'bullet':
-                    bullet_char = field.format_schema.get('bullet_char', '-')
-                    format_instructions = f"\nFormat the response as a bullet list using '{bullet_char}' as the bullet character."
-                elif format_type == 'numbered':
-                    format_instructions = "\nFormat the response as a numbered list."
+        # Use FieldResponse for structured output
+        from server.schemas.grammars import FieldResponse
+        response_format = FieldResponse.model_json_schema()
 
-            system_prompt += format_instructions
+        # Get the field name and system prompt
+        field_name = field.field_name
+        system_prompt = getattr(field, 'system_prompt', "") or ""
 
-            logger.info(f"Processing template field: {field_name} (System Prompt: {system_prompt[:50]}...")
+        # If no system prompt is provided, create a default one
+        if not system_prompt:
+            system_prompt = f"You are a medical documentation assistant. Extract the {field_name} from the provided medical document."
 
-            # Add patient context to system prompt
+        # Build patient context for the prompt
+        context_str = ""
+        if patient_context:
+            # Convert dictionary to format expected by _build_patient_context
             context_str = _build_patient_context(
                 patient_context.get('name'),
                 patient_context.get('dob'),
                 patient_context.get('gender')
             )
-            if context_str:
-                system_prompt += f"\n\nPatient context: {context_str}"
 
-            system_prompt += "\n\nPut your response in a code block but do not use any other markdown."
+        # Create the request messages
+        request_body = [
+            {"role": "system", "content": (
+                f"{system_prompt}\n"
+                "Extract and return key points as a JSON array."
+            )},
+        ]
 
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": f"Please extract the {field_name} from this medical document:\n\n{extracted_text}",
-                },
-                {
-                    "role": "assistant",
-                    "content": f"I'll extract the requested information and provide it in a code block:\n```\n{field_name}:"
-                },
-            ]
+        # Add patient context if available
+        if context_str:
+            request_body.append({"role": "system", "content": f"Patient context: {context_str}"})
 
-            # Stop options with the code-block prompt
-            options["temperature"] = 0.1
-            options["stop"] = ["```"]
+        # Add the document text as user input
+        request_body.append({"role": "user", "content": f"Please extract the {field_name} from this medical document:\n\n{document_text}"})
 
-            response = await client.chat(
-                model=config["PRIMARY_MODEL"],
-                messages=messages,
-                options=options,
-            )
+        logger.info(f"Processing document field: {field_name}")
 
-            # Strip leading and trailing newlines
-            results[field_key] = response["message"]["content"].strip()
+        # Set temperature to 0 for deterministic output
+        options["temperature"] = 0
 
-        except Exception as e:
-            logger.error(f"Error processing field {field_name}: {str(e)}")
-            results[field_key] = f"Error extracting {field_name}"
+        # Make the API call
+        response = await client.chat(
+            model=config["PRIMARY_MODEL"],
+            messages=request_body,
+            format=response_format,
+            options=options
+        )
 
-    logger.info(f"Successfully processed {len(results)} template fields")
-    return results
+        # Parse the response
+        field_response = FieldResponse.model_validate_json(
+            response['message']['content']
+        )
 
+        # Convert key points into a formatted string
+        formatted_content = "\n".join(f"• {point.strip()}" for point in field_response.key_points)
+
+        return TemplateResponse(
+            field_key=field.field_key,
+            content=formatted_content
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing document field {field.field_key}: {e}")
+        # Return empty result on error
+        return TemplateResponse(
+            field_key=field.field_key,
+            content=f"Error extracting {field.field_name}: {str(e)}"
+        )
 
 def _build_patient_context(name: Optional[str], dob: Optional[str], gender: Optional[str]) -> str:
     """

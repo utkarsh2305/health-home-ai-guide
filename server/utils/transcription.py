@@ -6,8 +6,9 @@ import logging
 from typing import Dict, List, Union
 from ollama import AsyncClient as AsyncOllamaClient
 from server.database.config import config_manager
+from server.utils.helpers import refine_field_content
 from server.schemas.templates import TemplateField, TemplateResponse
-from server.schemas.grammars import FieldResponse, RefinedResponse
+from server.schemas.grammars import FieldResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +44,7 @@ async def transcribe_audio(audio_buffer: bytes) -> Dict[str, Union[str, float]]:
             form_data.add_field("language", "en")
             form_data.add_field("temperature", "0.1")
             form_data.add_field("vad_filter", "true")
-            form_data.add_field("response_format", "json")
+            form_data.add_field("response_format", "verbose_json")
             form_data.add_field("timestamp_granularities[]", "segment")
 
             transcription_start = time.perf_counter()
@@ -82,6 +83,9 @@ async def transcribe_audio(audio_buffer: bytes) -> Dict[str, Union[str, float]]:
                     )
                 else:
                     transcript_text = data["text"]
+
+                # Clean repetitive text patterns
+                transcript_text = _clean_repetitive_text(transcript_text)
 
                 return {
                     "text": transcript_text,
@@ -221,108 +225,6 @@ def clean_list_spacing(text: str) -> str:
     text = re.sub(r'^\s{2,}', ' ', text)
     return text.strip()
 
-async def refine_field_content(
-    content: Union[str, Dict],
-    field: TemplateField
-) -> Union[str, Dict]:
-    """
-    Refine the content of a single field.
-
-    Args:
-        content (Union[str, Dict]): The raw content to refine.
-        field (TemplateField): The field being processed.
-
-    Returns:
-        Union[str, Dict]: The refined content.
-    """
-    try:
-        # If content is already structured (dict), return as is
-        if isinstance(content, dict):
-            return content
-
-        config = config_manager.get_config()
-        client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
-        prompts = config_manager.get_prompts_and_options()
-        options = prompts["options"]["general"]
-
-        # Determine the response format and system prompt based on field format_schema
-        format_type = None
-        if field.format_schema and "type" in field.format_schema:
-            format_type = field.format_schema["type"]
-
-            if format_type == "narrative":
-                response_format = NarrativeResponse.model_json_schema()
-                system_prompt = "Format the following content as a cohesive narrative paragraph."
-            else:
-                response_format = RefinedResponse.model_json_schema()
-
-                # Add format guidance to the system prompt
-                format_guidance = ""
-                if format_type == "numbered":
-                    format_guidance = "Format the key points as a numbered list (1., 2., etc.)."
-                elif format_type == "bullet":
-                    format_guidance = "Format the key points as a bulleted list (•) prefixes)."
-
-                system_prompt = prompts["prompts"]["refinement"]["system"] + "\n" + format_guidance
-        else:
-            # Default to RefinedResponse
-            response_format = RefinedResponse.model_json_schema()
-            system_prompt = prompts["prompts"]["refinement"]["system"]
-
-        # Override with custom refinement rules if specified
-        if field.refinement_rules:
-            # Check if rules are provided and exist in the prompts configuration
-            for rule in field.refinement_rules:
-                if rule in prompts["prompts"]["refinement"]:
-                    system_prompt = prompts["prompts"]["refinement"][rule]
-                    break
-
-        request_body = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content},
-        ]
-
-        response = await client.chat(
-            model=config["PRIMARY_MODEL"],
-            messages=request_body,
-            format=response_format,
-            options=options
-        )
-
-        # Process response based on format type
-        if format_type == "narrative":
-            narrative_response = NarrativeResponse.model_validate_json(response['message']['content'])
-            return narrative_response.narrative
-        else:
-            refined_response = RefinedResponse.model_validate_json(response['message']['content'])
-
-            # Apply formatting based on format_type
-            if format_type == "numbered":
-                formatted_key_points = []
-                for i, point in enumerate(refined_response.key_points):
-                    # Strip any existing numbering
-                    cleaned_point = re.sub(r'^\d+\.\s*', '', point.strip())
-                    formatted_key_points.append(f"{i+1}. {cleaned_point}")
-                return "\n".join(formatted_key_points)
-            elif format_type == "bullet":
-                bullet_char = "•"  # Default bullet character
-                if field.format_schema and "bullet_char" in field.format_schema:
-                    bullet_char = field.format_schema["bullet_char"]
-
-                formatted_key_points = []
-                for point in refined_response.key_points:
-                    # Strip any existing bullets
-                    cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
-                    formatted_key_points.append(f"{bullet_char} {cleaned_point}")
-                return "\n".join(formatted_key_points)
-            else:
-                # No specific formatting required
-                return "\n".join(refined_response.key_points)
-
-    except Exception as e:
-        logger.error(f"Error refining field {field.field_key}: {e}")
-        raise
-
 def _build_patient_context(context: Dict[str, str]) -> str:
     """
     Build patient context string from dictionary.
@@ -344,6 +246,28 @@ def _build_patient_context(context: Dict[str, str]) -> str:
         context_parts.append(f"DOB: {context['dob']}")
 
     return " ".join(context_parts)
+
+def _clean_repetitive_text(text: str) -> str:
+    """
+    Clean up repetitive text patterns that might appear in transcripts.
+
+    Args:
+        text (str): The text to clean
+
+    Returns:
+        str: Cleaned text
+    """
+    # Pattern to find repetitions of the same word/phrase 3+ times in succession
+    pattern = r'(\b\w+[\s\w]*?\b)(\s+\1){3,}'
+
+    # Replace with just two instances
+    cleaned_text = re.sub(pattern, r'\1 \1', text)
+
+    # If the text changed, recursively clean again (for nested repetitions)
+    if cleaned_text != text:
+        return _clean_repetitive_text(cleaned_text)
+
+    return cleaned_text
 
 def _detect_audio_format(audio_buffer):
     """

@@ -18,8 +18,9 @@ class TemplateField(BaseModel):
     required: bool = False
     persistent: bool = False
     system_prompt: str
-    initial_prompt: str
+    initial_prompt: Optional[str] = None
     format_schema: Optional[dict] = None
+    style_example: str
     refinement_rules: Optional[List[str]] = None
 
     @validator('field_type')
@@ -28,6 +29,7 @@ class TemplateField(BaseModel):
         if v not in valid_types:
             raise ValueError(f"field_type must be one of {valid_types}")
         return v
+
 
 class ClinicalTemplate(BaseModel):
     template_key: str
@@ -62,6 +64,7 @@ class TemplateSectionSchema(BaseModel):
     format_style: FormatStyle
     bullet_type: Optional[str] = None
     section_starter: str
+    example_text: str
     persistent: bool = False
     required: bool = False
 

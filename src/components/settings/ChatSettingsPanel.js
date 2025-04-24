@@ -135,7 +135,7 @@ const ChatSettingsPanel = ({
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="textarea-style"
+                                                className="input-style"
                                                 placeholder="Prompt sent to AI"
                                                 rows={4}
                                             />
@@ -213,7 +213,7 @@ const ChatSettingsPanel = ({
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="textarea-style"
+                                                className="input-style"
                                                 placeholder="Prompt sent to AI"
                                                 rows={4}
                                             />
@@ -291,7 +291,7 @@ const ChatSettingsPanel = ({
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="textarea-style"
+                                                className="input-style"
                                                 placeholder="Prompt sent to AI"
                                                 rows={4}
                                             />
