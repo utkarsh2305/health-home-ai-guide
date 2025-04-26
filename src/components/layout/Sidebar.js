@@ -18,8 +18,11 @@ import {
     ModalCloseButton,
     Badge,
     useToast,
-    Collapse,
     Tooltip,
+    Avatar,
+    Divider,
+    Collapse,
+    useColorModeValue,
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import {
@@ -27,10 +30,36 @@ import {
     AddIcon,
     SettingsIcon,
     HamburgerIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
 } from "@chakra-ui/icons";
-import { FaClinicMedical, FaTasks } from "react-icons/fa";
+import { FaClinicMedical, FaTasks, FaPlus } from "react-icons/fa";
 import { GiBrain } from "react-icons/gi";
 import VersionInfo from "./VersionInfo";
+
+// Function to generate a consistent color based on a string
+const getAvatarColor = (name) => {
+    // Array of colors for avatar backgrounds - using your color palette
+    const colors = [
+        "#8aadf4", // primaryButton dark
+        "#ed8796", // dangerButton dark
+        "#a6da95", // successButton dark
+        "#eed49f", // secondaryButton dark
+        "#b7bdf8", // neutralButton dark
+        "#f5bde6", // tertiaryButton dark
+        "#c6a0f6", // chatIcon dark
+    ];
+
+    // Simple hash function for the name
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Get a consistent color from the array
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+};
 
 const Sidebar = ({
     onNewPatient,
@@ -47,9 +76,16 @@ const Sidebar = ({
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [patientToDelete, setPatientToDelete] = useState(null);
     const [hoveredPatientId, setHoveredPatientId] = useState(null);
-    const [hoveredNewPatient, setHoveredNewPatient] = useState(false);
     const [incompleteJobsCount, setIncompleteJobsCount] = useState(0);
+    const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+    const [isPatientsCollapsed, setIsPatientsCollapsed] = useState(false);
     const toast = useToast();
+
+    // Color mode values
+    const sidebarBg = useColorModeValue("gray.50", "gray.900");
+    const labelColor = useColorModeValue("gray.500", "gray.400");
+    const dividerColor = useColorModeValue("gray.200", "gray.700");
+    const hoverColor = useColorModeValue("gray.100", "gray.700");
 
     const fetchPatients = async (date) => {
         try {
@@ -120,6 +156,14 @@ const Sidebar = ({
         fetchIncompleteJobsCount();
     }, [selectedDate, refreshKey]);
 
+    // Get initials from name
+    const getInitials = (name) => {
+        const nameParts = name.split(" ");
+        return nameParts.length > 1
+            ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+            : nameParts[0].slice(0, 2).toUpperCase();
+    };
+
     return (
         <Box
             as="nav"
@@ -127,12 +171,12 @@ const Sidebar = ({
             top="0"
             left="0"
             h="100vh"
-            className="sidebar"
-            p={isCollapsed ? "2" : "4"}
-            boxShadow="lg"
+            p={isCollapsed ? "3" : "4"}
+            bg={sidebarBg}
+            boxShadow="md"
             display="flex"
             flexDirection="column"
-            w={isCollapsed ? "50px" : "200px"}
+            w={isCollapsed ? "70px" : "220px"}
             transition="all 0.3s ease"
             zIndex="100"
             transform={
@@ -141,7 +185,7 @@ const Sidebar = ({
                     : "translateX(0)"
             }
         >
-            {/* Only show the internal toggle button on larger screens */}
+            {/* Sidebar toggle button - redesigned */}
             {!isSmallScreen && (
                 <Tooltip
                     label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
@@ -151,116 +195,181 @@ const Sidebar = ({
                         icon={<HamburgerIcon />}
                         onClick={toggleSidebar}
                         position="absolute"
-                        top="5px"
-                        left="8px"
+                        top="12px"
+                        right={isCollapsed ? "12px" : "15px"}
                         size="sm"
-                        borderRadius="sm"
+                        borderRadius="full"
                         aria-label="Toggle sidebar"
                         zIndex="200"
-                        className="sidebar-toggle"
+                        variant="ghost"
+                        color={labelColor}
+                        _hover={{ bg: hoverColor }}
                     />
                 </Tooltip>
             )}
 
-            {/* Normal sidebar when not collapsed */}
-            {!isCollapsed && (
-                <VStack
-                    spacing="5"
-                    align="stretch"
-                    h="full"
-                    overflowY="auto"
-                    maxHeight="100vh"
-                    display="flex"
-                    flexDirection="column"
-                    justifyContent="space-between"
-                >
-                    <VStack
-                        spacing="5"
-                        align="stretch"
-                        h="full"
-                        overflowY="auto"
-                        maxHeight="100vh"
-                    >
-                        <Box
-                            as="button"
-                            onClick={() => handleNavigation("/")}
-                            cursor="pointer"
-                            _hover={{ opacity: 0.8 }}
-                            transition="opacity 0.2s"
-                            display="flex"
-                            justifyContent="center"
-                            width="100%"
-                            mt="5px" // Added margin-top to account for the toggle button spacing
+            {/* Logo Area */}
+            <Box
+                as="button"
+                onClick={() => handleNavigation("/")}
+                cursor="pointer"
+                display="flex"
+                justifyContent="center"
+                width="100%"
+                mt={isCollapsed ? "10px" : "5px"}
+                mb="15px"
+            >
+                <Image
+                    src="/logo.webp"
+                    alt="Logo"
+                    width={isCollapsed ? "40px" : "100px"}
+                />
+            </Box>
+
+            <VStack
+                spacing={isCollapsed ? "4" : "5"}
+                align={isCollapsed ? "center" : "stretch"}
+                h="full"
+                overflowY="auto"
+                maxHeight="calc(100vh - 80px)"
+            >
+                {/* Date selector - only visible when expanded */}
+                {!isCollapsed && (
+                    <Box mb="2">
+                        <Text
+                            fontSize="xs"
+                            fontWeight="medium"
+                            color={labelColor}
+                            mb="1"
                         >
-                            <Image
-                                src="/logo.webp"
-                                alt="Logo"
-                                mt="5"
-                                width="100px"
-                            />
-                        </Box>
+                            CLINIC DATE
+                        </Text>
+                        <Input
+                            type="date"
+                            value={selectedDate || ""}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            size="sm"
+                            borderRadius="md"
+                        />
+                    </Box>
+                )}
 
-                        {/* Date selector */}
-                        <Box>
-                            <Text as="h4">Clinic Date</Text>
-                            <Input
-                                type="date"
-                                value={selectedDate || ""}
-                                onChange={(e) =>
-                                    setSelectedDate(e.target.value)
-                                }
-                                size="sm"
-                                mt="2"
-                                className="input-style"
-                            />
-                        </Box>
-
-                        {/* New Patient button */}
-                        <Box
+                {/* New Patient button - rendered as avatar/icon button */}
+                <Tooltip
+                    label="New Patient"
+                    placement={isCollapsed ? "right" : "top"}
+                >
+                    <Flex
+                        w="100%"
+                        justifyContent={isCollapsed ? "center" : "flex-start"}
+                        mb="2"
+                    >
+                        <Flex
+                            align="center"
                             p="2"
-                            borderRadius="sm"
-                            mt="2"
-                            mb="4"
-                            className="new-patient"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="space-between"
+                            borderRadius="lg"
+                            role="group"
+                            cursor="pointer"
+                            w={isCollapsed ? "auto" : "100%"}
                             onClick={() => {
                                 toast.closeAll();
                                 onNewPatient();
                             }}
-                            onMouseEnter={() => setHoveredNewPatient(true)}
-                            onMouseLeave={() => setHoveredNewPatient(false)}
+                            _hover={{ bg: "rgba(245, 189, 230, 0.1)" }}
+                            transition="all 0.2s"
                         >
-                            <Text>New Patient</Text>
-                            {hoveredNewPatient && <AddIcon />}
-                        </Box>
+                            <Avatar
+                                icon={<FaPlus fontSize="1.2rem" />}
+                                bg="#f5bde6"
+                                color="white"
+                                size={isCollapsed ? "md" : "sm"}
+                                mr={isCollapsed ? "0" : "3"}
+                            />
 
-                        {/* Patient List */}
-                        <Text as="h4">Patient List</Text>
-                        <Box
-                            flex="1"
-                            overflowY="auto"
-                            className="custom-scrollbar"
-                            mt="0"
+                            {!isCollapsed && (
+                                <Text fontWeight="medium">New Patient</Text>
+                            )}
+                        </Flex>
+                    </Flex>
+                </Tooltip>
+
+                {/* Patient List Header - Collapsible when expanded */}
+                {!isCollapsed && (
+                    <Flex
+                        w="100%"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        onClick={() =>
+                            setIsPatientsCollapsed(!isPatientsCollapsed)
+                        }
+                        cursor="pointer"
+                        _hover={{ color: "gray.600" }}
+                        mt="2"
+                    >
+                        <Text
+                            fontSize="xs"
+                            fontWeight="medium"
+                            color={labelColor}
                         >
-                            {patients.length > 0 ? (
-                                patients.map((patient) => {
-                                    const nameParts = patient.name.split(" ");
-                                    const initials =
-                                        nameParts.length > 1
-                                            ? `${nameParts[1][0]}${nameParts[0][0]}`
-                                            : nameParts[0][0];
-                                    return (
-                                        <Box
-                                            key={patient.id}
+                            PATIENTS{" "}
+                            {patients.length > 0 ? `(${patients.length})` : ""}
+                        </Text>
+                        <IconButton
+                            icon={
+                                isPatientsCollapsed ? (
+                                    <ChevronDownIcon />
+                                ) : (
+                                    <ChevronUpIcon />
+                                )
+                            }
+                            variant="ghost"
+                            size="xs"
+                            aria-label={
+                                isPatientsCollapsed
+                                    ? "Expand patients"
+                                    : "Collapse patients"
+                            }
+                        />
+                    </Flex>
+                )}
+
+                {/* Patient List - collapsible and using avatar with initials */}
+                <Collapse
+                    in={isCollapsed || !isPatientsCollapsed}
+                    animateOpacity
+                >
+                    <Box
+                        w="100%"
+                        mt={isCollapsed ? "0" : "1"}
+                        maxH={isCollapsed ? "none" : "30vh"}
+                        overflowY="auto"
+                        className="custom-scrollbar"
+                    >
+                        {patients.length > 0 ? (
+                            patients.map((patient) => {
+                                const initials = getInitials(patient.name);
+                                const avatarBg = getAvatarColor(patient.name);
+
+                                return (
+                                    <Tooltip
+                                        key={patient.id}
+                                        label={isCollapsed ? patient.name : ""}
+                                        placement="right"
+                                        isDisabled={!isCollapsed}
+                                    >
+                                        <Flex
+                                            w="100%"
+                                            align="center"
                                             p="2"
-                                            borderRadius="sm"
-                                            className="sidebar-patient-items"
+                                            borderRadius="lg"
+                                            role="group"
+                                            cursor="pointer"
+                                            justifyContent={
+                                                isCollapsed
+                                                    ? "center"
+                                                    : "space-between"
+                                            }
                                             mb="2"
-                                            display="flex"
-                                            alignItems="center"
-                                            justifyContent="space-between"
                                             onClick={() =>
                                                 handlePatientClick(patient)
                                             }
@@ -270,271 +379,324 @@ const Sidebar = ({
                                             onMouseLeave={() =>
                                                 setHoveredPatientId(null)
                                             }
+                                            _hover={{
+                                                bg: "rgba(184, 192, 224, 0.1)",
+                                            }}
+                                            transition="all 0.2s"
                                         >
-                                            <HStack>
-                                                <Box
-                                                    maxW="120px"
-                                                    whiteSpace="nowrap"
-                                                    overflow="hidden"
-                                                    textOverflow="ellipsis"
-                                                    style={{
-                                                        WebkitMaskImage:
-                                                            hoveredPatientId ===
-                                                            patient.id
-                                                                ? "linear-gradient(to right, black 60%, transparent 100%)"
-                                                                : "none",
-                                                    }}
-                                                >
-                                                    <Text>{`${initials} ${patient.ur_number}`}</Text>
-                                                </Box>
-                                            </HStack>
-                                            {hoveredPatientId ===
-                                                patient.id && (
-                                                <IconButton
-                                                    icon={<DeleteIcon />}
-                                                    size="sm"
-                                                    aria-label="Delete patient"
-                                                    className="sidebar-patient-items-delete"
-                                                    onClick={(e) => {
-                                                        toast.closeAll();
-                                                        e.stopPropagation();
-                                                        handleDelete(patient);
-                                                    }}
-                                                    width="24px"
-                                                    height="24px"
-                                                    minWidth="24px"
-                                                    minHeight="24px"
+                                            <Flex align="center">
+                                                <Avatar
+                                                    name={initials}
+                                                    bg={avatarBg}
+                                                    color="white"
+                                                    size={
+                                                        isCollapsed
+                                                            ? "md"
+                                                            : "sm"
+                                                    }
+                                                    mr={isCollapsed ? "0" : "3"}
                                                 />
-                                            )}
-                                        </Box>
-                                    );
-                                })
-                            ) : (
-                                <Text>No patients available</Text>
-                            )}
-                        </Box>
 
-                        {/* Day Summary and All Jobs buttons */}
-                        <Box
-                            display="flex"
-                            mt="4"
-                            justifyContent="center"
-                            alignItems="center"
-                            flexDirection="column"
+                                                {!isCollapsed && (
+                                                    <Box>
+                                                        <Text
+                                                            fontSize="sm"
+                                                            fontWeight="500"
+                                                            noOfLines={1}
+                                                        >
+                                                            {patient.name}
+                                                        </Text>
+                                                        <Text
+                                                            fontSize="xs"
+                                                            color={labelColor}
+                                                        >
+                                                            UR:{" "}
+                                                            {patient.ur_number}
+                                                        </Text>
+                                                    </Box>
+                                                )}
+                                            </Flex>
+
+                                            {!isCollapsed &&
+                                                hoveredPatientId ===
+                                                    patient.id && (
+                                                    <IconButton
+                                                        icon={<DeleteIcon />}
+                                                        size="xs"
+                                                        aria-label="Delete patient"
+                                                        variant="ghost"
+                                                        colorScheme="red"
+                                                        onClick={(e) => {
+                                                            toast.closeAll();
+                                                            e.stopPropagation();
+                                                            handleDelete(
+                                                                patient,
+                                                            );
+                                                        }}
+                                                    />
+                                                )}
+                                        </Flex>
+                                    </Tooltip>
+                                );
+                            })
+                        ) : (
+                            <Text
+                                fontSize="sm"
+                                color={labelColor}
+                                textAlign={isCollapsed ? "center" : "left"}
+                                px="2"
+                            >
+                                {isCollapsed
+                                    ? "No pts"
+                                    : "No patients available"}
+                            </Text>
+                        )}
+                    </Box>
+                </Collapse>
+
+                <Divider borderColor={dividerColor} />
+
+                {/* Navigation Header - Collapsible when expanded */}
+                {!isCollapsed && (
+                    <Flex
+                        w="100%"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        onClick={() => setIsNavCollapsed(!isNavCollapsed)}
+                        cursor="pointer"
+                        _hover={{ color: "gray.600" }}
+                        mt="2"
+                    >
+                        <Text
+                            fontSize="xs"
+                            fontWeight="medium"
+                            color={labelColor}
                         >
-                            <VStack spacing={2} width="100%" align="stretch">
-                                {/* Day Summary button */}
-                                <Flex justifyContent="center">
-                                    <Button
-                                        onClick={() =>
-                                            handleNavigation("/clinic-summary")
-                                        }
-                                        fontSize="sm"
-                                        width="150px"
-                                        height="30px"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        className="summary-buttons"
-                                    >
-                                        <FaClinicMedical
-                                            style={{ marginRight: "8px" }}
-                                        />
-                                        Day Summary
-                                    </Button>
-                                </Flex>
+                            NAVIGATION
+                        </Text>
+                        <IconButton
+                            icon={
+                                isNavCollapsed ? (
+                                    <ChevronDownIcon />
+                                ) : (
+                                    <ChevronUpIcon />
+                                )
+                            }
+                            variant="ghost"
+                            size="xs"
+                            aria-label={
+                                isNavCollapsed
+                                    ? "Expand navigation"
+                                    : "Collapse navigation"
+                            }
+                        />
+                    </Flex>
+                )}
 
-                                {/* All Jobs button */}
+                {/* Navigation Icons - collapsible section when sidebar is expanded */}
+                <Collapse in={isCollapsed || !isNavCollapsed} animateOpacity>
+                    <VStack
+                        spacing={isCollapsed ? "6" : "3"}
+                        align={isCollapsed ? "center" : "stretch"}
+                        w="100%"
+                        mt={isCollapsed ? "6" : "2"}
+                    >
+                        {/* Day Summary button */}
+                        <Tooltip
+                            label="Day Summary"
+                            placement={isCollapsed ? "right" : "top"}
+                        >
+                            <Flex
+                                w="100%"
+                                justifyContent={
+                                    isCollapsed ? "center" : "flex-start"
+                                }
+                            >
                                 <Flex
-                                    justifyContent="center"
-                                    position="relative"
+                                    align="center"
+                                    p="2"
+                                    borderRadius="lg"
+                                    role="group"
+                                    cursor="pointer"
+                                    w={isCollapsed ? "auto" : "100%"}
+                                    onClick={() =>
+                                        handleNavigation("/clinic-summary")
+                                    }
+                                    _hover={{ bg: "rgba(138, 173, 244, 0.1)" }}
+                                    transition="all 0.2s"
                                 >
-                                    <Button
-                                        onClick={() =>
-                                            handleNavigation(
-                                                "/outstanding-jobs",
-                                            )
+                                    <Avatar
+                                        icon={
+                                            <FaClinicMedical fontSize="1.2rem" />
                                         }
-                                        fontSize="sm"
-                                        width="150px"
-                                        height="30px"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        className="summary-buttons"
-                                    >
-                                        <FaTasks
-                                            style={{ marginRight: "8px" }}
+                                        bg="#8aadf4"
+                                        color="white"
+                                        size={isCollapsed ? "md" : "sm"}
+                                        mr={isCollapsed ? "0" : "3"}
+                                    />
+
+                                    {!isCollapsed && (
+                                        <Text fontWeight="medium">
+                                            Day Summary
+                                        </Text>
+                                    )}
+                                </Flex>
+                            </Flex>
+                        </Tooltip>
+
+                        {/* All Jobs button */}
+                        <Tooltip
+                            label="All Jobs"
+                            placement={isCollapsed ? "right" : "top"}
+                        >
+                            <Flex
+                                w="100%"
+                                justifyContent={
+                                    isCollapsed ? "center" : "flex-start"
+                                }
+                                position="relative"
+                            >
+                                <Flex
+                                    align="center"
+                                    p="2"
+                                    borderRadius="lg"
+                                    role="group"
+                                    cursor="pointer"
+                                    w={isCollapsed ? "auto" : "100%"}
+                                    onClick={() =>
+                                        handleNavigation("/outstanding-jobs")
+                                    }
+                                    _hover={{ bg: "rgba(183, 189, 248, 0.1)" }}
+                                    transition="all 0.2s"
+                                >
+                                    <Box position="relative">
+                                        <Avatar
+                                            icon={<FaTasks fontSize="1.2rem" />}
+                                            bg="#b7bdf8"
+                                            color="white"
+                                            size={isCollapsed ? "md" : "sm"}
+                                            mr={isCollapsed ? "0" : "3"}
                                         />
-                                        All Jobs
+
                                         {incompleteJobsCount > 0 && (
                                             <Badge
-                                                borderRadius="full"
-                                                px="2"
-                                                colorScheme="red"
-                                                backgroundColor="red.500"
-                                                color="white"
                                                 position="absolute"
-                                                top="5px"
-                                                right="5px"
-                                                fontSize="0.75em"
-                                                width="20px"
-                                                height="20px"
-                                                display="flex"
-                                                alignItems="center"
-                                                justifyContent="center"
+                                                top="-2px"
+                                                right={
+                                                    isCollapsed
+                                                        ? "-5px"
+                                                        : "-8px"
+                                                }
+                                                borderRadius="full"
+                                                bg="red.500"
+                                                color="white"
+                                                fontSize="0.6rem"
+                                                p="1px 5px"
+                                                boxShadow={`0 0 0 2px ${sidebarBg}`}
                                             >
                                                 {incompleteJobsCount}
                                             </Badge>
                                         )}
-                                    </Button>
-                                </Flex>
-                            </VStack>
-                        </Box>
+                                    </Box>
 
-                        {/* Documents and Settings buttons */}
-                        <Box mt="auto">
-                            <VStack spacing={2} width="100%">
-                                {/* Documents button */}
+                                    {!isCollapsed && (
+                                        <Text fontWeight="medium">
+                                            All Jobs
+                                        </Text>
+                                    )}
+                                </Flex>
+                            </Flex>
+                        </Tooltip>
+
+                        {/* Documents button */}
+                        <Tooltip
+                            label="Documents"
+                            placement={isCollapsed ? "right" : "top"}
+                        >
+                            <Flex
+                                w="100%"
+                                justifyContent={
+                                    isCollapsed ? "center" : "flex-start"
+                                }
+                            >
                                 <Flex
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    width="100%"
+                                    align="center"
+                                    p="2"
+                                    borderRadius="lg"
+                                    role="group"
+                                    cursor="pointer"
+                                    w={isCollapsed ? "auto" : "100%"}
+                                    onClick={() => handleNavigation("/rag")}
+                                    _hover={{ bg: "rgba(198, 160, 246, 0.1)" }}
+                                    transition="all 0.2s"
                                 >
-                                    <Box
-                                        p="2"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        borderRadius="sm"
-                                        className="settings-button"
-                                        height="40px"
-                                        width="150px"
-                                        onClick={() => handleNavigation("/rag")}
-                                    >
-                                        <GiBrain />
-                                        <Text ml="2" fontSize="md">
+                                    <Avatar
+                                        icon={<GiBrain fontSize="1.3rem" />}
+                                        bg="#c6a0f6"
+                                        color="white"
+                                        size={isCollapsed ? "md" : "sm"}
+                                        mr={isCollapsed ? "0" : "3"}
+                                    />
+
+                                    {!isCollapsed && (
+                                        <Text fontWeight="medium">
                                             Documents
                                         </Text>
-                                    </Box>
+                                    )}
                                 </Flex>
+                            </Flex>
+                        </Tooltip>
 
-                                {/* Settings button */}
+                        {/* Settings button */}
+                        <Tooltip
+                            label="Settings"
+                            placement={isCollapsed ? "right" : "top"}
+                        >
+                            <Flex
+                                w="100%"
+                                justifyContent={
+                                    isCollapsed ? "center" : "flex-start"
+                                }
+                            >
                                 <Flex
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    width="100%"
+                                    align="center"
+                                    p="2"
+                                    borderRadius="lg"
+                                    role="group"
+                                    cursor="pointer"
+                                    w={isCollapsed ? "auto" : "100%"}
+                                    onClick={() =>
+                                        handleNavigation("/settings")
+                                    }
+                                    _hover={{ bg: "rgba(245, 194, 231, 0.1)" }}
+                                    transition="all 0.2s"
                                 >
-                                    <Box
-                                        p="2"
-                                        display="flex"
-                                        alignItems="center"
-                                        justifyContent="center"
-                                        borderRadius="sm"
-                                        className="settings-button"
-                                        height="40px"
-                                        width="150px"
-                                        onClick={() =>
-                                            handleNavigation("/settings")
+                                    <Avatar
+                                        icon={
+                                            <SettingsIcon fontSize="1.2rem" />
                                         }
-                                    >
-                                        <SettingsIcon />
-                                        <Text ml="2" fontSize="md">
+                                        bg="#f5c2e7"
+                                        color="white"
+                                        size={isCollapsed ? "md" : "sm"}
+                                        mr={isCollapsed ? "0" : "3"}
+                                    />
+
+                                    {!isCollapsed && (
+                                        <Text fontWeight="medium">
                                             Settings
                                         </Text>
-                                    </Box>
+                                    )}
                                 </Flex>
-                            </VStack>
-                        </Box>
+                            </Flex>
+                        </Tooltip>
                     </VStack>
+                </Collapse>
+            </VStack>
 
-                    {!isCollapsed && <VersionInfo isCollapsed={false} />}
-                </VStack>
-            )}
-
-            {/* Mini sidebar when collapsed */}
-            {isCollapsed && (
-                <VStack spacing="4" align="center" mt="50px">
-                    <Tooltip label="Dashboard" placement="right">
-                        <Box
-                            as="button"
-                            onClick={() => handleNavigation("/")}
-                            p="2"
-                        >
-                            <Image src="/logo.webp" alt="Logo" width="30px" />
-                        </Box>
-                    </Tooltip>
-
-                    <Tooltip label="New Patient" placement="right">
-                        <Box
-                            p="2"
-                            onClick={() => {
-                                toast.closeAll();
-                                onNewPatient();
-                            }}
-                            cursor="pointer"
-                        >
-                            <AddIcon />
-                        </Box>
-                    </Tooltip>
-
-                    <Tooltip label="Day Summary" placement="right">
-                        <Box
-                            p="2"
-                            onClick={() => handleNavigation("/clinic-summary")}
-                            cursor="pointer"
-                        >
-                            <FaClinicMedical />
-                        </Box>
-                    </Tooltip>
-
-                    <Tooltip label="All Jobs" placement="right">
-                        <Box
-                            p="2"
-                            onClick={() =>
-                                handleNavigation("/outstanding-jobs")
-                            }
-                            cursor="pointer"
-                            position="relative"
-                        >
-                            <FaTasks />
-                            {incompleteJobsCount > 0 && (
-                                <Badge
-                                    borderRadius="full"
-                                    backgroundColor="red.500"
-                                    position="absolute"
-                                    top="0"
-                                    right="0"
-                                    fontSize="0.6em"
-                                >
-                                    {incompleteJobsCount}
-                                </Badge>
-                            )}
-                        </Box>
-                    </Tooltip>
-
-                    <Tooltip label="Documents" placement="right">
-                        <Box
-                            p="2"
-                            onClick={() => handleNavigation("/rag")}
-                            cursor="pointer"
-                        >
-                            <GiBrain />
-                        </Box>
-                    </Tooltip>
-
-                    <Tooltip label="Settings" placement="right">
-                        <Box
-                            p="2"
-                            onClick={() => handleNavigation("/settings")}
-                            cursor="pointer"
-                        >
-                            <SettingsIcon />
-                        </Box>
-                    </Tooltip>
-                </VStack>
-            )}
-            {isCollapsed && <VersionInfo isCollapsed={true} />}
+            {/* Version info at bottom */}
+            <Box mt="auto" pt="4">
+                <VersionInfo isCollapsed={isCollapsed} />
+            </Box>
 
             {/* Delete confirmation modal */}
             <Modal isOpen={isOpen} onClose={onClose}>
