@@ -10,7 +10,7 @@ import {
 import { SunIcon, MoonIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { useState, useEffect, useCallback } from "react";
 import { TemplateProvider } from "./utils/templates/templateContext";
-import Sidebar from "./components/layout/Sidebar";
+import Sidebar from "./components/sidebar/Sidebar";
 import LandingPage from "./pages/LandingPage";
 import PatientDetails from "./pages/PatientDetails";
 import Settings from "./pages/Settings";
@@ -223,7 +223,7 @@ function AppContent() {
 
             <Box
                 flex="1"
-                ml={isSmallScreen ? "0" : isSidebarCollapsed ? "50px" : "200px"}
+                ml={isSmallScreen ? "0" : isSidebarCollapsed ? "60px" : "220px"}
                 p={isSmallScreen ? "6" : "0"}
                 pt={isSmallScreen ? "50px" : "0"}
                 className="main-bg"

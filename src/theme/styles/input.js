@@ -64,6 +64,20 @@ export const inputStyles = (props) => ({
                 ? `${colors.light.textTertiary} !important`
                 : `${colors.dark.textSecondary} !important`,
     },
+    ".clinic-date-input": {
+        backgroundColor:
+            props.colorMode === "light"
+                ? "white !important"
+                : `${colors.dark.crust} !important`,
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textTertiary} !important`
+                : `${colors.dark.textTertiary} !important`,
+        border:
+            props.colorMode === "light"
+                ? `1px solid ${colors.light.surface} !important`
+                : `1px solid ${colors.dark.surface} !important`,
+    },
     ".search-button": {
         borderLeft: "none !important",
         borderTopLeftRadius: "0 !important",

@@ -153,4 +153,38 @@ export const sidebarStyles = (props) => ({
                 ? `${darkenColor(colors.light.sidebar.background, 0.1)} !important`
                 : `${darkenColor(colors.dark.sidebar.background, 0.1)} !important`,
     },
+    // Patient list items styling - consistent in both modes
+    ".patient-list-item": {
+        backgroundColor: `${colors.dark.sidebar.item} !important`,
+        color: `${colors.dark.textPrimary} !important`,
+        transition: "all 0.2s ease",
+        _hover: {
+            backgroundColor: `${colors.dark.sidebar.hover} !important`,
+        },
+    },
+
+    // Sidebar section labels
+    ".sidebar-section-label": {
+        color: `${colors.dark.textSecondary} !important`,
+        fontSize: "xs",
+        fontWeight: "medium",
+    },
+
+    // Consistent text color for sidebar elements
+    ".sidebar-text": {
+        color: `${colors.dark.textPrimary} !important`,
+    },
+
+    // Sidebar dividers
+    ".sidebar-divider": {
+        borderColor: `${colors.dark.divider} !important`,
+    },
+
+    // Avatar button for New Patient
+    ".avatar-button": {
+        transition: "all 0.2s ease",
+        _hover: {
+            backgroundColor: "rgba(184, 192, 224, 0.1) !important",
+        },
+    },
 });

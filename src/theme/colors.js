@@ -54,7 +54,7 @@ const baseColorsDark = {
     sidebar: {
         background: "#1e2030",
         item: "#363a4f",
-        hover: "#494d64",
+        hover: "#363a4f",
     },
 };
 

@@ -89,7 +89,7 @@ export const buttonStyles = (props) => ({
         backgroundColor: `${colors.light.tertiaryButton} !important`,
         color: `${colors.light.base} !important`,
         height: "35px !important",
-        borderRadius: "lg !important",
+        borderRadius: "md !important",
         border:
             props.colorMode === "light"
                 ? `1px solid ${darkenColor(colors.light.tertiaryButton, 0.15)} !important`
