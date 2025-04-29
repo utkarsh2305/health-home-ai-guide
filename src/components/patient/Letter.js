@@ -18,6 +18,19 @@ import {
     Spinner,
     useClipboard,
     Tooltip,
+    Drawer,
+    DrawerBody,
+    DrawerCloseButton,
+    DrawerContent,
+    DrawerHeader,
+    DrawerOverlay,
+    DrawerFooter,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
 } from "@chakra-ui/react";
 import {
     ChevronRightIcon,
@@ -28,7 +41,7 @@ import {
     EditIcon,
     CloseIcon,
 } from "@chakra-ui/icons";
-import { FaEnvelope, FaSave } from "react-icons/fa";
+import { FaEnvelope, FaSave, FaPen } from "react-icons/fa";
 import { letterApi } from "../../utils/api/letterApi";
 import { settingsApi } from "../../utils/api/settingsApi";
 
@@ -142,8 +155,6 @@ const RefinementInterface = ({
 const Letter = forwardRef(
     (
         {
-            isLetterCollapsed,
-            toggleLetterCollapse,
             finalCorrespondence,
             setFinalCorrespondence,
             handleSaveLetter,
@@ -173,6 +184,9 @@ const Letter = forwardRef(
         const [refinementInput, setRefinementInput] = useState("");
         const [letterContext, setLetterContext] = useState([]);
         const [options, setOptions] = useState(null);
+
+        // New state for letter drawer
+        const [isLetterOpen, setIsLetterOpen] = useState(false);
 
         useEffect(() => {
             const fetchOptions = async () => {
@@ -262,6 +276,9 @@ const Letter = forwardRef(
             autoResizeTextarea: () => {
                 autoResizeTextarea();
             },
+            openLetter: () => {
+                setIsLetterOpen(true);
+            },
         }));
 
         const autoResizeTextarea = () => {
@@ -273,12 +290,12 @@ const Letter = forwardRef(
         };
 
         useEffect(() => {
-            if (!isLetterCollapsed) {
+            if (isLetterOpen) {
                 setTimeout(() => {
                     autoResizeTextarea();
                 }, 100);
             }
-        }, [isLetterCollapsed]);
+        }, [isLetterOpen]);
 
         useEffect(() => {
             if (finalCorrespondence) autoResizeTextarea();
@@ -341,207 +358,258 @@ const Letter = forwardRef(
             });
         };
 
+        // Floating button + Drawer approach
         return (
-            <Box p="4" borderRadius="sm" className="panels-bg">
-                <Flex align="center" justify="space-between">
-                    <Flex align="center">
-                        <IconButton
-                            icon={
-                                isLetterCollapsed ? (
-                                    <ChevronRightIcon />
-                                ) : (
-                                    <ChevronDownIcon />
-                                )
-                            }
-                            onClick={toggleLetterCollapse}
-                            aria-label="Toggle collapse"
-                            variant="outline"
-                            size="sm"
-                            mr="2"
-                            className="collapse-toggle"
-                        />
-                        <HStack spacing={2}>
-                            <FaEnvelope size="1.2em" />
-                            <Text as="h3">Letter</Text>
-                        </HStack>
-                    </Flex>
-                </Flex>
-                <Collapse in={!isLetterCollapsed} animateOpacity>
-                    <Box mt="4" borderRadius="sm">
-                        <VStack spacing="5">
-                            <Box width="100%" position="relative">
-                                {letterLoading && (
-                                    <Flex
-                                        position="absolute"
-                                        top={0}
-                                        left={0}
-                                        right={0}
-                                        bottom={0}
-                                        zIndex={1}
-                                        justify="center"
-                                        align="center"
-                                        borderRadius="sm"
-                                    >
-                                        <Spinner size="xl" />
-                                    </Flex>
-                                )}
-                                <Box
-                                    position="relative"
-                                    className="textarea-container"
-                                >
-                                    <Textarea
-                                        placeholder="Write your letter here..."
-                                        value={
-                                            finalCorrespondence ||
-                                            "No letter attached to encounter"
-                                        }
-                                        onChange={(e) => {
-                                            setFinalCorrespondence(
-                                                e.target.value,
-                                            );
-                                            setIsModified(true);
-                                            autoResizeTextarea();
-                                        }}
-                                        rows={10}
-                                        style={{
-                                            minHeight: "150px",
-                                            overflowY: "hidden",
-                                            resize: "none",
-                                            color: letterLoading
-                                                ? "rgba(0, 0, 0, 0.4)"
-                                                : "inherit",
-                                            transition:
-                                                "color 0.2s ease-in-out",
-                                            filter: letterLoading
-                                                ? "blur(0.4px)"
-                                                : "none",
-                                            paddingBottom: "50px",
-                                        }}
-                                        className="textarea-style"
-                                        ref={(el) =>
-                                            (textareasRefs.current.letter = el)
-                                        }
-                                    />
-                                    <Tooltip
-                                        label="Refine letter"
-                                        placement="left"
-                                        isDisabled={letterLoading}
-                                    >
-                                        <IconButton
-                                            icon={<EditIcon />}
+            <>
+                {/* Floating Letter Button */}
+                <Box
+                    position="fixed"
+                    bottom="20px"
+                    right="90px" // Positioned to the left of the chat button
+                    zIndex="1000"
+                    className="hover-letter-box"
+                >
+                    <IconButton
+                        icon={<FaEnvelope boxSize="1.5em" />}
+                        colorScheme="teal"
+                        onClick={() => setIsLetterOpen(true)}
+                        aria-label="Open Letter"
+                        borderRadius="full"
+                        size="lg"
+                        bg="#81c8be"
+                        className="letter-icon"
+                        boxShadow="md"
+                        width="3em"
+                        height="3em"
+                        fontSize="2xl"
+                    />
+                </Box>
+
+                {/* Letter Drawer */}
+                <Drawer
+                    isOpen={isLetterOpen}
+                    placement="right"
+                    onClose={() => setIsLetterOpen(false)}
+                    size="xl"
+                >
+                    <DrawerOverlay />
+                    <DrawerContent>
+                        <DrawerCloseButton />
+                        <DrawerHeader borderBottomWidth="1px">
+                            <Flex align="center">
+                                <FaEnvelope
+                                    size="1em"
+                                    style={{ marginRight: "8px" }}
+                                />
+                                <Text>Patient Letter</Text>
+                            </Flex>
+                        </DrawerHeader>
+
+                        <DrawerBody>
+                            <VStack spacing="5" align="stretch">
+                                <Box position="relative">
+                                    {letterLoading && (
+                                        <Flex
                                             position="absolute"
-                                            bottom={4}
-                                            width="40px"
-                                            height="40px"
-                                            right={4}
-                                            sx={{
-                                                opacity: 1,
-                                                zIndex: 2,
-                                                transition: "transform 0.2s",
-                                                aspectRatio: "1/1",
-                                                pointerEvents: letterLoading
-                                                    ? "none"
-                                                    : "auto",
-                                                "&:hover": !letterLoading && {
-                                                    transform: "scale(1.1)",
-                                                },
+                                            top={0}
+                                            left={0}
+                                            right={0}
+                                            bottom={0}
+                                            zIndex={1}
+                                            justify="center"
+                                            align="center"
+                                            borderRadius="sm"
+                                        >
+                                            <Spinner size="xl" />
+                                        </Flex>
+                                    )}
+                                    <Box
+                                        position="relative"
+                                        className="textarea-container"
+                                    >
+                                        <Textarea
+                                            placeholder="Write your letter here..."
+                                            value={
+                                                finalCorrespondence ||
+                                                "No letter attached to encounter"
+                                            }
+                                            onChange={(e) => {
+                                                setFinalCorrespondence(
+                                                    e.target.value,
+                                                );
+                                                setIsModified(true);
+                                                autoResizeTextarea();
                                             }}
-                                            className="blue-button refinement-fab"
-                                            onClick={() => setIsRefining(true)}
-                                            aria-label="Refine letter"
-                                            isDisabled={letterLoading}
+                                            rows={16}
+                                            style={{
+                                                minHeight: "400px",
+                                                overflowY: "hidden",
+                                                resize: "none",
+                                                color: letterLoading
+                                                    ? "rgba(0, 0, 0, 0.4)"
+                                                    : "inherit",
+                                                transition:
+                                                    "color 0.2s ease-in-out",
+                                                filter: letterLoading
+                                                    ? "blur(0.4px)"
+                                                    : "none",
+                                                paddingBottom: "50px",
+                                            }}
+                                            className="textarea-style"
+                                            ref={(el) =>
+                                                (textareasRefs.current.letter =
+                                                    el)
+                                            }
                                         />
-                                    </Tooltip>
+                                        <Tooltip
+                                            label="Refine letter"
+                                            placement="left"
+                                            isDisabled={letterLoading}
+                                        >
+                                            <IconButton
+                                                icon={<EditIcon />}
+                                                position="absolute"
+                                                bottom={4}
+                                                width="40px"
+                                                height="40px"
+                                                right={4}
+                                                sx={{
+                                                    opacity: 1,
+                                                    zIndex: 2,
+                                                    transition:
+                                                        "transform 0.2s",
+                                                    aspectRatio: "1/1",
+                                                    pointerEvents: letterLoading
+                                                        ? "none"
+                                                        : "auto",
+                                                    "&:hover":
+                                                        !letterLoading && {
+                                                            transform:
+                                                                "scale(1.1)",
+                                                        },
+                                                }}
+                                                className="blue-button refinement-fab"
+                                                onClick={() =>
+                                                    setIsRefining(true)
+                                                }
+                                                aria-label="Refine letter"
+                                                isDisabled={letterLoading}
+                                            />
+                                        </Tooltip>
+                                    </Box>
+                                    {isRefining && (
+                                        <RefinementInterface
+                                            refinementInput={refinementInput}
+                                            setRefinementInput={
+                                                setRefinementInput
+                                            }
+                                            handleRefinement={handleRefinement}
+                                            loading={letterLoading}
+                                            setIsRefining={setIsRefining}
+                                        />
+                                    )}
                                 </Box>
-                                {isRefining && (
-                                    <RefinementInterface
-                                        refinementInput={refinementInput}
-                                        setRefinementInput={setRefinementInput}
-                                        handleRefinement={handleRefinement}
-                                        loading={letterLoading}
-                                        setIsRefining={setIsRefining}
-                                    />
+
+                                <Box mb="4">
+                                    <Text
+                                        mt="2"
+                                        mb="2"
+                                        fontSize="sm"
+                                        fontWeight="bold"
+                                    >
+                                        Letter Template:
+                                    </Text>
+                                    <HStack spacing="2" overflowX="auto" pb="2">
+                                        {letterTemplates.map((template) => (
+                                            <Button
+                                                key={template.id}
+                                                size="sm"
+                                                variant={
+                                                    selectedTemplate &&
+                                                    selectedTemplate.id ===
+                                                        template.id
+                                                        ? "solid"
+                                                        : "outline"
+                                                }
+                                                onClick={() => {
+                                                    setSelectedTemplate(
+                                                        template,
+                                                    );
+                                                    setAdditionalInstructions(
+                                                        template.instructions ||
+                                                            "",
+                                                    );
+                                                }}
+                                                className="template-select-button"
+                                                minWidth="auto"
+                                                flexShrink={0}
+                                            >
+                                                {template.name}
+                                            </Button>
+                                        ))}
+                                        <Button
+                                            size="sm"
+                                            variant={
+                                                selectedTemplate === "custom"
+                                                    ? "solid"
+                                                    : "outline"
+                                            }
+                                            onClick={() =>
+                                                setSelectedTemplate("custom")
+                                            }
+                                            className="template-select-button"
+                                            minWidth="auto"
+                                            flexShrink={0}
+                                        >
+                                            Custom
+                                        </Button>
+                                    </HStack>
+                                </Box>
+
+                                {selectedTemplate === "custom" && (
+                                    <Box mt="2">
+                                        <Text fontSize="sm" mb="2">
+                                            Custom Instructions:
+                                        </Text>
+                                        <Textarea
+                                            placeholder="Enter custom instructions for letter generation..."
+                                            size="sm"
+                                            rows={2}
+                                            value={additionalInstructions}
+                                            onChange={(e) =>
+                                                setAdditionalInstructions(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="chat-input"
+                                            sx={{
+                                                paddingY: "2",
+                                                paddingX: "4",
+                                                minHeight: "40px",
+                                                resize: "none",
+                                            }}
+                                        />
+                                    </Box>
                                 )}
-                            </Box>
-                        </VStack>
-                    </Box>
-                    <Box mb="4">
-                        <Text mt="2" mb="2" fontSize="sm" fontWeight="bold">
-                            Letter Template:
-                        </Text>
-                        <HStack spacing="2">
-                            {letterTemplates.map((template) => (
-                                <Button
-                                    key={template.id}
-                                    size="sm"
-                                    variant={
-                                        selectedTemplate &&
-                                        selectedTemplate.id === template.id
-                                            ? "solid"
-                                            : "outline"
-                                    }
-                                    onClick={() => {
-                                        setSelectedTemplate(template);
-                                        setAdditionalInstructions(
-                                            template.instructions || "",
-                                        );
-                                    }}
-                                    className="template-select-button"
-                                >
-                                    {template.name}
-                                </Button>
-                            ))}
+                            </VStack>
+                        </DrawerBody>
+
+                        <DrawerFooter borderTopWidth="1px">
                             <Button
-                                size="sm"
-                                variant={
-                                    selectedTemplate === "custom"
-                                        ? "solid"
-                                        : "outline"
+                                onClick={() =>
+                                    handleGenerateLetterClick(
+                                        additionalInstructions,
+                                    )
                                 }
-                                onClick={() => setSelectedTemplate("custom")}
-                                className="template-select-button"
+                                className="tertiary-button"
+                                leftIcon={<RepeatIcon />}
+                                isDisabled={
+                                    letterLoading || saveState !== "idle"
+                                }
+                                mr="auto"
                             >
-                                Custom
+                                Regenerate Letter
                             </Button>
-                        </HStack>
-                    </Box>
-                    {selectedTemplate === "custom" && (
-                        <Box mt="4">
-                            <Text fontSize="sm" mb="2">
-                                Custom Instructions:
-                            </Text>
-                            <Textarea
-                                placeholder="Enter custom instructions for letter generation..."
-                                size="sm"
-                                rows={2}
-                                value={additionalInstructions}
-                                onChange={(e) =>
-                                    setAdditionalInstructions(e.target.value)
-                                }
-                                className="chat-input"
-                                sx={{
-                                    paddingY: "2",
-                                    paddingX: "4",
-                                    minHeight: "40px",
-                                    resize: "none",
-                                }}
-                            />
-                        </Box>
-                    )}
-                    <Flex mt="4" justifyContent="space-between">
-                        <Button
-                            onClick={() =>
-                                handleGenerateLetterClick(
-                                    additionalInstructions,
-                                )
-                            }
-                            className="tertiary-button"
-                            leftIcon={<RepeatIcon />}
-                            isDisabled={letterLoading || saveState !== "idle"}
-                        >
-                            Regenerate Letter
-                        </Button>
-                        <Flex>
                             <Button
                                 onClick={handleCopy}
                                 className="blue-button"
@@ -553,7 +621,6 @@ const Letter = forwardRef(
                                     )
                                 }
                                 mr="2"
-                                width="150px"
                                 isDisabled={letterLoading}
                             >
                                 {recentlyCopied ? "Copied!" : "Copy Letter"}
@@ -561,16 +628,15 @@ const Letter = forwardRef(
                             <Button
                                 onClick={handleSave}
                                 className="green-button"
-                                width="150px"
                                 isDisabled={
                                     letterLoading || saveState !== "idle"
                                 }
                                 {...getSaveButtonProps()}
                             />
-                        </Flex>
-                    </Flex>
-                </Collapse>
-            </Box>
+                        </DrawerFooter>
+                    </DrawerContent>
+                </Drawer>
+            </>
         );
     },
 );

@@ -25,13 +25,7 @@ const SidebarPatientList = ({
     const labelColor = colors.dark.textSecondary;
 
     return (
-        <Box
-            w="100%"
-            flex="1"
-            display="flex"
-            flexDirection="column"
-            overflow="hidden"
-        >
+        <Box w="100%">
             {/* Patient List Header - Collapsible when expanded */}
             {!isCollapsed && (
                 <SectionHeader
@@ -45,18 +39,8 @@ const SidebarPatientList = ({
             )}
 
             {/* Patient List */}
-            <Collapse
-                in={isCollapsed || !isPatientsCollapsed}
-                animateOpacity
-                style={{ flex: 1, overflow: "hidden" }}
-            >
-                <Box
-                    w="100%"
-                    mt={isCollapsed ? "0" : "1"}
-                    h="100%"
-                    overflowY="auto"
-                    className="custom-scrollbar"
-                >
+            <Collapse in={isCollapsed || !isPatientsCollapsed} animateOpacity>
+                <Box w="100%" mt={isCollapsed ? "0" : "1"}>
                     {patients.length > 0 ? (
                         <VStack
                             spacing={isCollapsed ? "3" : "2"}

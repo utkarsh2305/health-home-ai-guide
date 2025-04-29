@@ -188,58 +188,65 @@ const Sidebar = ({
             <Flex
                 direction="column"
                 flex="1"
-                h="calc(100vh - 160px)"
-                position="relative"
+                justifyContent="space-between"
                 overflow="hidden"
             >
-                {/* Date selector - only visible when expanded */}
-                {!isCollapsed && (
-                    <Box mb="2">
-                        <Text
-                            fontSize="xs"
-                            fontWeight="medium"
-                            color={labelColor}
-                            mb="1"
-                        >
-                            CLINIC DATE
-                        </Text>
-                        <Input
-                            type="date"
-                            value={selectedDate || ""}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            size="sm"
-                            borderRadius="md"
-                            className="clinic-date-input"
-                        />
-                    </Box>
-                )}
+                {/* Top section with date selector and new patient button */}
+                <Box>
+                    {/* Date selector - only visible when expanded */}
+                    {!isCollapsed && (
+                        <Box mb="2">
+                            <Text
+                                fontSize="xs"
+                                fontWeight="medium"
+                                color={labelColor}
+                                mb="1"
+                            >
+                                CLINIC DATE
+                            </Text>
+                            <Input
+                                type="date"
+                                value={selectedDate || ""}
+                                onChange={(e) =>
+                                    setSelectedDate(e.target.value)
+                                }
+                                size="sm"
+                                borderRadius="md"
+                                className="clinic-date-input"
+                            />
+                        </Box>
+                    )}
 
-                {/* New Patient button - adjusted size for collapsed view */}
-                <Tooltip
-                    label="New Patient"
-                    placement={isCollapsed ? "right" : "top"}
-                >
-                    <Box w="100%" mb={isCollapsed ? 3 : 4}>
-                        <AvatarButton
-                            icon={
-                                <FaPlus
-                                    fontSize={isCollapsed ? "0.9rem" : "1.2rem"}
-                                />
-                            }
-                            backgroundColor={colors.dark.tertiaryButton}
-                            label="New Patient"
-                            onClick={onNewPatient}
-                            isCollapsed={isCollapsed}
-                        />
-                    </Box>
-                </Tooltip>
+                    {/* New Patient button - adjusted size for collapsed view */}
+                    <Tooltip
+                        label="New Patient"
+                        placement={isCollapsed ? "right" : "top"}
+                    >
+                        <Box w="100%" mb={isCollapsed ? 3 : 4}>
+                            <AvatarButton
+                                icon={
+                                    <FaPlus
+                                        fontSize={
+                                            isCollapsed ? "0.9rem" : "1.2rem"
+                                        }
+                                    />
+                                }
+                                backgroundColor={colors.dark.tertiaryButton}
+                                label="New Patient"
+                                onClick={onNewPatient}
+                                isCollapsed={isCollapsed}
+                            />
+                        </Box>
+                    </Tooltip>
+                </Box>
 
-                {/* Patient List Section - Make it grow to fill available space */}
+                {/* Patient List Section - Make it grow and scroll */}
                 <Box
                     flex="1"
-                    overflow="hidden"
-                    mb={isCollapsed ? 2 : 0}
-                    mt={isCollapsed ? 0 : 0}
+                    overflowY="auto"
+                    overflowX="hidden"
+                    className="custom-scrollbar"
+                    mb={2}
                 >
                     <SidebarPatientList
                         patients={patients}
@@ -249,12 +256,9 @@ const Sidebar = ({
                     />
                 </Box>
 
-                {/* Navigation Section - Fixed at bottom, slides over patient list */}
+                {/* Navigation Section - Natural flow at bottom */}
                 <Box
-                    position="absolute"
-                    bottom="0"
-                    left="0"
-                    right="0"
+                    width="100%"
                     bg={sidebarBg}
                     pt="2"
                     borderTop={`1px solid ${dividerColor}`}
@@ -269,7 +273,7 @@ const Sidebar = ({
             </Flex>
 
             {/* Version info at bottom - adjusted for collapsed view */}
-            <Box mt="auto" pt="2" pb={isCollapsed ? "2" : "0"}>
+            <Box mt="2" pt="2" pb={isCollapsed ? "2" : "0"}>
                 <VersionInfo isCollapsed={isCollapsed} />
             </Box>
 
