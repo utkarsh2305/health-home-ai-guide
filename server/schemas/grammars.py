@@ -25,9 +25,7 @@ class RefinedResponse(BaseModel):
     Structured model where each individual discussion point
     is in its own entry in the list.
     """
-    key_points: List[str] = Field(
-        description="Individual discussion points extracted and refined as per the system prompt"
-    )
+    key_points: List[str]
 
 class NarrativeResponse(BaseModel):
     """

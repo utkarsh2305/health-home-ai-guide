@@ -6,6 +6,7 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 from ollama import AsyncClient as ollamaClient
 import re
 from server.database.config import config_manager
+from server.utils.helpers import clean_think_tags
 
 class ChatEngine:
     """
@@ -160,7 +161,13 @@ class ChatEngine:
         collection_names_string = ", ".join(collection_names)
 
         context_question_options = prompts["options"]["general"]
-        message_list = self.CHAT_SYSTEM_MESSAGE + conversation_history
+        context_question_options.pop("stop", None)
+        print(context_question_options)
+
+        # Clean <think> tags from conversation history as these are not required for new model responses and take up valuable context.
+        cleaned_conversation_history = clean_think_tags(conversation_history)
+
+        message_list = self.CHAT_SYSTEM_MESSAGE + cleaned_conversation_history
 
         # First call to determine if we need literature or direct response
         self.logger.info("Initial LLM call to determine tool usage...")

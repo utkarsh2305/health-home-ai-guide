@@ -1,5 +1,6 @@
-# server/utils/helpers.py
+from ast import Try
 from datetime import datetime
+from numpy import resize
 from ollama import AsyncClient as AsyncOllamaClient
 from server.schemas.patient import Patient, Condition
 from server.database.config import config_manager
@@ -201,6 +202,7 @@ async def refine_field_content(
 ) -> Union[str, Dict]:
     """
     Refine the content of a single field using style examples and format schema.
+    Handles special case for Qwen3 models, allowing for a thinking step before structured output.
 
     Args:
         content (Union[str, Dict]): The raw content to refine.
@@ -226,16 +228,38 @@ async def refine_field_content(
         # Build system prompt with style example if available
         system_prompt = build_system_prompt(field, format_details, prompts)
 
-        # Execute the model call
-        response = await client.chat(
-            model=config["PRIMARY_MODEL"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": content},
-            ],
-            format=format_details["response_format"],
-            options=options
-        )
+        # Qwen3 models perform better if we include the /no_think and some empty <think> tags to reduce semantic pressure.
+
+        logger.info(f"Qwen3 model detected: {model_name}. Using thinking step.")
+        model_name = config["PRIMARY_MODEL"].lower()
+        if "qwen3" in model_name:
+            logger.info(f"Qwen3 model detected: {model_name}. Using thinking step.")
+
+            # Now make the structured output call with the thinking included
+            response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": content + "/no_think"},
+                    {"role": "assistant", "content": "<think> </think>"},
+                ],
+                format=format_details["response_format"],
+                options=options
+            )
+
+        else:
+            # Standard approach for other models
+            response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": content},
+                ],
+                format=format_details["response_format"],
+                options=options
+            )
+
+        logger.debug(f"Response received for field {field.field_key}")
 
         # Format the response appropriately
         return format_refined_response(response, field, format_details)
@@ -353,3 +377,29 @@ def format_bulleted_list(key_points: List[str], field: TemplateField) -> str:
         cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
         formatted_key_points.append(f"{bullet_char} {cleaned_point}")
     return "\n".join(formatted_key_points)
+
+def clean_think_tags(message_list):
+    """
+    Remove <think> tags and their contents from conversation history messages.
+
+    Args:
+        message_list (list): List of message dictionaries
+
+    Returns:
+        list: Cleaned message list with <think> tags removed
+    """
+    cleaned_messages = []
+
+    for message in message_list:
+        if "content" in message and isinstance(message["content"], str):
+            # Remove <think>...</think> patterns from content
+            cleaned_content = re.sub(r'<think>.*?</think>', '', message["content"], flags=re.DOTALL)
+            # Create a new message with cleaned content
+            cleaned_message = message.copy()
+            cleaned_message["content"] = cleaned_content.strip()
+            cleaned_messages.append(cleaned_message)
+        else:
+            # If no content or not a string, keep the message as is
+            cleaned_messages.append(message)
+
+    return cleaned_messages
