@@ -45,3 +45,13 @@ class ClinicalReasoning(BaseModel):
     differentials: List[str]
     investigations: List[str]
     clinical_considerations: List[str]
+
+# Letter
+
+class LetterDraft(BaseModel):
+    """
+    Structured model for letter generation results.
+    """
+    content: str = Field(
+        description="The complete formatted letter content ready for display"
+    )

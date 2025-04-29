@@ -3,7 +3,7 @@ import logging
 from fastapi import HTTPException
 from ollama import Client as ollamaClient
 from server.database.config import config_manager
-
+from server.schemas.grammars import LetterDraft
 
 async def generate_letter_content(
     patient_name: str,
@@ -40,7 +40,6 @@ async def generate_letter_content(
             doctor_context += f"a {specialty} specialist." if specialty else "a specialist."
             request_body.append({"role": "system", "content": doctor_context})
 
-
         # Format clinic note
         clinic_note = "\n\n".join(
             f"{key.replace('_', ' ').title()}:\n{value}"
@@ -58,25 +57,28 @@ async def generate_letter_content(
         if context:
             request_body.extend(context)
 
-        # Always end with the code block prompt
-        request_body.append({
-            "role": "assistant",
-            "content": "I'll write the letter in a code block:\n```",
-        })
+        # Set up response format for structured output
+        response_format = LetterDraft.model_json_schema()
 
         # Letter options
         options = prompts["options"]["general"].copy() # General options
         options["temperature"] = prompts["options"]["letter"]["temperature"] # User defined temperature
-        options["stop"] = ["```"]
 
-        # Generate the letter content
-        ollama_letter_response = client.chat(
+        # Generate the letter content with structured output
+        response = client.chat(
             model=config["PRIMARY_MODEL"],
             messages=request_body,
-            options=options,
-        )["message"]["content"]
+            format=response_format,
+            options=options
+        )
 
-        return ollama_letter_response.strip()
+        # Parse the JSON response
+        letter_response = LetterDraft.model_validate_json(response["message"]["content"])
+
+        # Log the thinking but only return the content
+        print(letter_response.thinking)
+
+        return letter_response.content.strip()
 
     except Exception as e:
         logging.error(f"Error generating letter content: {e}")
