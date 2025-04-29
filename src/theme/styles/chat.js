@@ -96,4 +96,18 @@ export const chatStyles = (props) => ({
     ".message-box ul, .message-box ol": {
         paddingLeft: "20px",
     },
+    ".thinking-toggle": {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 6px",
+        margin: "2px 0",
+        cursor: "pointer",
+        userSelect: "none",
+    },
+    ".thinking-block": {
+        borderLeftColor:
+            props.colorMode === "light"
+                ? `${colors.light.primary} !important`
+                : `${colors.dark.primary} !important`,
+    },
 });
