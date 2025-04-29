@@ -159,7 +159,7 @@ class ChatEngine:
         collection_names = self.chroma_client.list_collections()
         collection_names_string = ", ".join(collection_names)
 
-        context_question_options = prompts["options"]["chat"]
+        context_question_options = prompts["options"]["general"]
         message_list = self.CHAT_SYSTEM_MESSAGE + conversation_history
 
         # First call to determine if we need literature or direct response

@@ -76,7 +76,7 @@ async def generate_letter_content(
         letter_response = LetterDraft.model_validate_json(response["message"]["content"])
 
         # Log the thinking but only return the content
-        print(letter_response.thinking)
+        #print(letter_response.thinking)
 
         return letter_response.content.strip()
 
