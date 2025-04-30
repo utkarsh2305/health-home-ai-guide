@@ -182,14 +182,28 @@ async def process_template_field(
 
         response_format = FieldResponse.model_json_schema()
 
+        # Check if using Qwen3 model
+        model_name = config["PRIMARY_MODEL"].lower()
+        is_qwen3 = "qwen3" in model_name
+
+        # Prepare user content, adding /no_think for Qwen3 models
+        user_content = transcript_text
+        if is_qwen3:
+            user_content = f"{transcript_text} /no_think"
+            logger.info(f"Qwen3 model detected: {model_name}. Adding /no_think and empty think tags.")
+
         request_body = [
             {"role": "system", "content": (
                 f"{field.system_prompt}\n"
                 "Extract and return key points as a JSON array."
             )},
             {"role": "system", "content": _build_patient_context(patient_context)},
-            {"role": "user", "content": transcript_text},
+            {"role": "user", "content": user_content},
         ]
+
+        # For Qwen3 models, add empty think tags
+        if is_qwen3:
+            request_body.append({"role": "assistant", "content": "<think>\n</think>"})
 
         response = await client.chat(
             model=config["PRIMARY_MODEL"],
@@ -197,7 +211,8 @@ async def process_template_field(
             format=response_format,
             options={**options, "temperature": 0}
         )
-
+        print(request_body,flush=True)
+        print(response,flush=True)
         field_response = FieldResponse.model_validate_json(
             response['message']['content']
         )

@@ -121,7 +121,7 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
 
     age = calculate_age(dob, encounter_date)
     reasoning_options = prompts["options"].get("reasoning", {})
-    reasoning_prompt = prompts["prompts"]["reasoning"]["system"] # Assuming this structure
+    reasoning_prompt = prompts["prompts"]["reasoning"]["system"]
 
     # Format the clinical note more naturally
     formatted_note = ""
@@ -148,16 +148,74 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
     3. Recommended investigations
     4. Key clinical considerations
 
-    Structure your response using JSON; do your <thinking> (raw reasoning) in the 'thinking' field. Then proceed to generate keywords for 'differentials' (top 3),'investigations' (5-7 items), and 'clinical_considerations' (3-5 items) in the respective JSON field."""
+    The key is to provide additional clinical considerations to the doctor, so feel free to take a critical eye to the clinician's perspective if appropriate."""
 
-    response = await client.chat(
-        model=config["REASONING_MODEL"],
-        messages=[{"role": "user", "content": prompt}],
-        format=ClinicalReasoning.model_json_schema(),
-        options=reasoning_options
-    )
+    # Create a modified schema that doesn't include the thinking field for the final response
+    # We'll add it back later for Qwen models
+    modified_schema = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "differentials": {"type": "array", "items": {"type": "string"}},
+            "investigations": {"type": "array", "items": {"type": "string"}},
+            "clinical_considerations": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["summary", "differentials", "investigations", "clinical_considerations"]
+    }
 
-    return ClinicalReasoning.model_validate_json(response.message.content)
+    # Check if using Qwen3 model
+    model_name = config["REASONING_MODEL"].lower()
+    thinking = ""
+
+    if "qwen3" in model_name:
+        logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+
+        # First message for thinking only
+        thinking_messages = [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": "<think>"}
+        ]
+
+        # Make initial call for thinking only
+        thinking_options = reasoning_options.copy()
+        thinking_options["stop"] = ["</think>"]
+
+        thinking_response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=thinking_messages,
+            options=thinking_options
+        )
+
+        # Extract thinking content
+        thinking = thinking_response["message"]["content"]
+
+        # Now make the structured output call with thinking included
+        response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": f"<think>{thinking}</think>"}
+            ],
+            format=modified_schema,
+            options=reasoning_options
+        )
+
+        # Create the full response with thinking included
+        result_dict = json.loads(response.message.content)
+        result_dict["thinking"] = thinking
+
+        # Convert to ClinicalReasoning model
+        return ClinicalReasoning.model_validate(result_dict)
+    else:
+        # Standard approach for other models
+        response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=[{"role": "user", "content": prompt}],
+            format=ClinicalReasoning.model_json_schema(),
+            options=reasoning_options
+        )
+
+        return ClinicalReasoning.model_validate_json(response.message.content)
 
 def calculate_age(dob: str, encounter_date: str = None) -> int:
     """
@@ -228,33 +286,58 @@ async def refine_field_content(
         # Build system prompt with style example if available
         system_prompt = build_system_prompt(field, format_details, prompts)
 
-        # Qwen3 models perform better if we include the /no_think and some empty <think> tags to reduce semantic pressure.
+        # Create base messages for all models
+        base_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content}
+        ]
 
-        logger.info(f"Qwen3 model detected: {model_name}. Using thinking step.")
+        # Check if using Qwen3 model
         model_name = config["PRIMARY_MODEL"].lower()
-        if "qwen3" in model_name:
-            logger.info(f"Qwen3 model detected: {model_name}. Using thinking step.")
+        thinking = ""
 
+        if "qwen3" in model_name:
+            logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+
+            # Create a copy of base_messages for the thinking step
+            thinking_messages = base_messages.copy()
+            thinking_messages.append({
+                "role": "assistant",
+                "content": "<think>"
+            })
+
+            # Make initial call for thinking only
+            thinking_options = options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            thinking_response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+            # Add thinking to the main request
+            full_messages = base_messages.copy()
+            full_messages.append({
+                "role": "assistant",
+                "content": thinking
+            })
+            print(full_messages, flush=True)
             # Now make the structured output call with the thinking included
             response = await client.chat(
                 model=config["PRIMARY_MODEL"],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content + "/no_think"},
-                    {"role": "assistant", "content": "<think> </think>"},
-                ],
+                messages=full_messages,
                 format=format_details["response_format"],
                 options=options
             )
-
         else:
             # Standard approach for other models
             response = await client.chat(
                 model=config["PRIMARY_MODEL"],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content},
-                ],
+                messages=base_messages,
                 format=format_details["response_format"],
                 options=options
             )
@@ -300,7 +383,7 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
     # Check if field has style_example and prioritize it
     if hasattr(field, 'style_example') and field.style_example:
         return f"""
-        You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy.
+        You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy. The medical information is a summary of a patient transcript. The summary was generated by an automated system therefore it may contain irrelevant information.
 
         STYLE EXAMPLE:
         {field.style_example}
@@ -314,7 +397,7 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
         - Tense (past/present) and perspective (first/third person)
 
         2. IMPORTANT CONSTRAINTS:
-        - Preserve ALL clinical details and values from the original text
+        - Preserve ALL important clinical details from the original text; information which is irrelevant to the clinical encounter should be removed.
         - Do not add information not present in the input
         - RETURN JSON IN THE REQUESTED FORMAT
         - If the style example uses abbreviations like "SNT" or "HSM", use similar appropriate medical abbreviations
