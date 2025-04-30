@@ -125,9 +125,7 @@ export const handleChat = async (
                         content: streamedContent, // Update content cumulatively
                         context: streamedContext, // Update context if received
                         loading: !finalResponseReceived, // Set loading to false only when 'end' is received
-                        // Initialize thinking state here if preferred, once finalized
-                        // isThinkingExpanded: finalResponseReceived && streamedContent.includes('<think>') ? false : undefined,
-                        // Let Chat.js handle default state for simplicity during render
+                        isThinkingExpanded: false, // Always start with thinking collapsed
                     };
                     // If stream finished, remove loading and potentially set final state
                     if (finalResponseReceived) {

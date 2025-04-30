@@ -77,6 +77,7 @@ const parseMessageContent = (content) => {
     const thinkRegex = /<think>(.*?)<\/think>/s; // 's' flag allows '.' to match newlines
     const match = content.match(thinkRegex);
 
+    // If we have a complete <think></think> tag, parse it normally
     if (match) {
         const thinkContent = match[1].trim();
         const parts = content.split(match[0]); // Split by the full <think>...</think> block
@@ -88,6 +89,22 @@ const parseMessageContent = (content) => {
             beforeContent,
             thinkContent,
             afterContent,
+        };
+    }
+
+    // Check for an unclosed <think> tag during streaming
+    const openThinkMatch = content.match(/<think>(.*?)$/s);
+    if (openThinkMatch) {
+        // We have an opening <think> tag without a closing one yet (during streaming)
+        const beforeContent = content.split("<think>")[0].trim();
+        const partialThinkContent = openThinkMatch[1].trim();
+
+        return {
+            hasThinkTag: true,
+            beforeContent,
+            thinkContent: partialThinkContent,
+            afterContent: "", // No after content yet as the tag isn't closed
+            isPartialThinking: true, // Flag to indicate streaming status
         };
     }
 
@@ -338,7 +355,10 @@ const Chat = ({
                                                             borderRadius="sm"
                                                         >
                                                             <Text>
-                                                                Thinking
+                                                                Thinking{" "}
+                                                                {parsed.isPartialThinking
+                                                                    ? "..."
+                                                                    : ""}
                                                             </Text>
                                                             <IconButton
                                                                 aria-label={
