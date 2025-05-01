@@ -119,8 +119,8 @@ class AsyncLLMClient:
                     params["temperature"] = options["temperature"]
 
                 # Renamed mappings
-                if "num_ctx" in options:
-                    params["max_tokens"] = options["num_ctx"]  # Closest equivalent
+                #if "num_ctx" in options:
+                 #   params["max_tokens"] = options["num_ctx"]  # Closest equivalent
 
                 # Handle stop tokens
                 if "stop" in options:
@@ -128,11 +128,13 @@ class AsyncLLMClient:
 
             # Handle format (for JSON responses)
             if format:
-                params["response_format"] = {"type": "json_object"}
-                # If it's a complete schema, we can pass it as-is
-                if "properties" in format:
-                    params["response_format"]["schema"] = format
-
+                params["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "field_response",
+                        "schema": format
+                    },
+                }
             # Make the API call
             response = await self._client.chat.completions.create(**params)
 

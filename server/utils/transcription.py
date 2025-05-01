@@ -128,7 +128,7 @@ async def process_transcription(
             )
             for field in non_persistent_fields
         ])
-        print(raw_results)
+
         # Refine all results concurrently
         refined_results = await asyncio.gather(*[
             refine_field_content(
@@ -199,9 +199,6 @@ async def process_template_field(
             format=response_format,
             options={**options, "temperature": 0}
         )
-
-        print(request_body, flush=True)
-        print(response, flush=True)
 
         # Extract content from response based on provider type
         content = response['message']['content']
