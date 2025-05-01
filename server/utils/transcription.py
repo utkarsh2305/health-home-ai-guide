@@ -4,7 +4,7 @@ import time
 import re
 import logging
 from typing import Dict, List, Union
-from ollama import AsyncClient as AsyncOllamaClient
+from server.utils.llm_client import AsyncLLMClient, LLMProviderType, get_llm_client
 from server.database.config import config_manager
 from server.utils.helpers import refine_field_content
 from server.schemas.templates import TemplateField, TemplateResponse
@@ -160,25 +160,13 @@ async def process_template_field(
     field: TemplateField,
     patient_context: Dict[str, str]
 ) -> TemplateResponse:
-    """Process a single template field by extracting key points from the transcript text using a structured JSON output.
-
-    This function sends the transcript text and patient context to the Ollama model, instructing it to return key points in JSON format according to the FieldResponse schema. The key points are then formatted into a human-friendly string.
-
-    Args:
-        transcript_text (str): The transcribed text to be analyzed.
-        field (TemplateField): The template field configuration containing prompts.
-        patient_context (Dict[str, str]): Patient context details.
-
-    Returns:
-        TemplateResponse: An object containing the field key and the formatted key points.
-
-    Raises:
-        Exception: Propagates exceptions if the extraction or formatting fails.
-    """
+    """Process a single template field by extracting key points from the transcript text using a structured JSON output."""
     try:
         config = config_manager.get_config()
-        client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
         options = config_manager.get_prompts_and_options()["options"]["general"]
+
+        # Initialize the appropriate client based on config
+        client = get_llm_client()
 
         response_format = FieldResponse.model_json_schema()
 
@@ -186,7 +174,7 @@ async def process_template_field(
         model_name = config["PRIMARY_MODEL"].lower()
         is_qwen3 = "qwen3" in model_name
 
-        # Prepare user content, adding /no_think for Qwen3 models
+        # Prepare user content, adding /no_think for Qwen3 models with Ollama
         user_content = transcript_text
         if is_qwen3:
             user_content = f"{transcript_text} /no_think"
@@ -201,7 +189,7 @@ async def process_template_field(
             {"role": "user", "content": user_content},
         ]
 
-        # For Qwen3 models, add empty think tags
+        # For Qwen3 models with Ollama, add empty think tags
         if is_qwen3:
             request_body.append({"role": "assistant", "content": "<think>\n</think>"})
 
@@ -211,11 +199,14 @@ async def process_template_field(
             format=response_format,
             options={**options, "temperature": 0}
         )
-        print(request_body,flush=True)
-        print(response,flush=True)
-        field_response = FieldResponse.model_validate_json(
-            response['message']['content']
-        )
+
+        print(request_body, flush=True)
+        print(response, flush=True)
+
+        # Extract content from response based on provider type
+        content = response['message']['content']
+
+        field_response = FieldResponse.model_validate_json(content)
 
         # Convert key points into a nicely formatted string
         formatted_content = "\n".join(f"• {point.strip()}" for point in field_response.key_points)

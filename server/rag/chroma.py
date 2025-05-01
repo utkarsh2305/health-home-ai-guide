@@ -2,10 +2,11 @@ import fitz  # PyMuPDF
 from .semantic_chunker import ClusterSemanticChunker
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction, OpenAIEmbeddingFunction
 import re
 from ollama import Client as ollamaClient
 from server.database.config import config_manager
+from server.utils.llm_client import get_llm_client, LLMProviderType
 
 prompts = config_manager.get_prompts_and_options()
 
@@ -21,11 +22,28 @@ class ChromaManager:
         """
         self.config = config_manager.get_config()
         self.prompts = config_manager.get_prompts_and_options()
-        self.embedding_model = OllamaEmbeddingFunction(
-            url=f"{self.config['OLLAMA_BASE_URL']}/api/embeddings",
-            model_name=self.config["EMBEDDING_MODEL"],
-        )
-        self.ollama_client = ollamaClient(host=self.config["OLLAMA_BASE_URL"])
+
+        # Initialize embedding function based on provider type
+        provider_type = self.config.get("LLM_PROVIDER", "ollama").lower()
+
+        if provider_type == LLMProviderType.OLLAMA.value:
+            self.embedding_model = OllamaEmbeddingFunction(
+                url=f"{self.config['LLM_BASE_URL']}/api/embeddings",
+                model_name=self.config["EMBEDDING_MODEL"],
+            )
+        elif provider_type == LLMProviderType.OPENAI_COMPATIBLE.value:
+            self.embedding_model = OpenAIEmbeddingFunction(
+                model_name=self.config["EMBEDDING_MODEL"],
+                api_key=self.config.get("LLM_API_KEY", "cant-be-empty"),
+                api_base=f"{self.config['LLM_BASE_URL']}/v1/embeddings",
+            )
+        else:
+            raise ValueError(f"Unsupported LLM provider type: {provider_type}")
+
+        # Create the LLM client
+        self.llm_client = get_llm_client()
+
+        # Initialize Chroma client
         self.chroma_client = chromadb.PersistentClient(
             path="/usr/src/app/data/chroma",
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
