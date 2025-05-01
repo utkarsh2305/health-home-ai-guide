@@ -131,8 +131,9 @@ class AsyncLLMClient:
 
             if tools:
                 params["tools"] = tools
-                # Set explicit tool_choice to "required" instead of auto
-                params["tool_choice"] = "required"
+                # Only force tool choice to required if explicitly specified
+                if options and options.get("force_tools", False):
+                    params["tool_choice"] = "required"
 
             # Map options from our format to OpenAI format
             if options:
@@ -166,7 +167,13 @@ class AsyncLLMClient:
                         if hasattr(chunk, 'choices') and chunk.choices:
                             delta = chunk.choices[0].delta
                             content = delta.content if hasattr(delta, 'content') and delta.content else ""
-                            yield {
+
+                            # Check for tool calls in the delta
+                            tool_calls = None
+                            if hasattr(delta, 'tool_calls') and delta.tool_calls:
+                                tool_calls = delta.tool_calls
+
+                            response = {
                                 "model": model,
                                 "message": {
                                     "role": "assistant",
@@ -174,20 +181,40 @@ class AsyncLLMClient:
                                 }
                             }
 
+                            # Add tool_calls if present
+                            if tool_calls:
+                                response["message"]["tool_calls"] = tool_calls
+
+                            yield response
+
                 return response_generator()
             else:
                 # Make the API call
                 response = await self._client.chat.completions.create(**params)
 
                 # Convert to Ollama-like format for consistency
-                return {
+                result = {
                     "model": model,
                     "message": {
                         "role": "assistant",
-                        "content": response.choices[0].message.content,
-                        "tool_calls": response.choices[0].message.tool_calls if hasattr(response.choices[0].message, 'tool_calls') else None
+                        "content": response.choices[0].message.content or "",
                     }
                 }
+
+                # Add tool_calls if present
+                if hasattr(response.choices[0].message, 'tool_calls') and response.choices[0].message.tool_calls:
+                    result["message"]["tool_calls"] = []
+                    for tool_call in response.choices[0].message.tool_calls:
+                        result["message"]["tool_calls"].append({
+                            "id": tool_call.id,
+                            "type": tool_call.type,
+                            "function": {
+                                "name": tool_call.function.name,
+                                "arguments": tool_call.function.arguments
+                            }
+                        })
+
+                return result
         except Exception as e:
             logger.error(f"Error in OpenAI-compatible chat request: {e}")
             raise
