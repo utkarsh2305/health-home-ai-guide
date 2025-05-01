@@ -2,11 +2,11 @@ import logging
 from numpy import cos
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
-from ollama import AsyncClient as ollamaClient
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction, OpenAIEmbeddingFunction
 import re
 from server.database.config import config_manager
 from server.utils.helpers import clean_think_tags
+from server.utils.llm_client import get_llm_client, LLMProviderType
 
 class ChatEngine:
     """
@@ -52,8 +52,9 @@ class ChatEngine:
                 "content": doctor_context
             })
 
-        self.BASE_URL = self.config["OLLAMA_BASE_URL"]
-        self.ollama_client = ollamaClient(host=self.BASE_URL)
+        # Get the unified LLM client instead of Ollama-specific client
+        self.llm_client = get_llm_client()
+
         self.chroma_client = self._initialize_chroma_client()
         self.embedding_model = self._initialize_embedding_model()
         self.last_successful_collection = "misc"
@@ -72,15 +73,26 @@ class ChatEngine:
 
     def _initialize_embedding_model(self):
         """
-        Initialize and return an Ollama embedding model.
+        Initialize and return an embedding model based on the provider type.
 
         Returns:
-            OllamaEmbeddingFunction: An instance of the Ollama embedding model.
+            An embedding function compatible with the current provider.
         """
-        return OllamaEmbeddingFunction(
-            url=f"{self.BASE_URL}/api/embeddings",
-            model_name=f"{self.config['EMBEDDING_MODEL']}",
-        )
+        provider_type = self.config.get("LLM_PROVIDER", "ollama").lower()
+
+        if provider_type == LLMProviderType.OLLAMA.value:
+            return OllamaEmbeddingFunction(
+                url=f"{self.config['LLM_BASE_URL']}/api/embeddings",
+                model_name=self.config["EMBEDDING_MODEL"],
+            )
+        elif provider_type == LLMProviderType.OPENAI_COMPATIBLE.value:
+            return OpenAIEmbeddingFunction(
+                model_name=self.config["EMBEDDING_MODEL"],
+                api_key=self.config.get("LLM_API_KEY", "cant-be-empty"),
+                api_base=f"{self.config['LLM_BASE_URL']}/v1/embeddings",
+            )
+        else:
+            raise ValueError(f"Unsupported LLM provider type: {provider_type}")
 
     def sanitizer(self, disease_name: str) -> str:
         """
@@ -171,7 +183,9 @@ class ChatEngine:
 
         # First call to determine if we need literature or direct response
         self.logger.info("Initial LLM call to determine tool usage...")
-        response = await self.ollama_client.chat(
+
+        # Use the unified LLM client instead of directly calling Ollama
+        response = await self.llm_client.chat(
             model=self.config["PRIMARY_MODEL"],
             messages=message_list,
             options=context_question_options,
@@ -224,7 +238,7 @@ class ChatEngine:
             self.logger.info("LLM chose direct response.")
             yield {"type": "status", "content": "Generating response..."}
             # Stream direct response
-            async for chunk in await self.ollama_client.chat(
+            async for chunk in await self.llm_client.chat(
                 model=self.config["PRIMARY_MODEL"],
                 messages=message_list,
                 options=context_question_options,
@@ -240,7 +254,7 @@ class ChatEngine:
                 self.logger.info("Executing direct response...")
                 yield {"type": "status", "content": "Generating response..."}
                 # Stream direct response
-                async for chunk in await self.ollama_client.chat(
+                async for chunk in await self.llm_client.chat(
                     model=self.config["PRIMARY_MODEL"],
                     messages=message_list,
                     options=context_question_options,
@@ -260,7 +274,7 @@ class ChatEngine:
                         "content": "No transcript is available to query. Please answer the user's question without transcript information."
                     })
 
-                    async for chunk in await self.ollama_client.chat(
+                    async for chunk in await self.llm_client.chat(
                         model=self.config["PRIMARY_MODEL"],
                         messages=message_list,
                         options=context_question_options,
@@ -288,7 +302,7 @@ class ChatEngine:
                     ]
 
                     # Get information from transcript
-                    transcript_response = await self.ollama_client.chat(
+                    transcript_response = await self.llm_client.chat(
                         model=self.config["PRIMARY_MODEL"],
                         messages=transcript_query_messages,
                         options=context_question_options,
@@ -308,7 +322,7 @@ class ChatEngine:
                     yield {"type": "status", "content": "Generating response with transcript information..."}
 
                     # Stream the answer
-                    async for chunk in await self.ollama_client.chat(
+                    async for chunk in await self.llm_client.chat(
                         model=self.config["PRIMARY_MODEL"],
                         messages=temp_conversation_history,
                         options=context_question_options,
@@ -350,7 +364,7 @@ class ChatEngine:
                 yield {"type": "status", "content": "Generating response with retrieved information..."}
 
                 # Stream the context answer
-                async for chunk in await self.ollama_client.chat(
+                async for chunk in await self.llm_client.chat(
                     model=self.config["PRIMARY_MODEL"],
                     messages=temp_conversation_history,
                     options=context_question_options,
@@ -364,9 +378,9 @@ class ChatEngine:
         yield {"type": "end", "content": "", "function_response": function_response}
 
     async def stream_chat(self, conversation_history: list, raw_transcription=None):
-        """Stream chat response from Ollama"""
+        """Stream chat response from the LLM"""
         try:
-            self.logger.info("Starting Ollama stream...")
+            self.logger.info("Starting LLM stream...")
             yield {"type": "start", "content": ""}
 
             async for chunk in self.get_streaming_response(conversation_history, raw_transcription):

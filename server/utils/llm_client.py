@@ -1,7 +1,7 @@
 import aiohttp
 import json
 import logging
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, AsyncGenerator
 from server.database.config import config_manager
 from enum import Enum
 
@@ -60,10 +60,12 @@ class AsyncLLMClient:
                 raise ImportError("OpenAI client not installed. Install with 'pip install openai'")
 
     async def chat(self,
-                   model: str,
-                   messages: List[Dict[str, str]],
-                   format: Optional[Dict] = None,
-                   options: Optional[Dict] = None) -> Dict[str, Any]:
+                model: str,
+                messages: List[Dict[str, str]],
+                format: Optional[Dict] = None,
+                options: Optional[Dict] = None,
+                tools: Optional[List[Dict]] = None,
+                stream: bool = False) -> Union[Dict[str, Any], AsyncGenerator]:
         """
         Send a chat completion request.
 
@@ -72,38 +74,53 @@ class AsyncLLMClient:
             messages: List of message dictionaries with 'role' and 'content'
             format: Format specification (Ollama-specific)
             options: Additional options for the model
+            tools: Optional list of tools/functions for function calling
+            stream: Whether to stream the response
 
         Returns:
-            Response dictionary
+            Response dictionary or async generator for streaming
         """
         if self.provider_type == LLMProviderType.OLLAMA:
-            return await self._ollama_chat(model, messages, format, options)
+            return await self._ollama_chat(model, messages, format, options, tools, stream)
         else:
-            return await self._openai_compatible_chat(model, messages, format, options)
+            return await self._openai_compatible_chat(model, messages, format, options, tools, stream)
 
     async def _ollama_chat(self,
                           model: str,
                           messages: List[Dict[str, str]],
                           format: Optional[Dict] = None,
-                          options: Optional[Dict] = None) -> Dict[str, Any]:
+                          options: Optional[Dict] = None,
+                          tools: Optional[List[Dict]] = None,
+                          stream: bool = False) -> Union[Dict[str, Any], AsyncGenerator]:
         """Send chat request to Ollama."""
         try:
-            result = await self._client.chat(
-                model=model,
-                messages=messages,
-                format=format,
-                options=options
-            )
-            return result
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "format": format,
+                "options": options
+            }
+
+            if tools:
+                kwargs["tools"] = tools
+
+            if stream:
+                kwargs["stream"] = stream
+                return await self._client.chat(**kwargs)
+            else:
+                result = await self._client.chat(**kwargs)
+                return result
         except Exception as e:
             logger.error(f"Error in Ollama chat request: {e}")
             raise
 
     async def _openai_compatible_chat(self,
-                                    model: str,
-                                    messages: List[Dict[str, str]],
-                                    format: Optional[Dict] = None,
-                                    options: Optional[Dict] = None) -> Dict[str, Any]:
+                                model: str,
+                                messages: List[Dict[str, str]],
+                                format: Optional[Dict] = None,
+                                options: Optional[Dict] = None,
+                                tools: Optional[List[Dict]] = None,
+                                stream: bool = False) -> Union[Dict[str, Any], AsyncGenerator]:
         """Send chat request to OpenAI-compatible API using the OpenAI client."""
         try:
             # Prepare parameters for OpenAI
@@ -112,16 +129,18 @@ class AsyncLLMClient:
                 "messages": messages,
             }
 
+            if tools:
+                params["tools"] = tools
+                # Set explicit tool_choice to "required" instead of auto
+                params["tool_choice"] = "required"
+
             # Map options from our format to OpenAI format
             if options:
                 # Direct mappings
                 if "temperature" in options:
                     params["temperature"] = options["temperature"]
-
-                # Renamed mappings
                 #if "num_ctx" in options:
-                 #   params["max_tokens"] = options["num_ctx"]  # Closest equivalent
-
+                    #params["max_tokens"] = options["num_ctx"]  # Closest equivalent
                 # Handle stop tokens
                 if "stop" in options:
                     params["stop"] = options["stop"]
@@ -135,17 +154,40 @@ class AsyncLLMClient:
                         "schema": format
                     },
                 }
-            # Make the API call
-            response = await self._client.chat.completions.create(**params)
 
-            # Convert to Ollama-like format for consistency
-            return {
-                "model": model,
-                "message": {
-                    "role": "assistant",
-                    "content": response.choices[0].message.content
+            # Add stream parameter if needed
+            if stream:
+                params["stream"] = stream
+
+                # For streaming, return an async generator
+                async def response_generator():
+                    async for chunk in await self._client.chat.completions.create(**params):
+                        # Format the response to match Ollama's format
+                        if hasattr(chunk, 'choices') and chunk.choices:
+                            delta = chunk.choices[0].delta
+                            content = delta.content if hasattr(delta, 'content') and delta.content else ""
+                            yield {
+                                "model": model,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": content
+                                }
+                            }
+
+                return response_generator()
+            else:
+                # Make the API call
+                response = await self._client.chat.completions.create(**params)
+
+                # Convert to Ollama-like format for consistency
+                return {
+                    "model": model,
+                    "message": {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content,
+                        "tool_calls": response.choices[0].message.tool_calls if hasattr(response.choices[0].message, 'tool_calls') else None
+                    }
                 }
-            }
         except Exception as e:
             logger.error(f"Error in OpenAI-compatible chat request: {e}")
             raise
