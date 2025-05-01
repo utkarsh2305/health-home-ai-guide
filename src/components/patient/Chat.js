@@ -322,7 +322,7 @@ const Chat = ({
                                         position="relative"
                                     >
                                         {message.loading ? (
-                                            <Spinner size="sm" />
+                                            <Spinner size="sm" mt="1" />
                                         ) : (
                                             <VStack
                                                 align="start"
@@ -354,7 +354,7 @@ const Chat = ({
                                                             p={1}
                                                             borderRadius="sm"
                                                         >
-                                                            <Text>
+                                                            <Text mr="2">
                                                                 Thinking{" "}
                                                                 {parsed.isPartialThinking
                                                                     ? "..."
@@ -373,8 +373,10 @@ const Chat = ({
                                                                         <ChevronDownIcon />
                                                                     )
                                                                 }
-                                                                size="sm"
-                                                                mr={2}
+                                                                variant="outline"
+                                                                size="10"
+                                                                mr="2"
+                                                                className="collapse-toggle"
                                                             />
                                                         </Flex>
                                                         <Collapse

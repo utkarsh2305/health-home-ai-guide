@@ -110,4 +110,16 @@ export const chatStyles = (props) => ({
                 ? `${colors.light.primary} !important`
                 : `${colors.dark.primary} !important`,
     },
+    ".collapse-toggle": {
+        border: "none !important",
+        borderRadius: "lg !important",
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textSecondary} !important`
+                : `${colors.dark.textTertiary} !important`,
+        backgroundColor:
+            props.colorMode === "light"
+                ? `${colors.light.crust} !important`
+                : `${colors.dark.base} !important`,
+    },
 });
