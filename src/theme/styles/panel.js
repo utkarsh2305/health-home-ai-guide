@@ -44,6 +44,7 @@ export const panelStyles = (props) => ({
                 : `${colors.dark.textSecondary} !important`,
         borderColor: "#cecacd",
         border: "none !important",
+        borderRadius: "md !important",
         fontSize: "1rem !important",
         fontWeight: "700",
     },

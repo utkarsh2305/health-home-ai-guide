@@ -33,6 +33,9 @@ export const inputStyles = (props) => ({
         },
         minHeight: "auto !important",
     },
+    ".letter-editor-textarea": {
+        overflow: "auto !important",
+    },
     ".input-style": {
         backgroundColor:
             props.colorMode === "light"
@@ -63,6 +66,20 @@ export const inputStyles = (props) => ({
             props.colorMode === "light"
                 ? `${colors.light.textTertiary} !important`
                 : `${colors.dark.textSecondary} !important`,
+    },
+    ".clinic-date-input": {
+        backgroundColor:
+            props.colorMode === "light"
+                ? "white !important"
+                : `${colors.dark.crust} !important`,
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textTertiary} !important`
+                : `${colors.dark.textTertiary} !important`,
+        border:
+            props.colorMode === "light"
+                ? `1px solid ${colors.light.surface} !important`
+                : `1px solid ${colors.dark.surface} !important`,
     },
     ".search-button": {
         borderLeft: "none !important",

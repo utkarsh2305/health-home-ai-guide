@@ -35,6 +35,20 @@ const loadingGradient = keyframes`
   }
 `;
 
+// Updated animation that emerges from button position
+const emergeFromButton = keyframes`
+  from {
+    transform: scale(0.5) translateY(60px);
+    opacity: 0;
+    transform-origin: bottom right;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    transform-origin: bottom right;
+  }
+`;
+
 const slideUp = keyframes`
   from {
     transform: translateY(20px);
@@ -70,6 +84,12 @@ const LoadingBox = styled(Box)`
 
 const AnimatedHStack = styled(HStack)`
     animation: ${slideUp} 0.5s ease-out forwards;
+`;
+
+const AnimatedChatPanel = styled(Box)`
+    animation: ${emergeFromButton} 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)
+        forwards;
+    transform-origin: bottom right;
 `;
 
 // Function to parse message content with <think> tags
@@ -129,10 +149,12 @@ const Chat = ({
     currentTemplate,
     patientData,
     patientId,
+    onChatToggle,
 }) => {
     const [dimensions, setDimensions] = useState({ width: 600, height: 400 });
     const messagesEndRef = useRef(null);
     const resizerRef = useRef(null);
+    const chatButtonRef = useRef(null);
     const [showTooltip, setShowTooltip] = useState(null);
     const [userSettings, setUserSettings] = useState(null);
     const isTemplateLoaded = currentTemplate?.fields !== undefined;
@@ -140,6 +162,14 @@ const Chat = ({
     const filteredMessages = messages.filter(
         (message) => message.role !== "system",
     );
+
+    const toggleChat = () => {
+        const newState = !chatExpanded;
+        setChatExpanded(newState); // This only updates local state
+
+        // Call parent toggle handler to ensure proper coordination
+        if (onChatToggle) onChatToggle(newState);
+    };
 
     // Function to toggle thinking visibility for a specific message
     const toggleThinkingVisibility = (messageIndex) => {
@@ -208,13 +238,13 @@ const Chat = ({
     const handleMouseMove = (e) => {
         setDimensions((prev) => ({
             width: Math.max(
-                350, // Minimum width
+                400,
                 prev.width -
                     (e.clientX -
                         resizerRef.current.getBoundingClientRect().left),
             ),
             height: Math.max(
-                300, // Minimum height
+                300,
                 prev.height -
                     (e.clientY -
                         resizerRef.current.getBoundingClientRect().top),
@@ -241,31 +271,41 @@ const Chat = ({
             zIndex="1000"
             className="hover-chat-box"
         >
-            {!chatExpanded && (
-                <IconButton
-                    icon={<ChatIcon boxSize="1.5em" />}
-                    colorScheme="purple"
-                    onClick={() => setChatExpanded(true)}
-                    aria-label="Open Chat"
-                    borderRadius="full"
-                    size="lg"
-                    bg="#c4a7e7"
-                    className="chat-icon"
-                    boxShadow="md"
-                    width="3em"
-                    height="3em"
-                    fontSize="2xl"
-                />
-            )}
+            {/* Always render the button for toggling */}
+            <IconButton
+                icon={<ChatIcon boxSize="1.5em" />}
+                colorScheme="purple"
+                onClick={toggleChat}
+                aria-label={chatExpanded ? "Close Chat" : "Open Chat"}
+                borderRadius="full"
+                size="lg"
+                bg={chatExpanded ? "#b096d3" : "#c4a7e7"} // Darker when active
+                className={`chat-icon ${chatExpanded ? "chat-icon-active" : ""}`}
+                boxShadow={
+                    chatExpanded ? "0 0 10px rgba(196, 167, 231, 0.6)" : "md"
+                }
+                width="3em"
+                height="3em"
+                fontSize="2xl"
+                ref={chatButtonRef}
+                _hover={{
+                    bg: chatExpanded ? "#a085c2" : "#b096d3",
+                    transform: "scale(1.05)",
+                }}
+                transition="all 0.2s ease-in-out"
+            />
+
             {chatExpanded && (
-                <Box
+                <AnimatedChatPanel
+                    position="absolute"
+                    bottom="80px" // Position above the button
+                    right="0px"
                     width={`${dimensions.width}px`}
                     height={`${dimensions.height - 24}px`}
                     borderRadius="xl"
                     boxShadow="md"
                     overflow="hidden"
-                    position="relative"
-                    className="chat-panel"
+                    className="floating-panel"
                     display="flex"
                     flexDirection="column"
                 >
@@ -281,7 +321,7 @@ const Chat = ({
                         <Text fontWeight="bold">Chat With Phlox</Text>
                         <IconButton
                             icon={<CloseIcon />}
-                            onClick={() => setChatExpanded(false)}
+                            onClick={toggleChat}
                             aria-label="Close chat"
                             variant="ghost"
                             size="sm"
@@ -609,7 +649,7 @@ const Chat = ({
                         onMouseDown={handleMouseDown}
                         zIndex={1}
                     />
-                </Box>
+                </AnimatedChatPanel>
             )}
         </Box>
     );

@@ -16,10 +16,12 @@ import {
     Link,
     VStack,
     HStack,
+    Center,
 } from "@chakra-ui/react";
 import { FaGithub } from "react-icons/fa";
 import { TbVersions } from "react-icons/tb";
 import { BsCheck2All, BsExclamationTriangle } from "react-icons/bs";
+import { colors } from "../../theme/colors";
 
 const VersionInfo = ({ isCollapsed }) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -29,6 +31,10 @@ const VersionInfo = ({ isCollapsed }) => {
         whisper: false,
         ollama: false,
     });
+
+    // Use consistent dark theme text color
+    const textColor = colors.dark.textPrimary;
+    const iconColor = colors.dark.textSecondary;
 
     useEffect(() => {
         // Fetch version from backend
@@ -99,33 +105,35 @@ const VersionInfo = ({ isCollapsed }) => {
     // Display for the collapsed sidebar
     if (isCollapsed) {
         return (
-            <VStack
-                position="absolute"
-                bottom="10px"
-                left="0"
-                width="100%"
-                spacing={5}
-                align="center"
-                px={2}
-            >
-                <Tooltip label="View Version Info" placement="right">
-                    <Box onClick={onOpen} cursor="pointer" fontSize="xl">
-                        <TbVersions />
-                    </Box>
-                </Tooltip>
+            <Box position="relative" width="100%">
+                <VStack spacing={2} align="center" width="100%">
+                    <Tooltip label="View Version Info" placement="right">
+                        <Box
+                            onClick={onOpen}
+                            cursor="pointer"
+                            fontSize="md"
+                            color={iconColor} // Apply consistent color
+                            _hover={{ color: textColor }} // Brighten on hover
+                        >
+                            <TbVersions />
+                        </Box>
+                    </Tooltip>
 
-                <Tooltip label="GitHub Repository" placement="right">
-                    <Link
-                        href="https://github.com/bloodworks-io/phlox"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        fontSize="xl"
-                    >
-                        <FaGithub />
-                    </Link>
-                </Tooltip>
+                    <Tooltip label="GitHub Repository" placement="right">
+                        <Link
+                            href="https://github.com/bloodworks-io/phlox"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            fontSize="md"
+                            color={iconColor} // Apply consistent color
+                            _hover={{ color: textColor }} // Brighten on hover
+                        >
+                            <FaGithub />
+                        </Link>
+                    </Tooltip>
 
-                <StatusIcon />
+                    <StatusIcon />
+                </VStack>
 
                 <ChangelogModal
                     isOpen={isOpen}
@@ -133,36 +141,47 @@ const VersionInfo = ({ isCollapsed }) => {
                     version={version}
                     changelog={changelog}
                 />
-            </VStack>
+            </Box>
         );
     }
 
     // Display for the expanded sidebar
     return (
         <Box width="100%">
-            <Flex align="center" justify="center" width="100%">
+            {/* Center the version, GitHub icon, and status icon */}
+            <Center width="100%">
                 <HStack spacing={4}>
-                    <Text
-                        fontSize="md"
-                        onClick={onOpen}
-                        cursor="pointer"
-                        _hover={{ textDecoration: "underline" }}
-                    >
-                        v{version}
-                    </Text>
+                    <Tooltip label="View Changelog">
+                        <Text
+                            fontSize="md"
+                            onClick={onOpen}
+                            cursor="pointer"
+                            color={textColor} // Apply consistent color
+                            _hover={{
+                                textDecoration: "underline",
+                                color: colors.dark.textPrimary,
+                            }}
+                        >
+                            v{version}
+                        </Text>
+                    </Tooltip>
 
-                    <Link
-                        href="https://github.com/bloodworks-io/phlox"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        fontSize="xl"
-                    >
-                        <FaGithub />
-                    </Link>
+                    <Tooltip label="GitHub Repository">
+                        <Link
+                            href="https://github.com/bloodworks-io/phlox"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            fontSize="lg"
+                            color={iconColor} // Apply consistent color
+                            _hover={{ color: textColor }} // Brighten on hover
+                        >
+                            <FaGithub />
+                        </Link>
+                    </Tooltip>
 
                     <StatusIcon />
                 </HStack>
-            </Flex>
+            </Center>
 
             <ChangelogModal
                 isOpen={isOpen}
@@ -196,8 +215,6 @@ const ChangelogModal = ({ isOpen, onClose, version, changelog }) => {
                     {releases.length > 0 ? (
                         releases.map((release, index) => (
                             <Box key={index} mb={10}>
-                                {" "}
-                                {/* Add mb={10} here */}
                                 <ReactMarkdown>{release}</ReactMarkdown>
                             </Box>
                         ))

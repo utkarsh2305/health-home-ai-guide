@@ -76,6 +76,20 @@ const PatientDetails = ({
         loadPatientDetails,
     } = usePatient(initialPatient, setInitialPatient);
 
+    const handleChatToggle = (isOpen) => {
+        if (isOpen && !letter.isCollapsed) {
+            // If chat is opening and letter is open, close letter
+            letter.setIsCollapsed(true);
+        }
+    };
+
+    const handleLetterToggle = (isOpen) => {
+        if (isOpen && chat.chatExpanded) {
+            // If letter is opening and chat is open, close chat
+            chat.setChatExpanded(false);
+        }
+    };
+
     const transcription = useCollapse(false);
     const summary = useCollapse(false);
     const letterHook = useLetter(setIsModified);
@@ -446,7 +460,6 @@ const PatientDetails = ({
 
         letter.setIsCollapsed(false);
         transcription.setIsCollapsed(true);
-        summary.setIsCollapsed(true);
         chat.setChatExpanded(false);
 
         await letterHook.generateLetter(
@@ -698,6 +711,7 @@ const PatientDetails = ({
                     toast={toast}
                     patient={patient}
                     setLoading={setLoading}
+                    onLetterToggle={handleLetterToggle}
                 />
 
                 <Chat
@@ -721,6 +735,7 @@ const PatientDetails = ({
                     rawTranscription={patient.raw_transcription}
                     currentTemplate={currentTemplate}
                     patientData={patient}
+                    onChatToggle={handleChatToggle}
                 />
             </VStack>
         </Box>

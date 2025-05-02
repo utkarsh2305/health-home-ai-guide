@@ -5,7 +5,7 @@ import { panelStyles } from "./panel";
 import { buttonStyles } from "./button";
 import { inputStyles } from "./input";
 import { modalStyles } from "./modal";
-import { chatStyles } from "./chat";
+import { floatingStyles } from "./floating";
 import { modeSelectorStyles } from "./modeSelector";
 import { toggleStyles } from "./toggle";
 import { documentExplorerStyles } from "./documentExplorer";
@@ -23,7 +23,7 @@ export const styles = {
         ...buttonStyles(props),
         ...inputStyles(props),
         ...modalStyles(props),
-        ...chatStyles(props),
+        ...floatingStyles(props),
         ...modeSelectorStyles(props),
         ...toggleStyles(props),
         ...documentExplorerStyles(props),
