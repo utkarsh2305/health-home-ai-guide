@@ -29,7 +29,7 @@ const VersionInfo = ({ isCollapsed }) => {
     const [changelog, setChangelog] = useState("");
     const [serverStatus, setServerStatus] = useState({
         whisper: false,
-        ollama: false,
+        llm: false, // Updated from 'ollama' to 'llm'
     });
 
     // Use consistent dark theme text color
@@ -75,14 +75,14 @@ const VersionInfo = ({ isCollapsed }) => {
 
     // Combined status icon
     const StatusIcon = () => {
-        const allServicesUp = serverStatus.ollama && serverStatus.whisper;
+        const allServicesUp = serverStatus.llm && serverStatus.whisper;
 
         return (
             <Tooltip
                 label={
                     allServicesUp
                         ? "All services connected"
-                        : `Services: ${serverStatus.ollama ? "✓" : "✗"} Ollama, ${serverStatus.whisper ? "✓" : "✗"} Whisper`
+                        : `Services: ${serverStatus.llm ? "✓" : "✗"} LLM, ${serverStatus.whisper ? "✓" : "✗"} Whisper`
                 }
                 placement={isCollapsed ? "right" : "top"}
             >

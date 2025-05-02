@@ -330,7 +330,12 @@ const Chat = ({
                     </Flex>
 
                     {/* Messages Area */}
-                    <Box flex="1" overflowY="auto" p="4" className="chat-main">
+                    <Box
+                        flex="1"
+                        overflowY="auto"
+                        p="4"
+                        className="floating-main"
+                    >
                         {messages.map((message, index) => {
                             // Skip system messages for rendering
                             if (message.role === "system") return null;

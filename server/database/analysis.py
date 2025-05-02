@@ -1,11 +1,12 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from ollama import AsyncClient as AsyncOllamaClient
 from server.database.connection import PatientDatabase
 from server.database.patient import get_patients_by_date
 from server.utils.helpers import run_clinical_reasoning
 from server.database.config import config_manager
+from server.utils.llm_client import get_llm_client
+from server.schemas.grammars import PatientAnalysis, PreviousVisitSummary
 import random
 import asyncio
 
@@ -15,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 async def _generate_analysis_with_llm(patient_data):
     """
-    Generate analysis using Ollama LLM.
+    Generate analysis using LLM.
     """
     config = config_manager.get_config()
-    client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
-    ollama_model = config["PRIMARY_MODEL"]
+    client = get_llm_client()
+    model = config["PRIMARY_MODEL"]
     options = config_manager.get_prompts_and_options()["options"]["general"]
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -40,24 +41,89 @@ async def _generate_analysis_with_llm(patient_data):
 
     system_prompt = f"""{doctor_context}. Today's date is {today}. Your task is to analyze patient records with outstanding tasks and provide a prioritized analysis of what needs attention. Consider the recency of encounters and the nature of outstanding tasks when determining urgency. Focus on tasks that the doctor will need to arrange once the patient leaves the rooms (such as ordering CT scans). Names are formatted as Last, First. Please just use the patient's last name. Avoid use of markdown or other formatting"""
 
-    user_content = f"""Please analyze these patients with outstanding tasks and provide a narrative digest, in just 1 short paragraph of 3-4 sentences, of the most pressing tasks that need to be completed.""
+    user_content = f"""Please analyze these patients with outstanding tasks and provide a narrative digest, in just 1 short paragraph of 3-4 sentences, of the most pressing tasks that need to be completed.
 
     Patient Data:
     {json.dumps(patient_data, indent=2)}"""
 
     initial_assistant_content = """Hi there Doctor, here's todays digest:"""
 
-    request_body = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_content},
-        {"role": "assistant", "content": initial_assistant_content},
-    ]
+    # Check if using Qwen3 model
+    model_name = model.lower()
+    is_qwen3 = "qwen3" in model_name
+
+    # Create response format schema
+    response_format = PatientAnalysis.model_json_schema()
 
     try:
-        response = await client.chat(
-            model=ollama_model, messages=request_body, options=options
-        )
-        cleaned_response = response["message"]["content"].strip()
+        if is_qwen3:
+            logger.info(f"Qwen3 model detected: {model_name}. Using thinking step for analysis.")
+
+            # First, get the thinking step
+            thinking_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": "<think>"}
+            ]
+
+            # Create thinking-specific options that stop at </think>
+            thinking_options = options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            # Get the thinking content
+            thinking_response = await client.chat(
+                model=model,
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = thinking_response["message"]["content"]
+
+            # Now make the full request with the thinking included
+            full_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": f"<think>{thinking}</think>{initial_assistant_content}"}
+            ]
+
+            # Get the final response with structured format
+            response = await client.chat(
+                model=model,
+                messages=full_messages,
+                format=response_format,
+                options=options
+            )
+
+        else:
+            # Standard approach for other models
+            request_body = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": initial_assistant_content},
+            ]
+
+            response = await client.chat(
+                model=model,
+                messages=request_body,
+                format=response_format,
+                options=options
+            )
+
+        content = response["message"]["content"].strip()
+
+        try:
+            # Try to parse as JSON
+            analysis_data = PatientAnalysis.model_validate_json(content)
+            cleaned_response = analysis_data.analysis
+        except Exception as e:
+            logger.warning(f"Failed to parse response as JSON: {e}")
+            # Just use content as is
+            cleaned_response = content
+
+        # Make sure it starts with the initial assistant content
+        if not cleaned_response.startswith(initial_assistant_content):
+            cleaned_response = f"{initial_assistant_content} {cleaned_response}"
 
         return cleaned_response
     except Exception as e:
@@ -183,8 +249,8 @@ async def generate_previous_visit_summary(patient_data):
     Generate a summary of patient's previous visit using LLM.
     """
     config = config_manager.get_config()
-    client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
-    ollama_model = config["SECONDARY_MODEL"]
+    client = get_llm_client()
+    model = config["SECONDARY_MODEL"]
     options = config_manager.get_prompts_and_options()["options"]["secondary"]
 
     # Calculate time since last visit
@@ -242,20 +308,48 @@ async def generate_previous_visit_summary(patient_data):
     selected_intro = random.choice(intro_phrases)
     initial_assistant_content = f"{selected_intro}, "
 
+    # Check if using Qwen3 model
+    model_name = model.lower()
+    is_qwen3 = "qwen3" in model_name
+
+    # Add /no_think for Qwen3 models
+    if is_qwen3:
+        logger.info(f"Qwen3 model detected: {model_name}. Adding /no_think and empty think tags.")
+        user_prompt = f"{user_prompt} /no_think"
+
     request_body = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
         {"role": "assistant", "content": initial_assistant_content},
     ]
 
+    # For Qwen3 models, add empty think tags
+    if is_qwen3:
+        request_body.append({"role": "assistant", "content": "<think>\n</think>"})
+
+    response_format = PreviousVisitSummary.model_json_schema()
+
     try:
         response = await client.chat(
-            model=ollama_model,
+            model=model,
             messages=request_body,
             options=options,
+            format=response_format
         )
 
-        summary = f"{initial_assistant_content}{response['message']['content'].strip()}"
+        content = response['message']['content'].strip()
+
+        try:
+            # Try to parse as JSON first (in case it returned structured output)
+            summary_data = PreviousVisitSummary.model_validate_json(content)
+            summary = f"{initial_assistant_content}{summary_data.summary}"
+        except:
+            # If not JSON, just use the raw content
+            if content.startswith(initial_assistant_content):
+                summary = content
+            else:
+                summary = f"{initial_assistant_content}{content}"
+
         return summary
     except Exception as e:
         logger.error(f"Error generating previous visit summary: {e}")

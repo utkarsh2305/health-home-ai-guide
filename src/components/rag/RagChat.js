@@ -249,7 +249,7 @@ const RagChat = ({
                         mt="4"
                         p="2"
                         borderRadius="sm"
-                        className="chat-main"
+                        className="floating-main"
                     >
                         {messages.map((message, messageIndex) => (
                             <Flex

@@ -1,9 +1,9 @@
 import random
 import logging
 from fastapi import HTTPException
-from ollama import Client as ollamaClient
 from server.database.config import config_manager
 from server.schemas.grammars import LetterDraft
+from server.utils.llm_client import get_llm_client
 
 async def generate_letter_content(
     patient_name: str,
@@ -12,15 +12,15 @@ async def generate_letter_content(
     additional_instruction: str | None = None,
     context: list | None = None
 ):
-    """Generates letter content using Ollama based on provided data and prompts."""
+    """Generates letter content using the LLM client based on provided data and prompts."""
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
-    client = ollamaClient(host=config["OLLAMA_BASE_URL"])
+    llm_client = get_llm_client()
 
     try:
         # Always start with system messages
         request_body = [
-             {
+            {
                 "role": "system",
                 "content": prompts["prompts"]["letter"]["system"]
             },
@@ -77,7 +77,7 @@ async def generate_letter_content(
             thinking_options = prompts["options"]["general"].copy()
             thinking_options["stop"] = ["</think>"]
 
-            thinking_response = client.chat(
+            thinking_response = await llm_client.chat(
                 model=config["PRIMARY_MODEL"],
                 messages=thinking_messages,
                 options=thinking_options
@@ -104,7 +104,7 @@ async def generate_letter_content(
         options["temperature"] = prompts["options"]["letter"]["temperature"] # User defined temperature
 
         # Generate the letter content with structured output
-        response = client.chat(
+        response = await llm_client.chat(
             model=config["PRIMARY_MODEL"],
             messages=request_body,
             format=response_format,
@@ -113,7 +113,6 @@ async def generate_letter_content(
 
         # Parse the JSON response
         letter_response = LetterDraft.model_validate_json(response["message"]["content"])
-
 
         return letter_response.content.strip()
 

@@ -54,7 +54,7 @@ const NewsDigestPanel = ({ rssDigests, isRefreshing, refreshRssDigests }) => {
             </Flex>
 
             <Box
-                className="chat-main custom-scrollbar"
+                className="floating-main custom-scrollbar"
                 borderRadius="sm"
                 p="4"
                 minH="200px"
