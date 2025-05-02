@@ -33,6 +33,9 @@ export const inputStyles = (props) => ({
         },
         minHeight: "auto !important",
     },
+    ".letter-editor-textarea": {
+        overflow: "auto !important",
+    },
     ".input-style": {
         backgroundColor:
             props.colorMode === "light"

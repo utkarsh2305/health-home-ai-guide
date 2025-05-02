@@ -122,16 +122,19 @@ const Sidebar = ({
         fetchIncompleteJobsCount();
     }, [selectedDate, refreshKey]);
 
+    // Determine if the sidebar should have floating behavior
+    const shouldFloat = isSmallScreen && !isCollapsed;
+
     return (
         <Box
             as="nav"
-            pos="fixed"
+            pos={shouldFloat ? "fixed" : "fixed"}
             top="0"
             left="0"
             h="100vh"
             p={isCollapsed ? "2" : "4"}
             bg={sidebarBg}
-            boxShadow="md"
+            boxShadow={shouldFloat ? "lg" : "md"}
             display="flex"
             flexDirection="column"
             w={isCollapsed ? "60px" : "220px"}
@@ -143,7 +146,25 @@ const Sidebar = ({
                     : "translateX(0)"
             }
         >
-            {/* Sidebar toggle button */}
+            {/* Small screen close button - only show when expanded */}
+            {isSmallScreen && !isCollapsed && (
+                <IconButton
+                    icon={<HamburgerIcon />}
+                    onClick={toggleSidebar}
+                    position="absolute"
+                    top="12px"
+                    right="15px"
+                    size="sm"
+                    borderRadius="full"
+                    aria-label="Close sidebar"
+                    zIndex="200"
+                    variant="ghost"
+                    color={labelColor}
+                    _hover={{ bg: hoverColor }}
+                />
+            )}
+
+            {/* Regular toggle button - only for larger screens */}
             {!isSmallScreen && (
                 <Tooltip
                     label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}

@@ -1,7 +1,7 @@
 // Styles for the chat interface.
 import { colors } from "../colors";
 
-export const chatStyles = (props) => ({
+export const floatingStyles = (props) => ({
     ".chat-icon": {
         backgroundColor:
             props.colorMode === "light"
@@ -12,11 +12,11 @@ export const chatStyles = (props) => ({
                 ? `${colors.light.invertedText} !important`
                 : `${colors.dark.invertedText} !important`,
     },
-    ".chat-panel": {
+    ".floating-panel": {
         backgroundColor:
             props.colorMode === "light"
-                ? colors.light.secondary
-                : colors.dark.secondary,
+                ? `${colors.light.secondary} !important`
+                : `${colors.dark.secondary} !important`,
         border:
             props.colorMode === "light"
                 ? `1px solid ${colors.light.surface} !important`
@@ -28,7 +28,7 @@ export const chatStyles = (props) => ({
         fontSize: "1rem !important",
         fontWeight: "700",
     },
-    ".chat-main": {
+    ".floating-main": {
         backgroundColor:
             props.colorMode === "light" ? colors.light.base : colors.dark.crust,
         color:
