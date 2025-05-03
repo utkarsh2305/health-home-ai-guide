@@ -15,7 +15,7 @@ Before you begin, ensure you have the following prerequisites installed and conf
     - **Remotely:** If you have a remote server with Ollama running, you can configure Phlox to connect to it.
 
 3.  **Whisper-compatible Transcription Service:** Phlox needs a service to transcribe audio into text. You have a few options:
-    - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speeches-ai/speaches) is a self-hostable, open-source Whisper server.
+    - **Speaches (Self-hosted, Recommended for Local):** [Speaches](https://github.com/speaches-ai/speaches) is a self-hostable, open-source Whisper server.
       - Recommended model: `Systran/faster-distil-whisper-medium.en` ( smaller and faster but still accurate)
       - Follow their instructions to set up an instance. This is recommended for local, privacy-focused setups.
     - **Cloud-based Whisper API:**
