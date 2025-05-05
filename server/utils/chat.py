@@ -9,6 +9,9 @@ from server.database.config import config_manager
 from server.utils.helpers import clean_think_tags
 from server.utils.llm_client import get_llm_client, LLMProviderType
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 class ChatEngine:
     """
     A class to manage chat interactions, including retrieving relevant medical literature
@@ -90,7 +93,7 @@ class ChatEngine:
             return OpenAIEmbeddingFunction(
                 model_name=self.config["EMBEDDING_MODEL"],
                 api_key=self.config.get("LLM_API_KEY", "cant-be-empty"),
-                api_base=f"{self.config['LLM_BASE_URL']}/v1/embeddings",
+                api_base=f"{self.config['LLM_BASE_URL']}/v1",
             )
         else:
             raise ValueError(f"Unsupported LLM provider type: {provider_type}")
@@ -122,20 +125,31 @@ class ChatEngine:
         Returns:
             str: Relevant literature excerpts or a message if no literature is found.
         """
+        self.logger.info(f"Searching literature for disease: '{disease_name}' with query: '{question}'")
         collection_names = self.chroma_client.list_collections()
         sanitized_disease_name = self.sanitizer(disease_name)
 
+        self.logger.info(f"Sanitized disease name: '{sanitized_disease_name}'")
+        self.logger.info(f"Available collections: {collection_names}")
+
         if sanitized_disease_name in collection_names:
+            self.logger.info(f"Found matching collection for '{sanitized_disease_name}'")
             try:
+                self.logger.info(f"Retrieving collection '{sanitized_disease_name}' with embedding model")
                 collection = self.chroma_client.get_collection(
                     name=sanitized_disease_name,
                     embedding_function=self.embedding_model
                 )
+
+                self.logger.info(f"Querying collection with question: '{question}'")
                 context = collection.query(
                     query_texts=[question],
                     n_results=5,
                     include=["documents", "metadatas", "distances"]
                 )
+
+                self.logger.info(f"Query completed, received {len(context['documents'][0])} results")
+                self.logger.info(f"Result distances: {context['distances'][0]}")
             except Exception as e:
                 self.logger.error(f"Error querying collection: {e}")
                 return "No relevant literature available"
@@ -143,17 +157,23 @@ class ChatEngine:
             output_strings = []
 
             # Apply distance threshold filter
-            distance_threshold = 0.3
+            distance_threshold = 0.2
+            self.logger.info(f"Filtering results with distance threshold: {distance_threshold}")
 
             for i, doc_list in enumerate(context["documents"]):
                 for j, doc in enumerate(doc_list):
-                    if context["distances"][i][j] > distance_threshold:
+                    distance = context["distances"][i][j]
+                    self.logger.info(f"Document {j+1}: distance={distance}")
+                    if distance > distance_threshold:
                         source = context["metadatas"][i][j]["source"]
                         formatted_source = source.replace("_", " ").title()
                         cleaned_doc = doc.strip().replace("\n", " ")
+                        self.logger.info(f"Adding document from source: {formatted_source} (distance: {distance})")
                         output_strings.append(
                             f'According to {formatted_source}:\n\n"...{cleaned_doc}..."\n'
                         )
+                    else:
+                        self.logger.info(f"Skipping document with distance {distance} (below threshold)")
 
             if not output_strings:
                 self.logger.info("No relevant literature matching query found.")
@@ -174,22 +194,8 @@ class ChatEngine:
             {
                 "type": "function",
                 "function": {
-                    "name": "direct_response",
-                    "description": "Use this tool if the most recent question from the user is a non-medical query (greetings, chat, clarifications).",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": [],
-                        "additionalProperties": False
-                    },
-                    "strict": True
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "query_transcript",
-                    "description": "Use this tool ONLY if the user explicitly asks about something from the transcript, interview, or conversation with the patient. This will search the transcript for relevant information.",
+                    "name": "transcript_search",
+                    "description": "Use this tool if the user asks about something from the transcript, interview, or conversation with the patient. This will search the transcript for relevant information.",
                     "parameters": {
                         "type": "object",
                         "properties": {},
@@ -222,6 +228,20 @@ class ChatEngine:
                     "strict": True
                 }
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "direct_response",
+                    "description": "Use this tool if the most recent question from the user is a non-medical query (greetings, chat, clarifications).",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": False
+                    },
+                    "strict": True
+                }
+            }
         ]
 
     async def get_streaming_response(self, conversation_history: list, raw_transcription=None):
@@ -314,7 +334,7 @@ class ChatEngine:
                         if 'message' in chunk and 'content' in chunk['message']:
                             yield {"type": "chunk", "content": chunk['message']['content']}
 
-                elif function_name == "query_transcript":
+                elif function_name == "transcript_search":
                     self.logger.info("Executing query_transcript tool...")
                     # Check if transcript is available
                     if not raw_transcription:
@@ -346,7 +366,7 @@ class ChatEngine:
                         transcript_query_messages = [
                             {
                                 "role": "system",
-                                "content": "You are a helpful medical assistant. Extract the relevant information from the provided transcript to answer the user's question. Only include information that is present in the transcript and include direct quotes."
+                                "content": "You are a helpful medical assistant. Extract the relevant information from the provided transcript to answer the user's question. Only include information that is present in the transcript and include direct quotes. The transcript was generated by an automated system therefore it may contain errors."
                             },
                             {
                                 "role": "user",
@@ -362,7 +382,7 @@ class ChatEngine:
                         )
 
                         transcript_info = transcript_response["message"]["content"]
-                        self.logger.info(f"Transcript query result: {transcript_info[:100]}...")
+                        self.logger.info(f"Transcript query result: {transcript_info[:200]}...")
 
                         # Add transcript info to original conversation as a tool response
                         message_list.append({

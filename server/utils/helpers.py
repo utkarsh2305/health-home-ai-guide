@@ -302,7 +302,7 @@ async def refine_field_content(
             thinking_messages = base_messages.copy()
             thinking_messages.append({
                 "role": "assistant",
-                "content": "<think>"
+                "content": "<think>\n"
             })
 
             # Make initial call for thinking only
@@ -324,7 +324,7 @@ async def refine_field_content(
                 "role": "assistant",
                 "content": thinking
             })
-            print(full_messages, flush=True)
+            #print(full_messages, flush=True)
             # Now make the structured output call with the thinking included
             response = await client.chat(
                 model=config["PRIMARY_MODEL"],
@@ -332,6 +332,7 @@ async def refine_field_content(
                 format=format_details["response_format"],
                 options=options
             )
+            print(response, flush=True)
         else:
             # Standard approach for other models
             response = await client.chat(

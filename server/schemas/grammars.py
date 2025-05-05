@@ -5,12 +5,29 @@ from typing import List
 class ClinicalSuggestion(BaseModel):
     question: str
 
-
 class ClinicalSuggestionList(BaseModel):
     suggestions: List[ClinicalSuggestion]
 
-# Transcription Processing
+# RAG Collection Management
+class DiseaseNameResponse(BaseModel):
+    """
+    Structured model for disease name identification.
+    """
+    disease_name: str
 
+class FocusAreaResponse(BaseModel):
+    """
+    Structured model for document focus area.
+    """
+    focus_area: str
+
+class DocumentSourceResponse(BaseModel):
+    """
+    Structured model for document source identification.
+    """
+    source: str
+
+# Transcription Processing
 class FieldResponse(BaseModel):
     """
     Structured model where each individual discussion point
@@ -53,7 +70,6 @@ class PreviousVisitSummary(BaseModel):
     )
 
 # Reasoning
-
 class ClinicalReasoning(BaseModel):
     thinking: str
     summary: str
@@ -62,7 +78,6 @@ class ClinicalReasoning(BaseModel):
     clinical_considerations: List[str]
 
 # Letter
-
 class LetterDraft(BaseModel):
     """
     Structured model for letter generation results.

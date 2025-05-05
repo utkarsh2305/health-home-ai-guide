@@ -109,7 +109,7 @@ class ChromaManager:
 
         if completion_prompt:
             complete_messages.append({"role": "assistant", "content": completion_prompt})
-        print(complete_messages)
+
         return await self.llm_client.chat(
             model=self.config["PRIMARY_MODEL"],
             messages=complete_messages,
@@ -359,6 +359,8 @@ class ChromaManager:
         Returns:
             str: Determined disease name.
         """
+        from server.schemas.grammars import DiseaseNameResponse
+
         collection_names = self.chroma_client.list_collections()
         collection_names_string = ", ".join(collection_names)
 
@@ -367,8 +369,9 @@ class ChromaManager:
 
         disease_question_options = {
             **prompts["options"]["chat"],  # Unpack the chat options
-            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
+
         }
+        disease_question_options["stop"] = [".", " "]
 
         # Initial disease question messages
         initial_messages = [
@@ -384,6 +387,11 @@ class ChromaManager:
 
         disease_question = await self.process_with_thinking(initial_messages, disease_question_options)
 
+        # Reset disease_question_options
+        disease_question_options = {
+            **prompts["options"]["chat"],  # Unpack the chat options
+
+        }
         disease_answer = disease_question["message"]["content"].strip()
         sanitized_disease_answer = disease_answer.lower().replace(" ", "_")
 
@@ -396,7 +404,7 @@ class ChromaManager:
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nIs the above block of text *primarily* related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
+                    "content": f"{sample_text}\n\nIs the above block of text *primarily* related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No. ONLY",
                 },
                 {
                     "role": "assistant",
@@ -404,18 +412,55 @@ class ChromaManager:
                 },
                 {
                     "role": "user",
-                    "content": f"Here is the list again:\n{collection_names_string}\nRespond only with the disease name as it appears in that list.",
+                    "content": f"Here is the list again:\n{collection_names_string}\nIdentify the disease name from this list that the text is about. Return the disease name in lowercase with underscores instead of spaces and in valid JSON.",
                 },
             ]
 
-            disease_choice = await self.process_with_thinking(
-                initial_messages,
-                disease_question_options,
-                completion_prompt="The disease is:"
-            )
+            # Get response with structured format
+            response_format = {"type": "json_object", "schema": DiseaseNameResponse.schema()}
 
-            disease_choice_response = disease_choice["message"]["content"].strip()
-            disease_name = disease_choice_response.lower().replace(" ", "_")
+            # For models that use thinking step
+            if self.uses_thinking_step:
+                # First get thinking
+                thinking_messages = initial_messages.copy()
+                thinking_messages.append({
+                    "role": "assistant",
+                    "content": "<think>"
+                })
+
+                thinking_options = disease_question_options.copy()
+                thinking_options["stop"] = ["</think>"]
+
+                thinking_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=thinking_messages,
+                    options=thinking_options
+                )
+
+                thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+                # Complete message with thinking
+                complete_messages = initial_messages.copy()
+                complete_messages.append({
+                    "role": "assistant",
+                    "content": thinking
+                })
+                print(f"HERE: {complete_messages}", flush=True)
+                disease_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=complete_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+            else:
+                disease_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=initial_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+
+            disease_name = disease_choice["message"]["content"]["disease_name"]
         else:
             # Initial messages for "No" path
             initial_messages = [
@@ -433,18 +478,59 @@ class ChromaManager:
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nWhat is the disease that the above block of text is referring to? Answer only with the name of the disease in American English, do not use acronyms. If there is more than one disease, then respond with only the name of the main disease of the text.",
+                    "content": f"{sample_text}\n\nWhat is the disease that the above block of text is referring to? Identify the disease name and return it in lowercase with underscores instead of spaces. Do not use acronyms. If there is more than one disease, then respond with only the name of the main disease of the text. Respond in valid JSON.",
                 },
             ]
 
-            disease_choice = await self.process_with_thinking(
-                initial_messages,
-                disease_question_options,
-                completion_prompt="The disease is:"
-            )
+            # Get response with structured format
+            response_format = DiseaseNameResponse.model_json_schema()
 
-            disease_choice_response = disease_choice["message"]["content"].strip()
-            disease_name = disease_choice_response.lower().replace(" ", "_")
+            # For models that use thinking step
+            if self.uses_thinking_step:
+                # First get thinking
+                thinking_messages = initial_messages.copy()
+                thinking_messages.append({
+                    "role": "assistant",
+                    "content": "<think>"
+                })
+
+                thinking_options = disease_question_options.copy()
+                thinking_options["stop"] = ["</think>"]
+
+                thinking_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=thinking_messages,
+                    options=thinking_options
+                )
+
+                thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+                # Complete message with thinking
+                complete_messages = initial_messages.copy()
+                complete_messages.append({
+                    "role": "assistant",
+                    "content": thinking
+                })
+
+                disease_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=complete_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+
+            else:
+                disease_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=initial_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+
+            validated_response = DiseaseNameResponse.model_validate_json(disease_choice["message"]["content"])
+
+
+        disease_name = validated_response.disease_name
 
         return disease_name
 
@@ -458,12 +544,13 @@ class ChromaManager:
         Returns:
             str: Determined focus area.
         """
+        from server.schemas.grammars import FocusAreaResponse
+
         words = text.split()
         sample_text = " ".join(words[:500])
 
         disease_question_options = {
             **prompts["options"]["chat"],  # Unpack the chat options
-            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
         # Focus area determination
@@ -474,18 +561,60 @@ class ChromaManager:
             },
             {
                 "role": "user",
-                "content": f"{sample_text}\n\nIs the block of text focused on guidelines, diagnosis, treatment, epidemiology, pathophysiology, prognosis, clinical features, prevention, or miscellaneous? (answer only with one word)",
+                "content": f"{sample_text}\n\nIdentify whether the block of text is primarily focused on guidelines, diagnosis, treatment, epidemiology, pathophysiology, prognosis, clinical features, prevention, or miscellaneous. Return the PRIAMRY focus area in lowercase, and with underscores instead of spaces. Answer in valid JSON.",
             },
         ]
 
-        focus_area_response = await self.process_with_thinking(focus_area_messages, disease_question_options)
+        # Get response with structured format
+        response_format = FocusAreaResponse.model_json_schema()
 
-        focus_area = (
-            focus_area_response["message"]["content"]
-            .strip()
-            .lower()
-            .replace(" ", "_")
-        )
+        # For models that use thinking step
+        if self.uses_thinking_step:
+            # First get thinking
+            thinking_messages = focus_area_messages.copy()
+            thinking_messages.append({
+                "role": "assistant",
+                "content": "<think>"
+            })
+
+            thinking_options = disease_question_options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            thinking_response = await self.llm_client.chat(
+                model=self.config["PRIMARY_MODEL"],
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+            # Complete message with thinking
+            complete_messages = focus_area_messages.copy()
+            complete_messages.append({
+                "role": "assistant",
+                "content": thinking
+            })
+
+            focus_area_response = await self.llm_client.chat(
+                model=self.config["PRIMARY_MODEL"],
+                messages=complete_messages,
+                format=response_format,
+                options=disease_question_options,
+            )
+
+        else:
+            focus_area_response = await self.llm_client.chat(
+                model=self.config["PRIMARY_MODEL"],
+                messages=focus_area_messages,
+                format=response_format,
+                options=disease_question_options,
+            )
+
+        # Add validation step here
+        validated_response = FocusAreaResponse.model_validate_json(focus_area_response["message"]["content"])
+
+        focus_area = validated_response.focus_area
+
         return focus_area
 
     async def get_document_source(self, text):
@@ -498,6 +627,8 @@ class ChromaManager:
         Returns:
             str: Determined document source.
         """
+        from server.schemas.grammars import DocumentSourceResponse
+
         words = text.split()
         sample_text = " ".join(words[:250])
 
@@ -506,7 +637,6 @@ class ChromaManager:
 
         disease_question_options = {
             **prompts["options"]["chat"],  # Unpack the chat options
-            "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
         # Document source determination
@@ -536,22 +666,57 @@ class ChromaManager:
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nWhich of the following sources is this document from? {existing_sources_string}\nRespond only with the source name as it appears in that list.",
+                    "content": f"{sample_text}\n\nWhich of the following sources is this document from? {existing_sources_string}\nIdentify the source name and return it in lowercase with underscores instead of spaces.",
                 },
             ]
 
-            document_source_choice = await self.process_with_thinking(
-                initial_messages,
-                disease_question_options,
-                completion_prompt="The source is:"
-            )
+            # Get response with structured format
+            response_format = DocumentSourceResponse.model_json_schema()
 
-            document_source = (
-                document_source_choice["message"]["content"]
-                .strip()
-                .lower()
-                .replace(" ", "_")
-            )
+            # For models that use thinking step
+            if self.uses_thinking_step:
+                # First get thinking
+                thinking_messages = initial_messages.copy()
+                thinking_messages.append({
+                    "role": "assistant",
+                    "content": "<think>"
+                })
+
+                thinking_options = disease_question_options.copy()
+                thinking_options["stop"] = ["</think>"]
+
+                thinking_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=thinking_messages,
+                    options=thinking_options
+                )
+
+                thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+                # Complete message with thinking
+                complete_messages = initial_messages.copy()
+                complete_messages.append({
+                    "role": "assistant",
+                    "content": thinking
+                })
+
+                document_source_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=complete_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+            else:
+                document_source_choice = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=initial_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+
+            # Add validation
+            validated_response = DocumentSourceResponse.model_validate_json(document_source_choice["message"]["content"])
+            document_source = validated_response.source
         else:
             # Initial messages for "No" source path
             initial_messages = [
@@ -561,38 +726,56 @@ class ChromaManager:
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nWhat is the source of this document? Only give the name, no other commentary.",
+                    "content": f"{sample_text}\n\nWhat is the source of this document? Identify the source name and return it in lowercase with underscores instead of spaces.",
                 },
             ]
 
-            document_source_response = await self.process_with_thinking(initial_messages, disease_question_options)
+            # Get response with structured format
+            response_format = DocumentSourceResponse.model_json_schema()
 
-            document_source = (
-                document_source_response["message"]["content"]
-                .strip()
-                .lower()
-                .replace(" ", "_")
-            )
+            # For models that use thinking step
+            if self.uses_thinking_step:
+                # First get thinking
+                thinking_messages = initial_messages.copy()
+                thinking_messages.append({
+                    "role": "assistant",
+                    "content": "<think>"
+                })
+
+                thinking_options = disease_question_options.copy()
+                thinking_options["stop"] = ["</think>"]
+
+                thinking_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=thinking_messages,
+                    options=thinking_options
+                )
+
+                thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+                # Complete message with thinking
+                complete_messages = initial_messages.copy()
+                complete_messages.append({
+                    "role": "assistant",
+                    "content": thinking
+                })
+
+                document_source_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=complete_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+            else:
+                document_source_response = await self.llm_client.chat(
+                    model=self.config["PRIMARY_MODEL"],
+                    messages=initial_messages,
+                    format=response_format,
+                    options=disease_question_options,
+                )
+
+            # Add validation
+            validated_response = DocumentSourceResponse.model_validate_json(document_source_response["message"]["content"])
+            document_source = validated_response.source
 
         return document_source
-
-    def reset_database(self):
-        """
-        Completely resets the Chroma database.
-
-        Returns:
-            bool: True if reset was successful, False otherwise.
-        """
-        try:
-            # First delete all collections individually
-            collections = self.list_collections()
-            for collection in collections:
-                self.delete_collection(collection)
-
-            # Then reset the entire Chroma client
-            self.chroma_client.reset()
-            print("Chroma database reset successfully")
-            return True
-        except Exception as e:
-            print(f"Error resetting Chroma database: {e}")
-            return False
