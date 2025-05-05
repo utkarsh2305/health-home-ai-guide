@@ -58,8 +58,7 @@ const LetterPanel = ({
                     align="center"
                     justify="space-between"
                     p="4"
-                    borderBottomWidth="1px"
-                    borderColor="gray.200"
+                    className="panel-header"
                     flexShrink={0} // Prevent header from shrinking
                 >
                     <Flex align="center">
@@ -137,8 +136,6 @@ const LetterPanel = ({
                 {/* Footer */}
                 <Box
                     p="4"
-                    borderTopWidth="1px"
-                    borderColor="gray.200"
                     flexShrink={0} // Prevent footer from shrinking
                 >
                     <PanelFooterActions

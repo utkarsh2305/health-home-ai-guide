@@ -316,7 +316,7 @@ const Chat = ({
                         p="3"
                         borderBottomWidth="1px"
                         borderColor="inherit"
-                        className="chat-header"
+                        className="panel-header"
                     >
                         <Text fontWeight="bold">Chat With Phlox</Text>
                         <IconButton

@@ -4,7 +4,7 @@ import chromadb
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction, OpenAIEmbeddingFunction
 import re
-from ollama import Client as ollamaClient
+import asyncio
 from server.database.config import config_manager
 from server.utils.llm_client import get_llm_client, LLMProviderType
 
@@ -35,7 +35,7 @@ class ChromaManager:
             self.embedding_model = OpenAIEmbeddingFunction(
                 model_name=self.config["EMBEDDING_MODEL"],
                 api_key=self.config.get("LLM_API_KEY", "cant-be-empty"),
-                api_base=f"{self.config['LLM_BASE_URL']}/v1/embeddings",
+                api_base=f"{self.config['LLM_BASE_URL']}/v1",
             )
         else:
             raise ValueError(f"Unsupported LLM provider type: {provider_type}")
@@ -49,6 +49,72 @@ class ChromaManager:
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
         self.extracted_text_store = None
+
+        # Check if using a model that requires the thinking step
+        model_name = self.config["PRIMARY_MODEL"].lower()
+        self.uses_thinking_step = "qwen3" in model_name
+
+    async def process_with_thinking(self, messages, options=None, completion_prompt=None):
+        """
+        Process a request with or without thinking step based on model.
+
+        Args:
+            messages (list): The message list for the chat
+            options (dict, optional): Custom options for the API call
+            completion_prompt (str, optional): Text to add to assistant's response to complete it
+
+        Returns:
+            dict: The response from the LLM
+        """
+        if options is None:
+            options = {
+                **self.prompts["options"]["chat"],  # Unpack the chat options
+                "stop": [".", "(", "\n", "/"],  # Add the stop tokens
+            }
+
+        if not self.uses_thinking_step:
+            # For models that don't need thinking step
+            if completion_prompt:
+                messages.append({"role": "assistant", "content": completion_prompt})
+            return await self.llm_client.chat(
+                model=self.config["PRIMARY_MODEL"],
+                messages=messages,
+                options=options,
+            )
+
+        # For models that use thinking step
+        thinking_messages = messages.copy()
+        thinking_messages.append({
+            "role": "assistant",
+            "content": "<think>"
+        })
+
+        thinking_options = options.copy()
+        thinking_options["stop"] = ["</think>"]
+
+        thinking_response = await self.llm_client.chat(
+            model=self.config["PRIMARY_MODEL"],
+            messages=thinking_messages,
+            options=thinking_options
+        )
+
+        thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+        # Complete message with thinking
+        complete_messages = messages.copy()
+        complete_messages.append({
+            "role": "assistant",
+            "content": thinking
+        })
+
+        if completion_prompt:
+            complete_messages.append({"role": "assistant", "content": completion_prompt})
+        print(complete_messages)
+        return await self.llm_client.chat(
+            model=self.config["PRIMARY_MODEL"],
+            messages=complete_messages,
+            options=options,
+        )
 
     def commit_to_vectordb(
         self, disease_name, focus_area, document_source, filename
@@ -77,6 +143,7 @@ class ChromaManager:
                 max_chunk_size=500,
                 min_chunk_size=150,
             )
+
             texts = chunker.split_text(self.extracted_text_store)
 
             collection = self.chroma_client.get_or_create_collection(
@@ -121,6 +188,7 @@ class ChromaManager:
         """
         try:
             collections = self.chroma_client.list_collections()
+            print(f"Collections:{collections}")
             return sorted(collections)
         except Exception as e:
             print("Error retrieving collections:", e)
@@ -281,7 +349,7 @@ class ChromaManager:
             text += page.get_text()
         return text
 
-    def get_disease_name(self, text):
+    async def get_disease_name(self, text):
         """
         Determines the disease name from the extracted text.
 
@@ -302,84 +370,85 @@ class ChromaManager:
             "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
-        disease_question = self.ollama_client.chat(
-            model=self.config["PRIMARY_MODEL"],
-            messages=[
+        # Initial disease question messages
+        initial_messages = [
+            {
+                "role": "system",
+                "content": self.prompts["prompts"]["chat"]["system"],
+            },
+            {
+                "role": "user",
+                "content": f"{sample_text}\n\nIs the above block of specifically addressing any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
+            },
+        ]
+
+        disease_question = await self.process_with_thinking(initial_messages, disease_question_options)
+
+        disease_answer = disease_question["message"]["content"].strip()
+        sanitized_disease_answer = disease_answer.lower().replace(" ", "_")
+
+        if sanitized_disease_answer == "yes":
+            # Initial messages for "Yes" path
+            initial_messages = [
                 {
                     "role": "system",
                     "content": self.prompts["prompts"]["chat"]["system"],
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nIs the above block of specifically addressing any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
+                    "content": f"{sample_text}\n\nIs the above block of text *primarily* related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
                 },
-            ],
-            options=disease_question_options,
-        )
+                {
+                    "role": "assistant",
+                    "content": "Yes",
+                },
+                {
+                    "role": "user",
+                    "content": f"Here is the list again:\n{collection_names_string}\nRespond only with the disease name as it appears in that list.",
+                },
+            ]
 
-        disease_answer = disease_question["message"]["content"].strip()
-        sanitized_disease_answer = disease_answer.lower().replace(" ", "_")
-
-        if sanitized_disease_answer == "yes":
-            disease_choice = self.ollama_client.chat(
-                model=self.config["PRIMARY_MODEL"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.prompts["prompts"]["chat"]["system"],
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{sample_text}\n\nIs the above block of text *primarily* related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Yes",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Here is the list again:\n{collection_names_string}\nRespond only with the disease name as it appears in that list.",
-                    },
-                    {"role": "assistant", "content": "The disease is:"},
-                ],
-                options=disease_question_options,
+            disease_choice = await self.process_with_thinking(
+                initial_messages,
+                disease_question_options,
+                completion_prompt="The disease is:"
             )
-            disease_choice_response = disease_choice["message"][
-                "content"
-            ].strip()
+
+            disease_choice_response = disease_choice["message"]["content"].strip()
             disease_name = disease_choice_response.lower().replace(" ", "_")
         else:
-            disease_choice = self.ollama_client.chat(
-                model=self.config["PRIMARY_MODEL"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.prompts["prompts"]["chat"]["system"],
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{sample_text}\n\nIs the above block of text related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "No",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{sample_text}\n\nWhat is the disease that the above block of text is referring to? Answer only with the name of the disease in American English, do not use acronyms. If there is more than one disease, then respond with only the name of the main disease of the text.",
-                    },
-                    {"role": "assistant", "content": "The disease is:"},
-                ],
-                options=disease_question_options,
+            # Initial messages for "No" path
+            initial_messages = [
+                {
+                    "role": "system",
+                    "content": self.prompts["prompts"]["chat"]["system"],
+                },
+                {
+                    "role": "user",
+                    "content": f"{sample_text}\n\nIs the above block of text related to any of the following list of diseases? {collection_names_string}\nAnswer Yes or No.",
+                },
+                {
+                    "role": "assistant",
+                    "content": "No",
+                },
+                {
+                    "role": "user",
+                    "content": f"{sample_text}\n\nWhat is the disease that the above block of text is referring to? Answer only with the name of the disease in American English, do not use acronyms. If there is more than one disease, then respond with only the name of the main disease of the text.",
+                },
+            ]
+
+            disease_choice = await self.process_with_thinking(
+                initial_messages,
+                disease_question_options,
+                completion_prompt="The disease is:"
             )
-            disease_choice_response = disease_choice["message"][
-                "content"
-            ].strip()
+
+            disease_choice_response = disease_choice["message"]["content"].strip()
             disease_name = disease_choice_response.lower().replace(" ", "_")
 
         return disease_name
 
-    def get_focus_area(self, text):
+    async def get_focus_area(self, text):
         """
         Determines the focus area of the document.
 
@@ -397,20 +466,20 @@ class ChromaManager:
             "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
-        focus_area_response = self.ollama_client.chat(
-            model=self.config["PRIMARY_MODEL"],
-            messages=[
-                {
-                    "role": "system",
-                    "content": self.prompts["prompts"]["chat"]["system"],
-                },
-                {
-                    "role": "user",
-                    "content": f"{sample_text}\n\nIs the block of text focused on guidelines, diagnosis, treatment, epidemiology, pathophysiology, prognosis, clinical features, prevention, or miscellaneous? (answer only with one word)",
-                },
-            ],
-            options=disease_question_options,
-        )
+        # Focus area determination
+        focus_area_messages = [
+            {
+                "role": "system",
+                "content": self.prompts["prompts"]["chat"]["system"],
+            },
+            {
+                "role": "user",
+                "content": f"{sample_text}\n\nIs the block of text focused on guidelines, diagnosis, treatment, epidemiology, pathophysiology, prognosis, clinical features, prevention, or miscellaneous? (answer only with one word)",
+            },
+        ]
+
+        focus_area_response = await self.process_with_thinking(focus_area_messages, disease_question_options)
+
         focus_area = (
             focus_area_response["message"]["content"]
             .strip()
@@ -419,7 +488,7 @@ class ChromaManager:
         )
         return focus_area
 
-    def get_document_source(self, text):
+    async def get_document_source(self, text):
         """
         Determines the source of the document.
 
@@ -440,40 +509,43 @@ class ChromaManager:
             "stop": [".", "(", "\n", "/"],  # Add the stop tokens
         }
 
-        document_source_question = self.ollama_client.chat(
-            model=self.config["PRIMARY_MODEL"],
-            messages=[
+        # Document source determination
+        source_question_messages = [
+            {
+                "role": "system",
+                "content": self.prompts["prompts"]["chat"]["system"],
+            },
+            {
+                "role": "user",
+                "content": f"{sample_text}\n\nIs the source of this document one of the following? {existing_sources_string}\nAnswer Yes or No.",
+            },
+        ]
+
+        document_source_question = await self.process_with_thinking(source_question_messages, disease_question_options)
+
+        source_answer = (
+            document_source_question["message"]["content"].strip().lower()
+        )
+
+        if source_answer == "yes":
+            # Initial messages for "Yes" source path
+            initial_messages = [
                 {
                     "role": "system",
                     "content": self.prompts["prompts"]["chat"]["system"],
                 },
                 {
                     "role": "user",
-                    "content": f"{sample_text}\n\nIs the source of this document one of the following? {existing_sources_string}\nAnswer Yes or No.",
+                    "content": f"{sample_text}\n\nWhich of the following sources is this document from? {existing_sources_string}\nRespond only with the source name as it appears in that list.",
                 },
-            ],
-            options=disease_question_options,
-        )
-        source_answer = (
-            document_source_question["message"]["content"].strip().lower()
-        )
+            ]
 
-        if source_answer == "yes":
-            document_source_choice = self.ollama_client.chat(
-                model=self.config["PRIMARY_MODEL"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.prompts["prompts"]["chat"]["system"],
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{sample_text}\n\nWhich of the following sources is this document from? {existing_sources_string}\nRespond only with the source name as it appears in that list.",
-                    },
-                    {"role": "assistant", "content": "The source is:"},
-                ],
-                options=disease_question_options,
+            document_source_choice = await self.process_with_thinking(
+                initial_messages,
+                disease_question_options,
+                completion_prompt="The source is:"
             )
+
             document_source = (
                 document_source_choice["message"]["content"]
                 .strip()
@@ -481,20 +553,20 @@ class ChromaManager:
                 .replace(" ", "_")
             )
         else:
-            document_source_response = self.ollama_client.chat(
-                model=self.config["PRIMARY_MODEL"],
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.prompts["prompts"]["chat"]["system"],
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{sample_text}\n\nWhat is the source of this document? Only give the name, no other commentary.",
-                    },
-                ],
-                options=disease_question_options,
-            )
+            # Initial messages for "No" source path
+            initial_messages = [
+                {
+                    "role": "system",
+                    "content": self.prompts["prompts"]["chat"]["system"],
+                },
+                {
+                    "role": "user",
+                    "content": f"{sample_text}\n\nWhat is the source of this document? Only give the name, no other commentary.",
+                },
+            ]
+
+            document_source_response = await self.process_with_thinking(initial_messages, disease_question_options)
+
             document_source = (
                 document_source_response["message"]["content"]
                 .strip()

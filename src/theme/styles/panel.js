@@ -19,7 +19,10 @@ export const panelStyles = (props) => ({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 4,
+        borderBottom:
+            props.colorMode === "light"
+                ? `1px solid ${colors.light.surface} !important`
+                : `1px solid ${colors.dark.surface} !important`,
     },
     ".panel-content": {
         backgroundColor:
