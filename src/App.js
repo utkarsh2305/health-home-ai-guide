@@ -179,7 +179,7 @@ function AppContent() {
     return (
         <Flex position="relative">
             {/* Floating hamburger button for small screens */}
-            {isSmallScreen && (
+            {isSmallScreen && isSidebarCollapsed && (
                 <IconButton
                     icon={<HamburgerIcon />}
                     onClick={toggleSidebar}
@@ -188,24 +188,7 @@ function AppContent() {
                     left="10px"
                     zIndex="101"
                     aria-label="Toggle sidebar"
-                    size="md"
-                    boxShadow="md"
-                    borderRadius="md"
-                />
-            )}
-
-            {/* Overlay when sidebar is expanded */}
-            {isSmallScreen && !isSidebarCollapsed && (
-                <Box
-                    position="fixed"
-                    top="0"
-                    left="0"
-                    right="0"
-                    bottom="0"
-                    bg="blackAlpha.600"
-                    zIndex="90"
-                    onClick={toggleSidebar}
-                    transition="all 0.3s"
+                    className="dark-toggle"
                 />
             )}
 

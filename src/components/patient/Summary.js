@@ -27,7 +27,7 @@ import {
     CheckIcon,
 } from "@chakra-ui/icons";
 import { FaMicrophone, FaStop, FaSave, FaFileAlt } from "react-icons/fa";
-import { GreenButton, BlueButton, TertiaryButton } from "../common/Buttons";
+import { GreenButton, OrangeButton, GreyButton } from "../common/Buttons";
 import { useTemplateSelection } from "../../utils/templates/templateContext";
 import ConfirmLeaveModal from "../modals/ConfirmLeaveModal";
 
@@ -385,7 +385,7 @@ const Summary = forwardRef(
                         </Box>
                         <Flex mt="4" justifyContent="space-between">
                             <Flex>
-                                <TertiaryButton
+                                <GreyButton
                                     onClick={() =>
                                         handleGenerateLetterClick(null)
                                     }
@@ -394,10 +394,10 @@ const Summary = forwardRef(
                                     isDisabled={saveLoading}
                                 >
                                     Generate Letter
-                                </TertiaryButton>
+                                </GreyButton>
                             </Flex>
                             <Flex>
-                                <BlueButton
+                                <GreyButton
                                     onClick={onCopy}
                                     width="190px"
                                     leftIcon={
@@ -412,7 +412,7 @@ const Summary = forwardRef(
                                     {recentlyCopied
                                         ? "Copied!"
                                         : "Copy to Clipboard"}
-                                </BlueButton>
+                                </GreyButton>
                                 <GreenButton
                                     onClick={handleSavePatientData}
                                     isLoading={saveLoading}

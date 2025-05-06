@@ -402,11 +402,14 @@ const Chat = ({
                                                     <Box
                                                         className="thinking-block"
                                                         mt={2}
-                                                        p={3}
+                                                        p={1}
                                                         borderLeftWidth="3px"
                                                         borderColor="blue.300"
                                                     >
-                                                        <Text whiteSpace="pre-wrap">
+                                                        <Text
+                                                            whiteSpace="pre-wrap"
+                                                            className="thinking-block-text"
+                                                        >
                                                             {
                                                                 parsed.thinkContent
                                                             }
@@ -590,8 +593,7 @@ const Chat = ({
                         onClick={() => handleSendMessage(userInput)}
                         isDisabled={!userInput.trim() || chatLoading}
                         isLoading={chatLoading}
-                        colorScheme="purple"
-                        borderRadius="full"
+                        className="chat-send-button"
                         size="sm"
                         aria-label="Send Message"
                     />

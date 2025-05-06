@@ -92,7 +92,12 @@ const PatientInfoBar = ({ patient, setPatient, handleSearch }) => {
                                 handleChange("ur_number", e.target.value)
                             }
                             className="input-style"
-                            borderRightRadius="0"
+                            sx={{
+                                borderTopLeftRadius: "md !important",
+                                borderBottomLeftRadius: "md !important",
+                                borderTopRightRadius: "0 !important",
+                                borderBottomRightRadius: "0 !important",
+                            }}
                         />
                         <IconButton
                             icon={<SearchIcon />}

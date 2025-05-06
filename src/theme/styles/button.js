@@ -79,7 +79,7 @@ export const buttonStyles = (props) => ({
         border:
             props.colorMode === "light"
                 ? `1px solid ${darkenColor(colors.light.dangerButton, 0.15)} !important`
-                : `1px solid ${darkenColor(colors.dark.dangerButton, 0.15)} !important`,
+                : `none !important`,
     },
     ".red-button:hover": {
         backgroundColor: `${colors.light.buttonHover.danger} !important`,
@@ -93,13 +93,13 @@ export const buttonStyles = (props) => ({
         border:
             props.colorMode === "light"
                 ? `1px solid ${darkenColor(colors.light.tertiaryButton, 0.15)} !important`
-                : `1px solid ${darkenColor(colors.dark.tertiaryButton, 0.15)} !important`,
+                : `none !important`,
     },
     ".tertiary-button:hover": {
         backgroundColor: `${colors.light.buttonHover.tertiary} !important`,
         color: `${colors.light.invertedText} !important`,
     },
-    ".blue-button": {
+    ".orange-button": {
         backgroundColor: `${colors.light.secondaryButton} !important`,
         color: `${colors.light.invertedText} !important`,
         height: "35px !important",
@@ -107,9 +107,9 @@ export const buttonStyles = (props) => ({
         border:
             props.colorMode === "light"
                 ? `1px solid ${darkenColor(colors.light.secondaryButton, 0.15)} !important`
-                : `1px solid ${darkenColor(colors.dark.secondaryButton, 0.15)} !important`,
+                : `none !important`,
     },
-    ".blue-button:hover": {
+    ".orange-button:hover": {
         backgroundColor: `${colors.light.buttonHover.secondary} !important`,
         color: `${colors.light.invertedText} !important`,
     },
@@ -121,7 +121,7 @@ export const buttonStyles = (props) => ({
         border:
             props.colorMode === "light"
                 ? `1px solid ${darkenColor(colors.light.successButton, 0.15)} !important`
-                : `1px solid ${darkenColor(colors.dark.successButton, 0.15)} !important`,
+                : `none !important`,
     },
     ".green-button:hover": {
         backgroundColor: `${colors.light.buttonHover.success} !important`,
@@ -140,9 +140,23 @@ export const buttonStyles = (props) => ({
         backgroundColor: `${colors.light.buttonHover.neutral} !important`,
         cursor: "pointer",
     },
-    ".template-select-button": {
+    ".chat-send-button": {
+        backgroundColor: `${colors.light.secondaryButton} !important`,
+        color: `${colors.light.invertedText} !important`,
+        borderRadius: "full !important",
+        border:
+            props.colorMode === "light"
+                ? `1px solid ${darkenColor(colors.light.secondaryButton, 0.15)} !important`
+                : `none !important`,
+    },
+    ".chat-send-button:hover": {
+        backgroundColor: `${colors.light.buttonHover.secondary} !important`,
+        color: `${colors.light.invertedText} !important`,
+    },
+    ".grey-button": {
         borderRadius: "lg !important",
         fontWeight: "normal",
+        height: "35px !important",
         border:
             props.colorMode === "light"
                 ? `1px solid ${colors.light.surface} !important`

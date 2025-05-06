@@ -36,13 +36,14 @@ export const floatingStyles = (props) => ({
                 ? `${colors.light.textSecondary} !important`
                 : `${colors.dark.textSecondary} !important`,
         fontWeight: "normal",
+        fontSize: "0.7rem !important",
     },
     ".chat-suggestions": {
         backgroundColor:
             props.colorMode === "light"
                 ? `${colors.light.crust} !important`
                 : `${colors.dark.overlay0} !important`,
-        borderRadius: "sm !important",
+        borderRadius: "lg !important",
         border:
             props.colorMode === "light"
                 ? `1px solid ${colors.light.surface} !important`
@@ -57,7 +58,7 @@ export const floatingStyles = (props) => ({
             props.colorMode === "light"
                 ? `${colors.light.crust} !important`
                 : `${colors.dark.overlay0} !important`,
-        borderRadius: "sm !important",
+        borderRadius: "lg !important",
         border:
             props.colorMode === "light"
                 ? `1px solid ${colors.light.surface} !important`
@@ -85,13 +86,20 @@ export const floatingStyles = (props) => ({
         wordBreak: "break-word",
     },
     ".message-box.assistant": {
-        backgroundColor: colors.light.surface,
-        color: colors.light.textTertiary,
-        borderRadius: "sm !important",
+        backgroundColor:
+            props.colorMode === "light"
+                ? colors.light.secondary
+                : colors.dark.secondary,
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textSecondary} !important`
+                : `${colors.dark.textSecondary} !important`,
+        borderRadius: "lg !important",
     },
     ".message-box.user": {
-        backgroundColor: colors.light.chatIcon,
+        backgroundColor: colors.light.secondaryButton,
         color: colors.light.invertedText,
+        borderRadius: "lg !important",
     },
     ".message-box ul, .message-box ol": {
         paddingLeft: "20px",
@@ -117,8 +125,11 @@ export const floatingStyles = (props) => ({
     ".thinking-block": {
         borderLeftColor:
             props.colorMode === "light"
-                ? `${colors.light.primary} !important`
-                : `${colors.dark.primary} !important`,
+                ? `${colors.light.secondaryButton} !important`
+                : `${colors.light.secondaryButton} !important`,
+    },
+    ".thinking-block-text": {
+        fontSize: "0.9rem !important",
     },
     ".collapse-toggle": {
         border: "none !important",

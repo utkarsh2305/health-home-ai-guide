@@ -153,10 +153,10 @@ const PatientTable = ({
                         <PatientDetails patient={patient} />
                     </Tooltip>
                     <Button
-                        className="green-button"
+                        className="grey-button"
                         size="sm"
                         onClick={() => handleSelectPatient(patient)}
-                        maxW="200px"
+                        maxW="150px"
                     >
                         Go to Encounter
                     </Button>
@@ -315,35 +315,7 @@ const PatientTable = ({
                                                 <Box
                                                     display="flex"
                                                     justifyContent="center"
-                                                >
-                                                    <Button
-                                                        leftIcon={
-                                                            loadingStates[
-                                                                patient.id
-                                                            ] ? (
-                                                                <Spinner size="sm" />
-                                                            ) : (
-                                                                <FaAtom />
-                                                            )
-                                                        }
-                                                        className="switch-mode"
-                                                        onClick={() =>
-                                                            handleGenerateReasoning(
-                                                                patient.id,
-                                                            )
-                                                        }
-                                                        size="sm"
-                                                        isLoading={
-                                                            loadingStates[
-                                                                patient.id
-                                                            ]
-                                                        }
-                                                        loadingText="Generating..."
-                                                        mt={2}
-                                                    >
-                                                        Generate Reasoning
-                                                    </Button>
-                                                </Box>
+                                                ></Box>
                                             )}
                                         </>
                                     )}

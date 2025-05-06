@@ -1,6 +1,6 @@
 // Styles for text input fields and buttons.
 import { colors } from "../colors";
-import { lightenColor } from "../utils"; // adjust path as needed
+import { lightenColor, darkenColor } from "../utils"; // adjust path as needed
 
 export const inputStyles = (props) => ({
     ".textarea-style": {
@@ -140,10 +140,15 @@ export const inputStyles = (props) => ({
     },
     ".refinement-fab": {
         borderRadius: "full !important",
+        color: `${colors.light.invertedText} !important`,
+        border:
+            props.colorMode === "light"
+                ? `1px solid ${darkenColor(colors.light.extraButton, 0.15)} !important`
+                : `none !important`,
         backgroundColor: `${
             props.colorMode === "light"
                 ? colors.light.extraButton
-                : colors.dark.extraButton
+                : colors.light.extraButton
         } !important`,
         opacity: 0,
         transition: "opacity 0.2s ease-in-out",
@@ -154,23 +159,27 @@ export const inputStyles = (props) => ({
             backgroundColor: `${
                 props.colorMode === "light"
                     ? lightenColor(colors.light.extraButton)
-                    : lightenColor(colors.dark.extraButton)
+                    : lightenColor(colors.light.extraButton)
             } !important`,
         },
     },
     ".refinement-submit-button": {
-        borderRadius: "sm !important",
+        borderRadius: "lg !important",
         color: `${colors.light.invertedText} !important`,
         backgroundColor: `${
             props.colorMode === "light"
                 ? colors.light.extraButton
-                : colors.dark.extraButton
+                : colors.light.extraButton
         } !important`,
+        border:
+            props.colorMode === "light"
+                ? `1px solid ${darkenColor(colors.light.extraButton, 0.15)} !important`
+                : `none !important`,
         "&:hover": {
             backgroundColor: `${
                 props.colorMode === "light"
                     ? lightenColor(colors.light.extraButton)
-                    : lightenColor(colors.dark.extraButton)
+                    : lightenColor(colors.light.extraButton)
             } !important`,
         },
     },
@@ -280,7 +289,7 @@ export const inputStyles = (props) => ({
         resize: "none !important",
         fontSize: "0.9rem !important",
         padding: "8px !important",
-        borderRadius: "sm !important",
+        borderRadius: "lg !important",
         overflow: "auto !important",
         whiteSpace: "pre-wrap !important",
         boxShadow: "none !important",

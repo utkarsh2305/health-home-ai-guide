@@ -195,7 +195,7 @@ const TemplateSettingsPanel = ({
                 <Button
                     leftIcon={<AddIcon />}
                     onClick={() => setIsNewTemplateModalOpen(true)}
-                    className="summary-buttons"
+                    className="grey-button"
                 >
                     New Template
                 </Button>

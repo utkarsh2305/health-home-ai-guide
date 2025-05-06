@@ -31,9 +31,8 @@ const RefinementPanel = ({
         width="90%"
         maxWidth="500px"
         zIndex={2}
-        className="chat-panel"
-        borderRadius="xl"
-        boxShadow="lg"
+        className="floating-panel"
+        borderRadius="lg"
     >
         {loading && (
             <Flex
@@ -51,13 +50,7 @@ const RefinementPanel = ({
                 <Spinner size="xl" />
             </Flex>
         )}
-        <Flex
-            align="center"
-            justify="space-between"
-            p="3"
-            borderBottom="1px"
-            borderColor="gray.200"
-        >
+        <Flex align="center" justify="space-between" p="3">
             <Flex align="center">
                 <EditIcon mr={2} />
                 <Text fontSize="sm" fontWeight="medium">

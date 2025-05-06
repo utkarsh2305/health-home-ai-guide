@@ -15,14 +15,20 @@ export const RedButton = ({ children, ...props }) => (
     </Button>
 );
 
-export const BlueButton = ({ children, ...props }) => (
-    <Button className="blue-button" {...props}>
+export const OrangeButton = ({ children, ...props }) => (
+    <Button className="orange-button" {...props}>
         {children}
     </Button>
 );
 
 export const TertiaryButton = ({ children, ...props }) => (
     <Button className="tertiary-button" {...props}>
+        {children}
+    </Button>
+);
+
+export const GreyButton = ({ children, ...props }) => (
+    <Button className="grey-button" {...props}>
         {children}
     </Button>
 );

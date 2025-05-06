@@ -221,7 +221,7 @@ const VoiceInputTab = ({
                                 <Button
                                     leftIcon={<FaRedo />}
                                     onClick={handleClearTranscription}
-                                    className="blue-button"
+                                    className="orange-button"
                                 >
                                     Start New Transcription
                                 </Button>
@@ -257,8 +257,6 @@ const VoiceInputTab = ({
                                 mt={2}
                                 borderRadius="md"
                                 borderWidth="1px"
-                                bg="gray.50"
-                                _dark={{ bg: "gray.700" }}
                                 maxHeight="100px"
                                 overflowY="auto"
                                 className="transcription-view"
@@ -336,7 +334,7 @@ const VoiceInputTab = ({
                                 <Button
                                     leftIcon={<FaRedo />}
                                     onClick={handleClearTranscription}
-                                    className="blue-button"
+                                    className="orange-button"
                                 >
                                     Start New Recording
                                 </Button>
@@ -372,7 +370,7 @@ const VoiceInputTab = ({
                                     size="sm"
                                     position="absolute"
                                     left="0"
-                                    top="0"
+                                    top="1"
                                     className="switch-mode"
                                 >
                                     Return
@@ -398,14 +396,14 @@ const VoiceInputTab = ({
                                     zIndex={1}
                                 >
                                     <Button
-                                        className={`mode-selector-button ${mode === "record" ? "active" : ""} blue-button`}
+                                        className={`mode-selector-button ${mode === "record" ? "active" : ""}`}
                                         leftIcon={<FaMicrophone />}
                                         onClick={() => setMode("record")}
                                     >
                                         Live Recording
                                     </Button>
                                     <Button
-                                        className={`mode-selector-button ${mode === "upload" ? "active" : ""} tertiary-button`}
+                                        className={`mode-selector-button ${mode === "upload" ? "active" : ""}`}
                                         leftIcon={<FaFileAudio />}
                                         onClick={() => setMode("upload")}
                                     >

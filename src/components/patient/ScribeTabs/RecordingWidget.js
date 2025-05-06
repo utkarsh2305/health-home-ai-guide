@@ -424,7 +424,7 @@ const RecordingWidget = ({
                         <Button
                             leftIcon={<FaRedo />}
                             onClick={startNewRecording}
-                            className="blue-button"
+                            className="orange-button"
                         >
                             {mode === "upload"
                                 ? "Upload New File"
@@ -473,7 +473,7 @@ const RecordingWidget = ({
                                             <FaMicrophone />
                                         )
                                     }
-                                    className="blue-button"
+                                    className="orange-button"
                                 >
                                     {isRecording
                                         ? isPaused
@@ -506,7 +506,7 @@ const RecordingWidget = ({
                                         onClick={sendRecording}
                                         colorScheme="blue"
                                         leftIcon={<FaRedo />}
-                                        className="blue-button"
+                                        className="orange-button"
                                     >
                                         Send Recording
                                     </Button>
@@ -546,7 +546,7 @@ const RecordingWidget = ({
                                         .getElementById("audio-file-input")
                                         .click()
                                 }
-                                className="blue-button"
+                                className="grey-button"
                             >
                                 Upload Audio File
                             </Button>

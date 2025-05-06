@@ -103,7 +103,7 @@ const LetterEditor = ({
                                 transform: "scale(1.1)",
                             },
                         }}
-                        className="blue-button refinement-fab"
+                        className="refinement-fab"
                         onClick={() => !loading && setIsRefining(true)} // Prevent click when loading
                         aria-label="Refine letter"
                         isDisabled={loading}

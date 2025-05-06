@@ -17,6 +17,7 @@ import { patientApi } from "../../../utils/api/patientApi";
 import { FaAtom, FaSync } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { colors } from "../../../theme/colors";
+import { GreyButton } from "../../common/Buttons";
 
 const ReasoningTab = ({ patientId, reasoning: initialReasoning }) => {
     const [loading, setLoading] = useState(false);
@@ -79,7 +80,13 @@ const ReasoningTab = ({ patientId, reasoning: initialReasoning }) => {
     };
 
     return (
-        <Box p={2} minH="180px" overflow="hidden" position="relative">
+        <Box
+            p={2}
+            minH="180px"
+            overflow="hidden"
+            position="relative"
+            className="tab-panel-container"
+        >
             {" "}
             {/* Add position relative */}
             {reasoning ? (
@@ -190,23 +197,27 @@ const ReasoningTab = ({ patientId, reasoning: initialReasoning }) => {
                         bottom="8"
                         onClick={handleGenerateReasoning}
                         isLoading={loading}
-                        className="blue-button"
+                        className="orange-button"
                         p="0"
                     />
                 </>
             ) : (
-                <Flex justify="center" align="center" h="140px">
-                    <Button
-                        leftIcon={<FaAtom />}
-                        className="blue-button"
-                        onClick={handleGenerateReasoning}
-                        isLoading={loading}
-                        loadingText="Generating"
-                        size="sm"
-                    >
-                        Generate Clinical Reasoning
-                    </Button>
-                </Flex>
+                <VStack spacing={4} width="full" align="stretch">
+                    <Text textAlign="center">
+                        Generate an analysis of the case using your model's
+                        reasoning capabilities.
+                    </Text>
+                    <VStack width="full" align="center">
+                        <GreyButton
+                            leftIcon={<FaAtom />}
+                            onClick={handleGenerateReasoning}
+                            isLoading={loading}
+                            loadingText="Generating"
+                        >
+                            Generate Clinical Reasoning
+                        </GreyButton>
+                    </VStack>
+                </VStack>
             )}
             {loading && (
                 <Flex

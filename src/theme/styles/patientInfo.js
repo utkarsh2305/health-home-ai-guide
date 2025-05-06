@@ -38,10 +38,7 @@ export const patientInfoStyles = (props) => ({
                 ? `1px solid ${colors.light.surface} !important`
                 : `${colors.dark.textTertiary} !important`,
         padding: "7px 8px !important",
-        borderTopLeftRadius: "md !important",
-        borderBottomLeftRadius: "md !important",
-        borderTopRightRadius: "0 !important",
-        borderBottomRightRadius: "0 !important",
+        borderRadius: "md !important",
         fontSize: "0.9rem !important",
     },
     ".search-button": {

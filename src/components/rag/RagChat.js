@@ -411,11 +411,14 @@ const RagChat = ({
                                                             <Box
                                                                 className="thinking-block"
                                                                 mt={2}
-                                                                p={3}
+                                                                p={1}
                                                                 borderLeftWidth="3px"
                                                                 borderColor="blue.300"
                                                             >
-                                                                <Text whiteSpace="pre-wrap">
+                                                                <Text
+                                                                    whiteSpace="pre-wrap"
+                                                                    className="thinking-block-text"
+                                                                >
                                                                     {
                                                                         parsed.thinkContent
                                                                     }
@@ -569,13 +572,12 @@ const RagChat = ({
                         />
                         <IconButton
                             icon={<ArrowUpIcon />}
-                            onClick={handleUserInputSend}
-                            colorScheme="purple"
-                            borderRadius="full"
-                            size="md"
-                            aria-label="Send"
+                            onClick={() => handleSendMessage(userInput)}
                             isDisabled={!userInput.trim() || chatLoading}
                             isLoading={chatLoading}
+                            className="chat-send-button"
+                            size="md"
+                            aria-label="Send Message"
                         />
                     </Flex>
 

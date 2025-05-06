@@ -173,7 +173,7 @@ const Uploader = ({ isCollapsed, setIsCollapsed, setCollections }) => {
                         width="220px"
                         isLoading={isExtracting}
                         loadingText="Extracting..."
-                        className="blue-button"
+                        className="orange-button"
                         alignSelf="flex-start"
                     >
                         Extract PDF Info

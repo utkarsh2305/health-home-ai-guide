@@ -36,7 +36,7 @@ const PanelFooterActions = ({
         <Flex width="100%" justifyContent="space-between">
             <Button
                 onClick={() => handleGenerateLetter(additionalInstructions)}
-                className="tertiary-button"
+                className="red-button"
                 leftIcon={<RepeatIcon />}
                 isDisabled={letterLoading || saveState !== "idle"}
             >
@@ -45,7 +45,7 @@ const PanelFooterActions = ({
             <Flex>
                 <Button
                     onClick={handleCopy}
-                    className="blue-button"
+                    className="grey-button"
                     leftIcon={recentlyCopied ? <CheckIcon /> : <CopyIcon />}
                     mr="2"
                     isDisabled={letterLoading}
