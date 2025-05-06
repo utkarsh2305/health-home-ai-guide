@@ -24,6 +24,13 @@ import {
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { FaUser, FaCalendarAlt, FaIdBadge } from "react-icons/fa";
+import {
+    FaFileAlt,
+    FaSitemap,
+    FaVial,
+    FaBrain,
+    FaArrowRight,
+} from "react-icons/fa";
 import { RepeatIcon } from "@chakra-ui/icons";
 import {
     toggleJobsItem,
@@ -158,59 +165,81 @@ const PatientTable = ({
 
             <Td width="45%" position="relative">
                 <Box>
-                    <Grid templateColumns="130px 1fr" gap={0} h="120px">
-                        <VStack align="flex-start" spacing={0} w="130px">
+                    <Grid templateColumns="40px 1fr" gap={0} h="120px">
+                        <VStack align="flex-start" spacing={0} w="30px">
                             {[
-                                "summary",
-                                "differentials",
-                                "investigations",
-                                "considerations",
-                            ].map((section) => (
-                                <Button
+                                {
+                                    section: "summary",
+                                    icon: FaFileAlt,
+                                    tooltip: "Summary",
+                                },
+                                {
+                                    section: "differentials",
+                                    icon: FaSitemap,
+                                    tooltip: "Differentials",
+                                },
+                                {
+                                    section: "investigations",
+                                    icon: FaVial,
+                                    tooltip: "Investigations",
+                                },
+                                {
+                                    section: "considerations",
+                                    icon: FaBrain,
+                                    tooltip: "Clinical Considerations",
+                                },
+                            ].map(({ section, icon, tooltip }) => (
+                                <Tooltip
                                     key={section}
-                                    className={`reason-button ${
-                                        (!patient.reasoning &&
-                                            section === "summary") ||
-                                        patient.activeSection === section
-                                            ? "reason-button-active-patient-table"
-                                            : ""
-                                    }`}
-                                    onClick={() => {
-                                        if (
-                                            patient.reasoning ||
-                                            section === "summary"
-                                        ) {
-                                            const updatedPatients =
-                                                patients.map((p) =>
-                                                    p.id === patient.id
-                                                        ? {
-                                                              ...p,
-                                                              activeSection:
-                                                                  section,
-                                                          }
-                                                        : p,
-                                                );
-                                            setPatients(updatedPatients);
-                                        }
-                                    }}
-                                    justifyContent="flex-start"
-                                    width="100%"
-                                    height="28px"
-                                    fontSize="xs"
-                                    isDisabled={
-                                        !patient.reasoning &&
-                                        section !== "summary"
-                                    }
-                                    opacity={
-                                        !patient.reasoning &&
-                                        section !== "summary"
-                                            ? 0.5
-                                            : 1
-                                    }
+                                    label={tooltip}
+                                    placement="right"
+                                    hasArrow
                                 >
-                                    {section.charAt(0).toUpperCase() +
-                                        section.slice(1)}
-                                </Button>
+                                    <Button
+                                        key={section}
+                                        className={`reason-button ${
+                                            (!patient.reasoning &&
+                                                section === "summary") ||
+                                            patient.activeSection === section
+                                                ? "reason-button-active-patient-table"
+                                                : ""
+                                        }`}
+                                        onClick={() => {
+                                            if (
+                                                patient.reasoning ||
+                                                section === "summary"
+                                            ) {
+                                                const updatedPatients =
+                                                    patients.map((p) =>
+                                                        p.id === patient.id
+                                                            ? {
+                                                                  ...p,
+                                                                  activeSection:
+                                                                      section,
+                                                              }
+                                                            : p,
+                                                    );
+                                                setPatients(updatedPatients);
+                                            }
+                                        }}
+                                        justifyContent="center"
+                                        width="100%"
+                                        height="28px"
+                                        fontSize="xs"
+                                        isDisabled={
+                                            !patient.reasoning &&
+                                            section !== "summary"
+                                        }
+                                        opacity={
+                                            !patient.reasoning &&
+                                            section !== "summary"
+                                                ? 0.5
+                                                : 1
+                                        }
+                                        leftIcon={<Icon as={icon} />}
+                                        p={1}
+                                    />
+                                </Tooltip>
                             ))}
                         </VStack>
 

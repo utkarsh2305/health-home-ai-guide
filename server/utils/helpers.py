@@ -200,7 +200,7 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
         )
 
         # Create the full response with thinking included
-        result_dict = json.loads(response.message.content)
+        result_dict = json.loads(response["message"]["content"])
         result_dict["thinking"] = thinking
 
         # Convert to ClinicalReasoning model
