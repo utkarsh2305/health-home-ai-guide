@@ -136,7 +136,7 @@ export const floatingStyles = (props) => ({
         backgroundColor:
             props.colorMode === "light"
                 ? `${colors.light.surface} !important` // Choose a prominent color
-                : `${colors.dark.primary} !important`,
+                : `${colors.dark.surface} !important`,
         color:
             props.colorMode === "light"
                 ? `${colors.light.textTertiary} !important`
