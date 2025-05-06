@@ -243,7 +243,11 @@ const Sidebar = ({
                         label="New Patient"
                         placement={isCollapsed ? "right" : "top"}
                     >
-                        <Box w="100%" mb={isCollapsed ? 3 : 4}>
+                        <Box
+                            w="100%"
+                            mb={isCollapsed ? 4 : 0}
+                            mt={isCollapsed ? 4 : 0}
+                        >
                             <AvatarButton
                                 icon={
                                     <FaPlus

@@ -1,4 +1,3 @@
-// Component for chatting with RAG documents
 import {
     Box,
     Flex,
@@ -10,17 +9,62 @@ import {
     Spinner,
     Button,
     Collapse,
+    VStack,
 } from "@chakra-ui/react";
 import {
     ArrowUpIcon,
     InfoIcon,
     SearchIcon,
     QuestionIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    ChevronUpIcon,
 } from "@chakra-ui/icons";
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { MdChat } from "react-icons/md";
-import { ChevronDownIcon, ChevronRightIcon } from "@chakra-ui/icons";
+
+// Function to parse message content with <think> tags
+const parseMessageContent = (content) => {
+    const thinkRegex = /<think>(.*?)<\/think>/s; // 's' flag allows '.' to match newlines
+    const match = content.match(thinkRegex);
+
+    // If we have a complete <think></think> tag, parse it normally
+    if (match) {
+        const thinkContent = match[1].trim();
+        const parts = content.split(match[0]); // Split by the full <think>...</think> block
+        const beforeContent = parts[0].trim();
+        const afterContent = parts.slice(1).join(match[0]).trim(); // Join back in case of multiple (though we handle first)
+
+        return {
+            hasThinkTag: true,
+            beforeContent,
+            thinkContent,
+            afterContent,
+        };
+    }
+
+    // Check for an unclosed <think> tag during streaming
+    const openThinkMatch = content.match(/<think>(.*?)$/s);
+    if (openThinkMatch) {
+        // We have an opening <think> tag without a closing one yet (during streaming)
+        const beforeContent = content.split("<think>")[0].trim();
+        const partialThinkContent = openThinkMatch[1].trim();
+
+        return {
+            hasThinkTag: true,
+            beforeContent,
+            thinkContent: partialThinkContent,
+            afterContent: "", // No after content yet as the tag isn't closed
+            isPartialThinking: true, // Flag to indicate streaming status
+        };
+    }
+
+    return {
+        hasThinkTag: false,
+        content, // Return original content if no tag
+    };
+};
 
 const RagChat = ({
     isCollapsed,
@@ -45,6 +89,23 @@ const RagChat = ({
         }
     }, [messages]);
 
+    // Function to toggle thinking visibility for a specific message
+    const toggleThinkingVisibility = (messageIndex) => {
+        setMessages((prevMessages) =>
+            prevMessages.map((msg, idx) => {
+                // Find the correct message in the full messages array
+                if (idx === messageIndex) {
+                    return {
+                        ...msg,
+                        // Toggle the state, default to false if undefined
+                        isThinkingExpanded: !(msg.isThinkingExpanded ?? false),
+                    };
+                }
+                return msg;
+            }),
+        );
+    };
+
     const handleSendMessage = (message) => {
         if (message.trim()) {
             setMessages((prevMessages) => [
@@ -56,6 +117,7 @@ const RagChat = ({
             setShowSuggestions(false);
         }
     };
+
     const handleUserInputSend = () => {
         handleSendMessage(userInput);
     };
@@ -210,6 +272,7 @@ const RagChat = ({
         };
         fetchSuggestions();
     }, []);
+
     return (
         <Box className="panels-bg" p="4" borderRadius="sm">
             <Flex align="center" justify="space-between">
@@ -251,81 +314,188 @@ const RagChat = ({
                         borderRadius="sm"
                         className="floating-main"
                     >
-                        {messages.map((message, messageIndex) => (
-                            <Flex
-                                key={messageIndex}
-                                justify={
-                                    message.role === "assistant"
-                                        ? "flex-start"
-                                        : "flex-end"
-                                }
-                                mb="2"
-                            >
-                                <Box
-                                    className={`message-box ${message.role}`}
-                                    px="4"
-                                    py="2"
-                                    borderRadius="sm"
-                                    maxWidth="80%"
-                                    fontSize="11pt"
+                        {messages.map((message, index) => {
+                            // Skip system messages for rendering
+                            if (message.role === "system") return null;
+
+                            // Parse the content for <think> tags
+                            const parsed = parseMessageContent(
+                                message.content || "",
+                            );
+                            // Determine if the 'Thinking' section is expanded for this message
+                            const isThinkingExpanded =
+                                message.isThinkingExpanded ?? false;
+
+                            return (
+                                <Flex
+                                    key={`${index}-${message.role}-${parsed.hasThinkTag}`}
+                                    justify={
+                                        message.role === "assistant"
+                                            ? "flex-start"
+                                            : "flex-end"
+                                    }
+                                    mb="3"
                                 >
-                                    <ReactMarkdown>
-                                        {message.content}
-                                    </ReactMarkdown>
-                                    {message.role === "assistant" &&
-                                        message.context && (
-                                            <>
-                                                {Object.keys(
-                                                    message.context,
-                                                ).map((key) => {
-                                                    const tooltipId = `${messageIndex}-${key}`;
-                                                    return (
-                                                        <Tooltip
-                                                            key={tooltipId}
-                                                            label={
-                                                                message.context[
-                                                                    key
-                                                                ]
+                                    <Box
+                                        className={`message-box ${message.role}`}
+                                        px="3"
+                                        py="2"
+                                        maxWidth="85%"
+                                        fontSize="sm"
+                                        position="relative"
+                                    >
+                                        {message.loading ? (
+                                            <Spinner size="sm" mt="1" />
+                                        ) : (
+                                            <VStack
+                                                align="start"
+                                                spacing={1}
+                                                width="100%"
+                                            >
+                                                {/* Render content before <think> tag */}
+                                                {parsed.hasThinkTag &&
+                                                    parsed.beforeContent && (
+                                                        <Text whiteSpace="pre-wrap">
+                                                            {
+                                                                parsed.beforeContent
                                                             }
-                                                            placement="top"
-                                                            hasArrow
-                                                            fontSize="13"
-                                                            maxWidth="500px"
-                                                            shouldWrapChildren
-                                                            isOpen={
-                                                                showTooltip ===
-                                                                tooltipId
+                                                        </Text>
+                                                    )}
+
+                                                {/* Handle Thinking block */}
+                                                {parsed.hasThinkTag && (
+                                                    <Box width="100%" my={1}>
+                                                        <Flex
+                                                            align="center"
+                                                            onClick={() =>
+                                                                toggleThinkingVisibility(
+                                                                    index,
+                                                                )
                                                             }
-                                                            sx={{
-                                                                whiteSpace:
-                                                                    "pre-wrap",
-                                                            }}
+                                                            cursor="pointer"
+                                                            className="thinking-toggle"
+                                                            p={1}
+                                                            borderRadius="sm"
                                                         >
-                                                            <Text
-                                                                as="span"
-                                                                color="blue.500"
-                                                                cursor="pointer"
-                                                                onMouseEnter={() =>
-                                                                    setShowTooltip(
-                                                                        tooltipId,
-                                                                    )
-                                                                }
-                                                                onMouseLeave={() =>
-                                                                    setShowTooltip(
-                                                                        null,
-                                                                    )
-                                                                }
-                                                            >
-                                                                [{key}]
+                                                            <Text mr="2">
+                                                                Thinking{" "}
+                                                                {parsed.isPartialThinking
+                                                                    ? "..."
+                                                                    : ""}
                                                             </Text>
-                                                        </Tooltip>
-                                                    );
-                                                })}
-                                            </>
+                                                            <IconButton
+                                                                aria-label={
+                                                                    isThinkingExpanded
+                                                                        ? "Collapse thinking"
+                                                                        : "Expand thinking"
+                                                                }
+                                                                icon={
+                                                                    isThinkingExpanded ? (
+                                                                        <ChevronUpIcon />
+                                                                    ) : (
+                                                                        <ChevronDownIcon />
+                                                                    )
+                                                                }
+                                                                variant="outline"
+                                                                size="xs"
+                                                                mr="2"
+                                                                className="collapse-toggle"
+                                                            />
+                                                        </Flex>
+                                                        <Collapse
+                                                            in={
+                                                                isThinkingExpanded
+                                                            }
+                                                            animateOpacity
+                                                        >
+                                                            <Box
+                                                                className="thinking-block"
+                                                                mt={2}
+                                                                p={3}
+                                                                borderLeftWidth="3px"
+                                                                borderColor="blue.300"
+                                                            >
+                                                                <Text whiteSpace="pre-wrap">
+                                                                    {
+                                                                        parsed.thinkContent
+                                                                    }
+                                                                </Text>
+                                                            </Box>
+                                                        </Collapse>
+                                                    </Box>
+                                                )}
+
+                                                {/* Render content after <think> tag or full content if no tag */}
+                                                <Text whiteSpace="pre-wrap">
+                                                    {parsed.hasThinkTag
+                                                        ? parsed.afterContent
+                                                        : parsed.content}
+                                                </Text>
+
+                                                {/* Render context links */}
+                                                {message.role === "assistant" &&
+                                                    message.context && (
+                                                        <HStack
+                                                            wrap="wrap"
+                                                            spacing={1}
+                                                            mt={1}
+                                                        >
+                                                            {Object.keys(
+                                                                message.context,
+                                                            ).map((key) => (
+                                                                <Tooltip
+                                                                    key={`${index}-context-${key}`}
+                                                                    label={
+                                                                        message
+                                                                            .context[
+                                                                            key
+                                                                        ]
+                                                                    }
+                                                                    placement="top"
+                                                                    hasArrow
+                                                                    fontSize="xs"
+                                                                    maxWidth="400px"
+                                                                    shouldWrapChildren
+                                                                    bg="gray.700"
+                                                                    color="white"
+                                                                    isOpen={
+                                                                        showTooltip ===
+                                                                        `${index}-context-${key}`
+                                                                    }
+                                                                >
+                                                                    <Text
+                                                                        as="span"
+                                                                        color="blue.500"
+                                                                        cursor="pointer"
+                                                                        fontSize="xs"
+                                                                        _hover={{
+                                                                            textDecoration:
+                                                                                "underline",
+                                                                        }}
+                                                                        onMouseEnter={() =>
+                                                                            setShowTooltip(
+                                                                                `${index}-context-${key}`,
+                                                                            )
+                                                                        }
+                                                                        onMouseLeave={() =>
+                                                                            setShowTooltip(
+                                                                                null,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        [{key}]
+                                                                    </Text>
+                                                                </Tooltip>
+                                                            ))}
+                                                        </HStack>
+                                                    )}
+                                            </VStack>
                                         )}
-                                </Box>
-                            </Flex>
-                        ))}
+                                    </Box>
+                                </Flex>
+                            );
+                        })}
+
                         {chatLoading && (
                             <Flex justify="flex-start" mb="2">
                                 <Box
@@ -339,6 +509,7 @@ const RagChat = ({
                                 </Box>
                             </Flex>
                         )}
+
                         {showSuggestions && (
                             <Flex
                                 justify="center"
@@ -369,8 +540,10 @@ const RagChat = ({
                                 ))}
                             </Flex>
                         )}
+
                         <div ref={messagesEndRef} />
                     </Box>
+
                     <Flex
                         alignItems="center"
                         justify="space-between"
@@ -401,8 +574,21 @@ const RagChat = ({
                             borderRadius="full"
                             size="md"
                             aria-label="Send"
+                            isDisabled={!userInput.trim() || chatLoading}
+                            isLoading={chatLoading}
                         />
                     </Flex>
+
+                    {/* Disclaimer */}
+                    <Text
+                        textAlign="center"
+                        fontSize="xs"
+                        color="gray.500"
+                        mt="2"
+                    >
+                        Phlox may make mistakes. Always verify critical
+                        information.
+                    </Text>
                 </Box>
             </Collapse>
         </Box>

@@ -96,6 +96,16 @@ export const floatingStyles = (props) => ({
     ".message-box ul, .message-box ol": {
         paddingLeft: "20px",
     },
+    ".template-selector": {
+        borderTop:
+            props.colorMode === "light"
+                ? `1px solid ${colors.light.surface} !important`
+                : `1px solid ${colors.dark.surface} !important`,
+    },
+    ".template-selector .template-selector": {
+        textAlign: "left !important",
+        display: "block !important",
+    },
     ".thinking-toggle": {
         display: "inline-flex",
         alignItems: "center",
@@ -121,5 +131,44 @@ export const floatingStyles = (props) => ({
             props.colorMode === "light"
                 ? `${colors.light.crust} !important`
                 : `${colors.dark.base} !important`,
+    },
+    ".fam-main-button": {
+        backgroundColor:
+            props.colorMode === "light"
+                ? `${colors.light.surface} !important` // Choose a prominent color
+                : `${colors.dark.primary} !important`,
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textTertiary} !important`
+                : `${colors.dark.textTertiary} !important`,
+        transition:
+            "transform 0.2s ease-in-out, background-color 0.2s ease-in-out",
+        _hover: {
+            transform: "scale(1.1)",
+            backgroundColor:
+                props.colorMode === "light"
+                    ? `${colors.light.primaryHover} !important` // Darker/lighter shade
+                    : `${colors.dark.primaryHover} !important`,
+        },
+    },
+    ".fam-action-button": {
+        backgroundColor:
+            props.colorMode === "light"
+                ? `${colors.light.surface} !important`
+                : `${colors.dark.surface} !important`,
+        color:
+            props.colorMode === "light"
+                ? `${colors.light.textTertiary} !important`
+                : `${colors.dark.textTertiary} !important`,
+
+        transition:
+            "transform 0.15s ease-in-out, background-color 0.15s ease-in-out",
+        _hover: {
+            transform: "scale(1.05)",
+            backgroundColor:
+                props.colorMode === "light"
+                    ? `${colors.light.overlay0} !important`
+                    : `${colors.dark.overlay0} !important`,
+        },
     },
 });

@@ -61,7 +61,8 @@ export const inputStyles = (props) => ({
         border:
             props.colorMode === "light"
                 ? `1px solid ${colors.light.surface} !important`
-                : `${colors.dark.textTertiary} !important`,
+                : `1px solid ${colors.dark.surface} !important`,
+        borderRadius: "md !important",
         color:
             props.colorMode === "light"
                 ? `${colors.light.textTertiary} !important`

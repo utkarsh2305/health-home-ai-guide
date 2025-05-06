@@ -9,7 +9,6 @@ import { useClipboard, Box } from "@chakra-ui/react";
 import styled from "@emotion/styled";
 import { keyframes } from "@emotion/react";
 
-import FloatingLetterButton from "./letter/FloatingLetterButton";
 import LetterPanel from "./letter/LetterPanel";
 import { useLetterTemplates } from "../../utils/hooks/useLetterTemplates";
 
@@ -36,8 +35,8 @@ const AnimatedBox = styled(Box)`
 const Letter = forwardRef(
     (
         {
-            isLetterCollapsed,
-            toggleLetterCollapse,
+            isOpen,
+            onClose,
             finalCorrespondence,
             setFinalCorrespondence,
             handleSaveLetter,
@@ -48,12 +47,10 @@ const Letter = forwardRef(
             toast,
             patient,
             setLoading: setGeneralLoading,
-            onLetterToggle,
         },
         ref,
     ) => {
         // State
-        const [isLetterOpen, setIsLetterOpen] = useState(false);
         const [isRefining, setIsRefining] = useState(false);
         const [refinementInput, setRefinementInput] = useState("");
         const [recentlyCopied, setRecentlyCopied] = useState(false);
@@ -67,7 +64,6 @@ const Letter = forwardRef(
         const textareasRefs = useRef({});
         const saveTimerRef = useRef(null);
         const resizerRef = useRef(null);
-        const buttonRef = useRef(null);
 
         // Hooks
         const {
@@ -83,21 +79,6 @@ const Letter = forwardRef(
         const { onCopy } = useClipboard(
             finalCorrespondence || "No letter attached to encounter",
         );
-
-        // Toggle letter panel
-        const toggleLetterPanel = () => {
-            const newState = !isLetterOpen;
-            setIsLetterOpen(newState);
-
-            // Notify parent AND use parent's toggle function to ensure consistency
-            if (onLetterToggle) onLetterToggle(newState);
-            if (toggleLetterCollapse) toggleLetterCollapse(newState);
-        };
-
-        // Also add this effect to ensure local state stays in sync with parent state
-        useEffect(() => {
-            setIsLetterOpen(!isLetterCollapsed);
-        }, [isLetterCollapsed]);
 
         // Clear the save timer on unmount
         useEffect(() => {
@@ -119,12 +100,13 @@ const Letter = forwardRef(
 
         // Auto-resize when letter opens or content changes
         useEffect(() => {
-            if (isLetterOpen) {
+            if (isOpen) {
+                // Use isOpen prop
                 setTimeout(() => {
                     autoResizeTextarea();
-                }, 100);
+                }, 100); // Small delay for elements to render
             }
-        }, [isLetterOpen, finalCorrespondence]);
+        }, [isOpen, finalCorrespondence]);
 
         const handleCopy = () => {
             onCopy();
@@ -191,68 +173,58 @@ const Letter = forwardRef(
             window.removeEventListener("mouseup", handleMouseUp);
         };
 
+        const handleClose = () => {
+            // Call the onClose prop passed from parent
+            if (onClose) {
+                onClose();
+            }
+        };
+
         // Imperative handle for parent components to call methods
         useImperativeHandle(ref, () => ({
             autoResizeTextarea,
-            openLetter: () => setIsLetterOpen(true),
         }));
 
-        return (
-            <Box
-                position="fixed"
-                bottom="20px"
-                right="20px"
-                zIndex="1000"
-                className="hover-letter-box"
-            >
-                {/* Always render the button so it stays clickable when panel is open */}
-                <FloatingLetterButton
-                    onClick={toggleLetterPanel}
-                    isActive={isLetterOpen}
-                    ref={buttonRef}
-                />
+        if (!isOpen) {
+            // If not open, render nothing
+            return null;
+        }
 
-                {isLetterOpen && (
-                    <AnimatedBox
-                        position="absolute"
-                        bottom="80px" // Position above the button
-                        right="0px"
-                    >
-                        <LetterPanel
-                            dimensions={dimensions}
-                            resizerRef={resizerRef}
-                            handleMouseDown={handleMouseDown}
-                            onClose={toggleLetterPanel}
-                            finalCorrespondence={finalCorrespondence}
-                            setFinalCorrespondence={setFinalCorrespondence}
-                            letterLoading={loading}
-                            handleGenerateLetterClick={
-                                handleGenerateLetterClick
-                            }
-                            handleSaveLetter={handleSave}
-                            setIsModified={setIsModified}
-                            letterTemplates={letterTemplates}
-                            selectedTemplate={selectedTemplate}
-                            selectTemplate={selectTemplate}
-                            additionalInstructions={additionalInstructions}
-                            setAdditionalInstructions={
-                                setAdditionalInstructions
-                            }
-                            refinementInput={refinementInput}
-                            setRefinementInput={setRefinementInput}
-                            handleRefinement={handleRefinement}
-                            isRefining={isRefining}
-                            setIsRefining={setIsRefining}
-                            textareaRef={(el) =>
-                                (textareasRefs.current.letter = el)
-                            }
-                            recentlyCopied={recentlyCopied}
-                            saveState={saveState}
-                            handleCopy={handleCopy}
-                        />
-                    </AnimatedBox>
-                )}
-            </Box>
+        return (
+            <AnimatedBox
+                position="fixed" // Or 'absolute' if relative to a specific parent in PatientDetails DOM
+                bottom="80px" // Adjust based on FAM size and spacing
+                right="20px" // Adjust based on FAM position
+                zIndex="1000" // Below FAM menu, but above other content
+                // className="hover-letter-box" // Keep if used for other global styles
+            >
+                <LetterPanel
+                    dimensions={dimensions}
+                    resizerRef={resizerRef}
+                    handleMouseDown={handleMouseDown}
+                    onClose={handleClose}
+                    finalCorrespondence={finalCorrespondence}
+                    setFinalCorrespondence={setFinalCorrespondence}
+                    letterLoading={loading}
+                    handleGenerateLetterClick={handleGenerateLetterClick}
+                    handleSaveLetter={handleSave}
+                    setIsModified={setIsModified}
+                    letterTemplates={letterTemplates}
+                    selectedTemplate={selectedTemplate}
+                    selectTemplate={selectTemplate}
+                    additionalInstructions={additionalInstructions}
+                    setAdditionalInstructions={setAdditionalInstructions}
+                    refinementInput={refinementInput}
+                    setRefinementInput={setRefinementInput}
+                    handleRefinement={handleRefinement}
+                    isRefining={isRefining}
+                    setIsRefining={setIsRefining}
+                    textareaRef={(el) => (textareasRefs.current.letter = el)}
+                    recentlyCopied={recentlyCopied}
+                    saveState={saveState}
+                    handleCopy={handleCopy}
+                />
+            </AnimatedBox>
         );
     },
 );

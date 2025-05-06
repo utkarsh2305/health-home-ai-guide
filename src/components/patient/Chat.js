@@ -135,8 +135,8 @@ const parseMessageContent = (content) => {
 };
 
 const Chat = ({
-    chatExpanded,
-    setChatExpanded,
+    isOpen,
+    onClose,
     chatLoading,
     messages,
     setMessages,
@@ -149,12 +149,10 @@ const Chat = ({
     currentTemplate,
     patientData,
     patientId,
-    onChatToggle,
 }) => {
     const [dimensions, setDimensions] = useState({ width: 600, height: 400 });
     const messagesEndRef = useRef(null);
     const resizerRef = useRef(null);
-    const chatButtonRef = useRef(null);
     const [showTooltip, setShowTooltip] = useState(null);
     const [userSettings, setUserSettings] = useState(null);
     const isTemplateLoaded = currentTemplate?.fields !== undefined;
@@ -162,14 +160,6 @@ const Chat = ({
     const filteredMessages = messages.filter(
         (message) => message.role !== "system",
     );
-
-    const toggleChat = () => {
-        const newState = !chatExpanded;
-        setChatExpanded(newState); // This only updates local state
-
-        // Call parent toggle handler to ensure proper coordination
-        if (onChatToggle) onChatToggle(newState);
-    };
 
     // Function to toggle thinking visibility for a specific message
     const toggleThinkingVisibility = (messageIndex) => {
@@ -209,11 +199,29 @@ const Chat = ({
         }
     }, [messages]);
 
+    //   useEffect(() => {
+    //       setMessages([]);
+    //       setShowSuggestions(true); // Reset suggestions flag
+    //   }, [patientId, setMessages, setUserInput, setShowSuggestions]);
+
     useEffect(() => {
-        setMessages([]);
-        setUserInput("");
-        setShowSuggestions(true); // Reset suggestions flag
-    }, [patientId, setMessages, setUserInput, setShowSuggestions]);
+        if (isOpen) {
+            // Reset when opening for a new patient perhaps
+            // This logic might need adjustment based on when patientData changes
+            // Consider if messages should clear every time it opens or only on patient change
+        }
+        // If patientData.id changes and it's open, then clear.
+        // This effect needs careful thought. For now, we remove the direct dependency on patientId
+        // setMessages([]);
+        // setUserInput("");
+        // setShowSuggestions(true);
+    }, [
+        isOpen,
+        patientData?.id,
+        setMessages,
+        setUserInput,
+        setShowSuggestions,
+    ]);
 
     const handleSendMessage = async (message) => {
         if (message.trim()) {
@@ -257,310 +265,225 @@ const Chat = ({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleClose = () => {
+        // Ensure we call the parent's onClose handler
+        if (onClose) {
+            onClose();
+        }
+    };
+
     // Show quick chat buttons only when we have messages and not showing suggestions in main area
     const shouldShowQuickChatButtons =
         filteredMessages.length > 0 &&
         userSettings &&
         (!showSuggestions || filteredMessages.length > 0);
 
+    if (!isOpen) {
+        return null; // Don't render anything if the panel is not supposed to be open
+    }
+
     return (
-        <Box
-            position="fixed"
-            bottom="20px"
+        <AnimatedChatPanel
+            position="fixed" // Or 'absolute'
+            bottom="80px" // Position above FAM
             right="20px"
-            zIndex="1000"
-            className="hover-chat-box"
+            width={`${dimensions.width}px`}
+            height={`${dimensions.height - 24}px`} // Original height logic
+            borderRadius="xl"
+            boxShadow="md"
+            overflow="hidden"
+            className="floating-panel"
+            display="flex"
+            flexDirection="column"
+            zIndex="1000" // Ensure it's above content, potentially below FAM menu if it overlaps
         >
-            {/* Always render the button for toggling */}
-            <IconButton
-                icon={<ChatIcon boxSize="1.5em" />}
-                colorScheme="purple"
-                onClick={toggleChat}
-                aria-label={chatExpanded ? "Close Chat" : "Open Chat"}
-                borderRadius="full"
-                size="lg"
-                bg={chatExpanded ? "#b096d3" : "#c4a7e7"} // Darker when active
-                className={`chat-icon ${chatExpanded ? "chat-icon-active" : ""}`}
-                boxShadow={
-                    chatExpanded ? "0 0 10px rgba(196, 167, 231, 0.6)" : "md"
-                }
-                width="3em"
-                height="3em"
-                fontSize="2xl"
-                ref={chatButtonRef}
-                _hover={{
-                    bg: chatExpanded ? "#a085c2" : "#b096d3",
-                    transform: "scale(1.05)",
-                }}
-                transition="all 0.2s ease-in-out"
-            />
+            {/* Header */}
+            <Flex
+                align="center"
+                justify="space-between"
+                p="3"
+                borderBottomWidth="1px"
+                borderColor="inherit"
+                className="panel-header"
+            >
+                <Text fontWeight="bold">Chat With Phlox</Text>
+            </Flex>
 
-            {chatExpanded && (
-                <AnimatedChatPanel
-                    position="absolute"
-                    bottom="80px" // Position above the button
-                    right="0px"
-                    width={`${dimensions.width}px`}
-                    height={`${dimensions.height - 24}px`}
-                    borderRadius="xl"
-                    boxShadow="md"
-                    overflow="hidden"
-                    className="floating-panel"
-                    display="flex"
-                    flexDirection="column"
-                >
-                    {/* Header */}
-                    <Flex
-                        align="center"
-                        justify="space-between"
-                        p="3"
-                        borderBottomWidth="1px"
-                        borderColor="inherit"
-                        className="panel-header"
-                    >
-                        <Text fontWeight="bold">Chat With Phlox</Text>
-                        <IconButton
-                            icon={<CloseIcon />}
-                            onClick={toggleChat}
-                            aria-label="Close chat"
-                            variant="ghost"
-                            size="sm"
-                            className="collapse-toggle"
-                        />
-                    </Flex>
+            {/* Messages Area */}
+            <Box flex="1" overflowY="auto" p="4" className="floating-main">
+                {messages.map((message, index) => {
+                    // Skip system messages for rendering
+                    if (message.role === "system") return null;
 
-                    {/* Messages Area */}
-                    <Box
-                        flex="1"
-                        overflowY="auto"
-                        p="4"
-                        className="floating-main"
-                    >
-                        {messages.map((message, index) => {
-                            // Skip system messages for rendering
-                            if (message.role === "system") return null;
+                    // Parse the content for <think> tags
+                    const parsed = parseMessageContent(message.content || "");
+                    // Determine if the 'Thinking' section is expanded for this message
+                    const isThinkingExpanded =
+                        message.isThinkingExpanded ?? false;
 
-                            // Parse the content for <think> tags
-                            const parsed = parseMessageContent(
-                                message.content || "",
-                            );
-                            // Determine if the 'Thinking' section is expanded for this message
-                            const isThinkingExpanded =
-                                message.isThinkingExpanded ?? false;
-
-                            return (
-                                <Flex
-                                    key={`${index}-${message.role}-${parsed.hasThinkTag}`}
-                                    justify={
-                                        message.role === "assistant"
-                                            ? "flex-start"
-                                            : "flex-end"
-                                    }
-                                    mb="3"
-                                >
-                                    <Box
-                                        className={`message-box ${message.role}`}
-                                        px="3"
-                                        py="2"
-                                        maxWidth="85%"
-                                        fontSize="sm"
-                                        position="relative"
+                    return (
+                        <Flex
+                            key={`${index}-${message.role}-${parsed.hasThinkTag}`}
+                            justify={
+                                message.role === "assistant"
+                                    ? "flex-start"
+                                    : "flex-end"
+                            }
+                            mb="3"
+                        >
+                            <Box
+                                className={`message-box ${message.role}`}
+                                px="3"
+                                py="2"
+                                maxWidth="85%"
+                                fontSize="sm"
+                                position="relative"
+                            >
+                                {message.loading ? (
+                                    <Spinner size="sm" mt="1" />
+                                ) : (
+                                    <VStack
+                                        align="start"
+                                        spacing={1}
+                                        width="100%"
                                     >
-                                        {message.loading ? (
-                                            <Spinner size="sm" mt="1" />
-                                        ) : (
-                                            <VStack
-                                                align="start"
-                                                spacing={1}
-                                                width="100%"
-                                            >
-                                                {/* Render content before <think> tag */}
-                                                {parsed.hasThinkTag &&
-                                                    parsed.beforeContent && (
-                                                        <Text whiteSpace="pre-wrap">
-                                                            {
-                                                                parsed.beforeContent
-                                                            }
-                                                        </Text>
-                                                    )}
-
-                                                {/* Handle Thinking block */}
-                                                {parsed.hasThinkTag && (
-                                                    <Box width="100%" my={1}>
-                                                        <Flex
-                                                            align="center"
-                                                            onClick={() =>
-                                                                toggleThinkingVisibility(
-                                                                    index,
-                                                                )
-                                                            }
-                                                            cursor="pointer"
-                                                            className="thinking-toggle"
-                                                            p={1}
-                                                            borderRadius="sm"
-                                                        >
-                                                            <Text mr="2">
-                                                                Thinking{" "}
-                                                                {parsed.isPartialThinking
-                                                                    ? "..."
-                                                                    : ""}
-                                                            </Text>
-                                                            <IconButton
-                                                                aria-label={
-                                                                    isThinkingExpanded
-                                                                        ? "Collapse thinking"
-                                                                        : "Expand thinking"
-                                                                }
-                                                                icon={
-                                                                    isThinkingExpanded ? (
-                                                                        <ChevronUpIcon />
-                                                                    ) : (
-                                                                        <ChevronDownIcon />
-                                                                    )
-                                                                }
-                                                                variant="outline"
-                                                                size="10"
-                                                                mr="2"
-                                                                className="collapse-toggle"
-                                                            />
-                                                        </Flex>
-                                                        <Collapse
-                                                            in={
-                                                                isThinkingExpanded
-                                                            }
-                                                            animateOpacity
-                                                        >
-                                                            <Box
-                                                                className="thinking-block"
-                                                                mt={2}
-                                                                p={3}
-                                                                borderLeftWidth="3px"
-                                                                borderColor="blue.300"
-                                                            >
-                                                                <Text whiteSpace="pre-wrap">
-                                                                    {
-                                                                        parsed.thinkContent
-                                                                    }
-                                                                </Text>
-                                                            </Box>
-                                                        </Collapse>
-                                                    </Box>
-                                                )}
-
-                                                {/* Render content after <think> tag or full content if no tag */}
+                                        {/* Render content before <think> tag */}
+                                        {parsed.hasThinkTag &&
+                                            parsed.beforeContent && (
                                                 <Text whiteSpace="pre-wrap">
-                                                    {parsed.hasThinkTag
-                                                        ? parsed.afterContent
-                                                        : parsed.content}
+                                                    {parsed.beforeContent}
                                                 </Text>
+                                            )}
 
-                                                {/* Render context links */}
-                                                {message.role === "assistant" &&
-                                                    message.context && (
-                                                        <HStack
-                                                            wrap="wrap"
-                                                            spacing={1}
-                                                            mt={1}
-                                                        >
-                                                            {Object.keys(
-                                                                message.context,
-                                                            ).map((key) => (
-                                                                <Tooltip
-                                                                    key={`${index}-context-${key}`}
-                                                                    label={
-                                                                        message
-                                                                            .context[
-                                                                            key
-                                                                        ]
-                                                                    }
-                                                                    placement="top"
-                                                                    hasArrow
-                                                                    fontSize="xs"
-                                                                    maxWidth="400px"
-                                                                    shouldWrapChildren
-                                                                    bg="gray.700"
-                                                                    color="white"
-                                                                >
-                                                                    <Text
-                                                                        as="span"
-                                                                        color="blue.500"
-                                                                        cursor="pointer"
-                                                                        fontSize="xs"
-                                                                        _hover={{
-                                                                            textDecoration:
-                                                                                "underline",
-                                                                        }}
-                                                                    >
-                                                                        [{key}]
-                                                                    </Text>
-                                                                </Tooltip>
-                                                            ))}
-                                                        </HStack>
-                                                    )}
-                                            </VStack>
-                                        )}
-                                    </Box>
-                                </Flex>
-                            );
-                        })}
-
-                        {/* Chat suggestions - only show when no non-system messages exist */}
-                        {showSuggestions &&
-                            filteredMessages.length === 0 &&
-                            userSettings && (
-                                <Flex
-                                    justify="center"
-                                    align="center"
-                                    flexWrap="wrap"
-                                    h="80%"
-                                    flexDirection="column"
-                                >
-                                    <Flex wrap="wrap" justify="center">
-                                        {[1, 2, 3].map((num) => {
-                                            const title =
-                                                userSettings[
-                                                    `quick_chat_${num}_title`
-                                                ];
-                                            const prompt =
-                                                userSettings[
-                                                    `quick_chat_${num}_prompt`
-                                                ];
-                                            if (!title || !prompt) return null;
-                                            return (
-                                                <Button
-                                                    key={num}
-                                                    leftIcon={<QuestionIcon />}
-                                                    m="1.5"
-                                                    size="md"
+                                        {/* Handle Thinking block */}
+                                        {parsed.hasThinkTag && (
+                                            <Box width="100%" my={1}>
+                                                <Flex
+                                                    align="center"
                                                     onClick={() =>
-                                                        handleSendMessage(
-                                                            prompt,
+                                                        toggleThinkingVisibility(
+                                                            index,
                                                         )
                                                     }
-                                                    className="chat-suggestions"
-                                                    variant="outline"
+                                                    cursor="pointer"
+                                                    className="thinking-toggle"
+                                                    p={1}
+                                                    borderRadius="sm"
                                                 >
-                                                    {title}
-                                                </Button>
-                                            );
-                                        })}
-                                    </Flex>
-                                </Flex>
-                            )}
+                                                    <Text mr="2">
+                                                        Thinking{" "}
+                                                        {parsed.isPartialThinking
+                                                            ? "..."
+                                                            : ""}
+                                                    </Text>
+                                                    <IconButton
+                                                        aria-label={
+                                                            isThinkingExpanded
+                                                                ? "Collapse thinking"
+                                                                : "Expand thinking"
+                                                        }
+                                                        icon={
+                                                            isThinkingExpanded ? (
+                                                                <ChevronUpIcon />
+                                                            ) : (
+                                                                <ChevronDownIcon />
+                                                            )
+                                                        }
+                                                        variant="outline"
+                                                        size="10"
+                                                        mr="2"
+                                                        className="collapse-toggle"
+                                                    />
+                                                </Flex>
+                                                <Collapse
+                                                    in={isThinkingExpanded}
+                                                    animateOpacity
+                                                >
+                                                    <Box
+                                                        className="thinking-block"
+                                                        mt={2}
+                                                        p={3}
+                                                        borderLeftWidth="3px"
+                                                        borderColor="blue.300"
+                                                    >
+                                                        <Text whiteSpace="pre-wrap">
+                                                            {
+                                                                parsed.thinkContent
+                                                            }
+                                                        </Text>
+                                                    </Box>
+                                                </Collapse>
+                                            </Box>
+                                        )}
 
-                        <div ref={messagesEndRef} />
-                    </Box>
+                                        {/* Render content after <think> tag or full content if no tag */}
+                                        <Text whiteSpace="pre-wrap">
+                                            {parsed.hasThinkTag
+                                                ? parsed.afterContent
+                                                : parsed.content}
+                                        </Text>
 
-                    {/* Input Area */}
-                    <Box p="3" borderTopWidth="1px" borderColor="inherit">
-                        {/* Quick chat buttons row - only show after messages have been sent */}
-                        {shouldShowQuickChatButtons && (
-                            <AnimatedHStack
-                                spacing="2"
-                                mb="2"
-                                justifyContent="space-between"
-                                width="100%"
-                            >
+                                        {/* Render context links */}
+                                        {message.role === "assistant" &&
+                                            message.context && (
+                                                <HStack
+                                                    wrap="wrap"
+                                                    spacing={1}
+                                                    mt={1}
+                                                >
+                                                    {Object.keys(
+                                                        message.context,
+                                                    ).map((key) => (
+                                                        <Tooltip
+                                                            key={`${index}-context-${key}`}
+                                                            label={
+                                                                message.context[
+                                                                    key
+                                                                ]
+                                                            }
+                                                            placement="top"
+                                                            hasArrow
+                                                            fontSize="xs"
+                                                            maxWidth="400px"
+                                                            shouldWrapChildren
+                                                            bg="gray.700"
+                                                            color="white"
+                                                        >
+                                                            <Text
+                                                                as="span"
+                                                                color="blue.500"
+                                                                cursor="pointer"
+                                                                fontSize="xs"
+                                                                _hover={{
+                                                                    textDecoration:
+                                                                        "underline",
+                                                                }}
+                                                            >
+                                                                [{key}]
+                                                            </Text>
+                                                        </Tooltip>
+                                                    ))}
+                                                </HStack>
+                                            )}
+                                    </VStack>
+                                )}
+                            </Box>
+                        </Flex>
+                    );
+                })}
+
+                {/* Chat suggestions - only show when no non-system messages exist */}
+                {showSuggestions &&
+                    filteredMessages.length === 0 &&
+                    userSettings && (
+                        <Flex
+                            justify="center"
+                            align="center"
+                            flexWrap="wrap"
+                            h="80%"
+                            flexDirection="column"
+                        >
+                            <Flex wrap="wrap" justify="center">
                                 {[1, 2, 3].map((num) => {
                                     const title =
                                         userSettings[`quick_chat_${num}_title`];
@@ -569,94 +492,130 @@ const Chat = ({
                                             `quick_chat_${num}_prompt`
                                         ];
                                     if (!title || !prompt) return null;
-                                    const showButtonTooltip = title.length > 25;
-
                                     return (
-                                        <Tooltip
+                                        <Button
                                             key={num}
-                                            label={title}
-                                            placement="top"
-                                            isDisabled={!showButtonTooltip}
-                                            hasArrow
-                                            fontSize="xs"
+                                            leftIcon={<QuestionIcon />}
+                                            m="1.5"
+                                            size="md"
+                                            onClick={() =>
+                                                handleSendMessage(prompt)
+                                            }
+                                            className="chat-suggestions"
+                                            variant="outline"
                                         >
-                                            <Button
-                                                leftIcon={<QuestionIcon />}
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    handleSendMessage(prompt)
-                                                }
-                                                className="quick-chat-buttons-collapsed"
-                                                flex="1"
-                                                minWidth="0"
-                                            >
-                                                <Box
-                                                    className="quick-chat-buttons-text"
-                                                    as="span"
-                                                    overflow="hidden"
-                                                    textOverflow="ellipsis"
-                                                    whiteSpace="nowrap"
-                                                    display="block"
-                                                    textAlign="left"
-                                                >
-                                                    {title}
-                                                </Box>
-                                            </Button>
-                                        </Tooltip>
+                                            {title}
+                                        </Button>
                                     );
                                 })}
-                            </AnimatedHStack>
-                        )}
-
-                        <Flex mb="2">
-                            <Input
-                                placeholder="Ask Phlox anything..."
-                                value={userInput}
-                                onChange={(e) => setUserInput(e.target.value)}
-                                onKeyPress={(e) =>
-                                    e.key === "Enter" &&
-                                    !e.shiftKey &&
-                                    (e.preventDefault(),
-                                    handleSendMessage(userInput))
-                                }
-                                mr="2"
-                                size="sm"
-                            />
-                            <IconButton
-                                icon={<ArrowUpIcon />}
-                                onClick={() => handleSendMessage(userInput)}
-                                isDisabled={!userInput.trim() || chatLoading}
-                                isLoading={chatLoading}
-                                colorScheme="purple"
-                                borderRadius="full"
-                                size="sm"
-                                aria-label="Send Message"
-                            />
+                            </Flex>
                         </Flex>
+                    )}
 
-                        {/* Disclaimer */}
-                        <Text textAlign="center" fontSize="xs" color="gray.500">
-                            Phlox may make mistakes. Always verify critical
-                            information.
-                        </Text>
-                    </Box>
+                <div ref={messagesEndRef} />
+            </Box>
 
-                    {/* Resizer */}
-                    <Box
-                        ref={resizerRef}
-                        position="absolute"
-                        top="0"
-                        left="0"
-                        width="15px"
-                        height="15px"
-                        cursor="nwse-resize"
-                        onMouseDown={handleMouseDown}
-                        zIndex={1}
+            {/* Input Area */}
+            <Box p="3" borderTopWidth="1px" borderColor="inherit">
+                {/* Quick chat buttons row - only show after messages have been sent */}
+                {shouldShowQuickChatButtons && (
+                    <AnimatedHStack
+                        spacing="2"
+                        mb="2"
+                        justifyContent="space-between"
+                        width="100%"
+                    >
+                        {[1, 2, 3].map((num) => {
+                            const title =
+                                userSettings[`quick_chat_${num}_title`];
+                            const prompt =
+                                userSettings[`quick_chat_${num}_prompt`];
+                            if (!title || !prompt) return null;
+                            const showButtonTooltip = title.length > 25;
+
+                            return (
+                                <Tooltip
+                                    key={num}
+                                    label={title}
+                                    placement="top"
+                                    isDisabled={!showButtonTooltip}
+                                    hasArrow
+                                    fontSize="xs"
+                                >
+                                    <Button
+                                        leftIcon={<QuestionIcon />}
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                            handleSendMessage(prompt)
+                                        }
+                                        className="quick-chat-buttons-collapsed"
+                                        flex="1"
+                                        minWidth="0"
+                                    >
+                                        <Box
+                                            className="quick-chat-buttons-text"
+                                            as="span"
+                                            overflow="hidden"
+                                            textOverflow="ellipsis"
+                                            whiteSpace="nowrap"
+                                            display="block"
+                                            textAlign="left"
+                                        >
+                                            {title}
+                                        </Box>
+                                    </Button>
+                                </Tooltip>
+                            );
+                        })}
+                    </AnimatedHStack>
+                )}
+
+                <Flex mb="2">
+                    <Input
+                        placeholder="Ask Phlox anything..."
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={(e) =>
+                            e.key === "Enter" &&
+                            !e.shiftKey &&
+                            (e.preventDefault(), handleSendMessage(userInput))
+                        }
+                        mr="2"
+                        size="sm"
+                        className="chat-input"
                     />
-                </AnimatedChatPanel>
-            )}
-        </Box>
+                    <IconButton
+                        icon={<ArrowUpIcon />}
+                        onClick={() => handleSendMessage(userInput)}
+                        isDisabled={!userInput.trim() || chatLoading}
+                        isLoading={chatLoading}
+                        colorScheme="purple"
+                        borderRadius="full"
+                        size="sm"
+                        aria-label="Send Message"
+                    />
+                </Flex>
+
+                {/* Disclaimer */}
+                <Text textAlign="center" fontSize="xs" color="gray.500">
+                    Phlox may make mistakes. Always verify critical information.
+                </Text>
+            </Box>
+
+            {/* Resizer */}
+            <Box
+                ref={resizerRef}
+                position="absolute"
+                top="0"
+                left="0"
+                width="15px"
+                height="15px"
+                cursor="nwse-resize"
+                onMouseDown={handleMouseDown}
+                zIndex={1}
+            />
+        </AnimatedChatPanel>
     );
 };
 

@@ -77,6 +77,10 @@ export const SectionHeader = ({ title, count, isCollapsed, onToggle }) => {
                 icon={isCollapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}
                 variant="ghost"
                 size="xs"
+                color={colors.dark.textPrimary}
+                _hover={{
+                    bg: `rgba(184, 192, 224, 0.1)`,
+                }}
                 aria-label={isCollapsed ? "Expand section" : "Collapse section"}
             />
         </Flex>

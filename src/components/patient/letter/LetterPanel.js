@@ -65,14 +65,6 @@ const LetterPanel = ({
                         <FaEnvelope size="1em" style={{ marginRight: "8px" }} />
                         <Text>Patient Letter</Text>
                     </Flex>
-                    <IconButton
-                        icon={<CloseIcon />}
-                        onClick={onClose}
-                        aria-label="Close chat"
-                        variant="outline"
-                        size="sm"
-                        className="collapse-toggle"
-                    />
                 </Flex>
 
                 {/* Content Area - Now a Flex Column */}
@@ -110,7 +102,7 @@ const LetterPanel = ({
                     </Box>
 
                     {/* Template Selection Area - Fixed size below editor */}
-                    <Box pt={5} flexShrink={0}>
+                    <Box pt={2} flexShrink={0} className="template-selector">
                         {" "}
                         {/* Prevent this section from shrinking */}
                         <TemplateSelector

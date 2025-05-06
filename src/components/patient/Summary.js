@@ -315,21 +315,6 @@ const Summary = forwardRef(
                 <Box p={[2, 3, 4]} borderRadius="sm" className="panels-bg">
                     <Flex align="center" justify="space-between">
                         <Flex align="center">
-                            <IconButton
-                                icon={
-                                    isSummaryCollapsed ? (
-                                        <ChevronRightIcon />
-                                    ) : (
-                                        <ChevronDownIcon />
-                                    )
-                                }
-                                onClick={toggleSummaryCollapse}
-                                aria-label="Toggle collapse"
-                                variant="outline"
-                                size="sm"
-                                mr="2"
-                                className="collapse-toggle"
-                            />
                             <HStack spacing={2}>
                                 <EditIcon size="1.2em" />
                                 <Text as="h3">Note</Text>
