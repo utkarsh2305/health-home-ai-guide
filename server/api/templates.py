@@ -11,8 +11,8 @@ from server.database.templates import (
     update_template,
     template_exists,
     soft_delete_template,
-    generate_template_from_note
 )
+from server.utils.templates import generate_template_from_note
 import logging
 
 router = APIRouter()

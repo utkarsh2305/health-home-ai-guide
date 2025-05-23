@@ -30,10 +30,12 @@ export const parseMessageContent = (content) => {
         };
     }
 
-    const openThinkMatch = content.match(/<think>(.*?)$/s);
+    // Change this regex to be greedy and handle the trimming more carefully
+    const openThinkMatch = content.match(/<think>(.*)$/s);
     if (openThinkMatch) {
         const beforeContent = content.split("<think>")[0].trim();
-        const partialThinkContent = openThinkMatch[1].trim();
+        // Don't trim the partial content - preserve whitespace during streaming
+        const partialThinkContent = openThinkMatch[1];
 
         return {
             hasThinkTag: true,
