@@ -11,20 +11,7 @@ import { keyframes } from "@emotion/react";
 
 import LetterPanel from "./letter/LetterPanel";
 import { useLetterTemplates } from "../../utils/hooks/useLetterTemplates";
-
-// Animation that emerges from the button position
-const emergeFromButton = keyframes`
-  from {
-    transform: scale(0.5) translateY(60px);
-    opacity: 0;
-    transform-origin: bottom right;
-  }
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    transform-origin: bottom right;
-  }
-`;
+import { emergeFromButton } from "../../theme/animations";
 
 const AnimatedBox = styled(Box)`
     animation: ${emergeFromButton} 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)
@@ -193,8 +180,8 @@ const Letter = forwardRef(
         return (
             <AnimatedBox
                 position="fixed" // Or 'absolute' if relative to a specific parent in PatientDetails DOM
-                bottom="80px" // Adjust based on FAM size and spacing
-                right="20px" // Adjust based on FAM position
+                bottom="20px" // Adjust based on FAM size and spacing
+                right="75px" // Adjust based on FAM position
                 zIndex="1000" // Below FAM menu, but above other content
                 // className="hover-letter-box" // Keep if used for other global styles
             >

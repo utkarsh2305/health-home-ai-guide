@@ -1,30 +1,25 @@
 import React, { useState, useRef } from "react";
-import {
-    Box,
-    IconButton,
-    Tooltip,
-    HStack,
-    useOutsideClick,
-} from "@chakra-ui/react";
+import { Box, IconButton, Tooltip, useOutsideClick } from "@chakra-ui/react";
 import { AddIcon, CloseIcon, ChatIcon } from "@chakra-ui/icons";
 import { FaEnvelope } from "react-icons/fa";
 import styled from "@emotion/styled";
 import { keyframes } from "@emotion/react";
 
-// Animation remains the same
+// Updated animation to move vertically upward
 const revealAnimation = keyframes`
   from {
     opacity: 0;
-    transform: translateX(20px) scale(0.8);
+    transform: translateY(20px) scale(0.8);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0) scale(1);
   }
 `;
 
 const ActionButtonWrapper = styled(Box)`
     animation: ${revealAnimation} 0.3s ease-out forwards;
+    margin-bottom: 10px;
 `;
 
 const FloatingActionMenu = ({
@@ -32,9 +27,8 @@ const FloatingActionMenu = ({
     onOpenLetter,
     isChatOpen,
     isLetterOpen,
-    // Remove forceMenuOpen prop and replace with these two:
-    onMenuOpen, // New callback to inform parent when menu opens
-    onMenuClose, // Renamed for clarity
+    onMenuOpen,
+    onMenuClose,
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef();
@@ -82,38 +76,22 @@ const FloatingActionMenu = ({
             zIndex="1050"
             ref={menuRef}
         >
-            <HStack spacing={3} justifyContent="flex-end">
-                {isMenuOpen && (
-                    <>
-                        <ActionButtonWrapper>
-                            <Tooltip
-                                label="Open Patient Letter"
-                                placement="top"
-                            >
-                                <IconButton
-                                    icon={<FaEnvelope />}
-                                    onClick={() => {
-                                        onOpenLetter();
-                                        // Keep menu open when clicking action buttons
-                                    }}
-                                    aria-label="Open Letter"
-                                    className="fam-action-button letter-fam-button"
-                                    size="md"
-                                    isRound
-                                />
-                            </Tooltip>
-                        </ActionButtonWrapper>
+            {/* Action buttons positioned above the main button */}
+            {isMenuOpen && (
+                <Box position="absolute" bottom="50px" right="5px">
+                    <Box
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="flex-end"
+                    >
                         <ActionButtonWrapper>
                             <Tooltip
                                 label="Open Chat with Phlox"
-                                placement="top"
+                                placement="left"
                             >
                                 <IconButton
                                     icon={<ChatIcon />}
-                                    onClick={() => {
-                                        onOpenChat();
-                                        // Keep menu open when clicking action buttons
-                                    }}
+                                    onClick={onOpenChat}
                                     aria-label="Open Chat"
                                     className="fam-action-button chat-fam-button"
                                     size="md"
@@ -121,23 +99,40 @@ const FloatingActionMenu = ({
                                 />
                             </Tooltip>
                         </ActionButtonWrapper>
-                    </>
-                )}
-                <Tooltip
-                    label={isMenuOpen ? "Close Menu" : "Open Actions Menu"}
-                    placement="top"
-                >
-                    <IconButton
-                        icon={mainFabIcon}
-                        onClick={toggleMenu}
-                        aria-label="Toggle Actions Menu"
-                        size="lg"
-                        isRound
-                        className="fam-main-button"
-                        boxShadow="xl"
-                    />
-                </Tooltip>
-            </HStack>
+                        <ActionButtonWrapper>
+                            <Tooltip
+                                label="Open Patient Letter"
+                                placement="left"
+                            >
+                                <IconButton
+                                    icon={<FaEnvelope />}
+                                    onClick={onOpenLetter}
+                                    aria-label="Open Letter"
+                                    className="fam-action-button letter-fam-button"
+                                    size="md"
+                                    isRound
+                                />
+                            </Tooltip>
+                        </ActionButtonWrapper>
+                    </Box>
+                </Box>
+            )}
+
+            {/* Main button always stays at the bottom right */}
+            <Tooltip
+                label={isMenuOpen ? "Close Menu" : "Open Actions Menu"}
+                placement="left"
+            >
+                <IconButton
+                    icon={mainFabIcon}
+                    onClick={toggleMenu}
+                    aria-label="Toggle Actions Menu"
+                    size="lg"
+                    isRound
+                    className="fam-main-button"
+                    boxShadow="xl"
+                />
+            </Tooltip>
         </Box>
     );
 };

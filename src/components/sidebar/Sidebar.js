@@ -139,7 +139,7 @@ const Sidebar = ({
             flexDirection="column"
             w={isCollapsed ? "60px" : "220px"}
             transition="all 0.3s ease"
-            zIndex="100"
+            zIndex={shouldFloat ? "1200" : "100"} // Increase z-index when in overlay mode
             transform={
                 isSmallScreen && isCollapsed
                     ? "translateX(-100%)"

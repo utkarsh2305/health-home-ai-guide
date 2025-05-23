@@ -13,7 +13,6 @@ export const panelStyles = (props) => ({
                 : colors.dark.textSecondary,
         borderRadius: "sm",
         shadow: "sm",
-        padding: 5,
     },
     ".panel-header": {
         display: "flex",
