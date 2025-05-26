@@ -8,7 +8,7 @@ from server.database.defaults.templates import DefaultTemplates
 from server.database.defaults.letters import DefaultLetters
 
 class PatientDatabase:
-    SCHEMA_VERSION = 2  # Current schema version
+    SCHEMA_VERSION = 3  # Current schema version
 
     def connect_to_database(self):
         """Establish encrypted database connection."""
@@ -506,6 +506,118 @@ class PatientDatabase:
             logging.error(f"Error during v2 migration: {e}")
             self.db.rollback()
             raise
+
+    def _migrate_to_v3(self):
+        """Migrate configuration from Ollama-based setup to OpenAI-compatible setup and update template schema"""
+        from server.database.defaults.templates import DefaultTemplates
+
+        try:
+            # Part 1: Handle configuration migration
+            # Get existing configuration values
+            self.cursor.execute("SELECT key, value FROM config")
+            existing_config = {}
+            for row in self.cursor.fetchall():
+                existing_config[row["key"]] = json.loads(row["value"])
+
+            # Determine LLM provider and base URL based on existing config
+            ollama_base_url = existing_config.get("OLLAMA_BASE_URL", "&nbsp;")
+
+            # If user has Ollama configured, migrate to new structure
+            if ollama_base_url != "&nbsp;" and ollama_base_url:
+                llm_provider = "ollama"
+                llm_base_url = ollama_base_url
+                llm_api_key = "&nbsp;"  # Ollama doesn't need API key
+            else:
+                # No existing Ollama setup, use defaults
+                llm_provider = "&nbsp;"
+                llm_base_url = "&nbsp;"
+                llm_api_key = "&nbsp;"
+
+            # Mapping of config values to preserve/migrate
+            config_mapping = {
+                "WHISPER_BASE_URL": existing_config.get("WHISPER_BASE_URL", "&nbsp;"),
+                "WHISPER_MODEL": existing_config.get("WHISPER_MODEL", "&nbsp;"),
+                "WHISPER_KEY": existing_config.get("WHISPER_KEY", "&nbsp;"),
+                "PRIMARY_MODEL": existing_config.get("PRIMARY_MODEL", "&nbsp;"),
+                "SECONDARY_MODEL": existing_config.get("SECONDARY_MODEL", "&nbsp;"),
+                "EMBEDDING_MODEL": existing_config.get("EMBEDDING_MODEL", "&nbsp;"),
+                "REASONING_MODEL": existing_config.get("REASONING_MODEL", "&nbsp;"),
+                "REASONING_ENABLED": existing_config.get("REASONING_ENABLED", False),
+                # New configuration keys
+                "LLM_PROVIDER": llm_provider,
+                "LLM_API_KEY": llm_api_key,
+                "LLM_BASE_URL": llm_base_url
+            }
+
+            # Remove old Ollama-specific configuration
+            self.cursor.execute("DELETE FROM config WHERE key = 'OLLAMA_BASE_URL'")
+
+            # Update/add all configuration values
+            for key, value in config_mapping.items():
+                self.cursor.execute(
+                    "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                    (key, json.dumps(value)),
+                )
+
+            # Part 2: Handle template schema migration
+            # Get default templates with new schema
+            default_templates = DefaultTemplates.get_default_templates()
+            default_fields_by_template = {}
+
+            # Create lookup for default template fields
+            for template in default_templates:
+                template_key_base = template["template_key"].split("_")[0]  # e.g., "phlox" from "phlox_01"
+                default_fields_by_template[template_key_base] = {
+                    field["field_key"]: field for field in template["fields"]
+                }
+
+            # Get all existing templates
+            self.cursor.execute("SELECT template_key, template_name, fields FROM clinical_templates")
+            templates = self.cursor.fetchall()
+
+            for template in templates:
+                template_key = template["template_key"]
+                fields = json.loads(template["fields"])
+                updated_fields = []
+
+                # Determine template type (phlox, soap, progress, or custom)
+                template_base = template_key.split("_")[0]
+                is_default_template = template_base in default_fields_by_template
+
+                for field in fields:
+                    # Start with existing field
+                    updated_field = field.copy()
+
+                    # Add missing fields from new schema
+                    if "style_example" not in updated_field:
+                        if is_default_template and field["field_key"] in default_fields_by_template[template_base]:
+                            # Use style_example from default template
+                            default_field = default_fields_by_template[template_base][field["field_key"]]
+                            updated_field["style_example"] = default_field.get("style_example", "&nbsp;")
+
+                            # Also update format_schema if it's changed in defaults
+                            if "format_schema" in default_field:
+                                updated_field["format_schema"] = default_field["format_schema"]
+                        else:
+                            # Custom template, use placeholder
+                            updated_field["style_example"] = "&nbsp;"
+
+                    updated_fields.append(updated_field)
+
+                # Update the template with new fields
+                self.cursor.execute(
+                    "UPDATE clinical_templates SET fields = ? WHERE template_key = ?",
+                    (json.dumps(updated_fields), template_key)
+                )
+
+            self.db.commit()
+            logging.info("Successfully migrated to schema version 3")
+
+        except Exception as e:
+            logging.error(f"Error during v3 migration: {e}")
+            self.db.rollback()
+            raise
+
 
     def test_database(self):
         """Test database functionality with sample data."""
