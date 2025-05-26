@@ -34,10 +34,11 @@ async def update_config(data: dict):
     config_manager.update_config(data)
     return {"message": "config.js updated successfully"}
 
+
 @router.get("/validate-url")
 async def validate_url(
     url: str = Query(..., description="URL to validate"),
-    type: str = Query(..., description="Type of URL (whisper or ollama)")
+    type: str = Query(..., description="Type of URL (whisper, ollama, or openai)")
 ):
     """Validate if a URL is accessible and returns a valid response."""
     try:
@@ -68,46 +69,98 @@ async def validate_url(
             elif type == "ollama":
                 # For Ollama, try to access the tags endpoint
                 validate_url = f"{url}/api/tags"
+                response = await client.get(validate_url, timeout=3.0)
+                return {"valid": response.status_code == 200}
+            elif type == "openai":
+                # For OpenAI-compatible, try to access the models endpoint
+                validate_url = f"{url}/v1/models"
+                try:
+                    response = await client.get(validate_url, timeout=3.0)
+                    # Most OpenAI-compatible endpoints will return 401 without auth
+                    return {"valid": response.status_code in [200, 401, 403, 404]}
+                except:
+                    # If models endpoint doesn't exist, try a different endpoint
+                    validate_url = f"{url}/v1/chat/completions"
+                    try:
+                        response = await client.post(
+                            validate_url,
+                            json={"model": "test", "messages": []},
+                            timeout=3.0
+                        )
+                        return {"valid": response.status_code in [200, 401, 403, 404, 422]}
+                    except:
+                        return {"valid": False}
             else:
                 raise HTTPException(status_code=400, detail="Invalid URL type")
-
-            response = await client.get(validate_url, timeout=3.0)
-            if response.status_code == 200:
-                return {"valid": True}
-            else:
-                return {"valid": False, "status_code": response.status_code}
 
     except Exception as e:
         logging.error(f"Error validating URL: {str(e)}")
         return {"valid": False, "error": "An internal error has occurred while validating the URL."}
+
 
 @router.get("/ollama")
 async def get_all_options():
     """Retrieve all Ollama-related configuration options."""
     return JSONResponse(content=config_manager.get_all_options())
 
-@router.get("/ollama/models")
-async def get_models(
-    ollamaEndpoint: str = Query(..., description="The endpoint for Ollama")
-):
-    """Fetch model tags from the configured Ollama endpoint."""
-    try:
-        async with httpx.AsyncClient() as client:
-            url = f"{ollamaEndpoint}/api/tags"
-            print(url)
-            response = await client.get(url)
 
-            if response.status_code == 200:
-                return response.json()
-            else:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail="Failed to fetch models",
-                )
+@router.get("/llm/models")
+async def get_llm_models(
+    provider: str = Query(..., description="LLM provider type (ollama or openai)"),
+    baseUrl: str = Query(..., description="The base URL for the LLM API"),
+    apiKey: str = Query(None, description="API key (required for OpenAI)")
+):
+    """Fetch available models from the configured LLM provider."""
+    try:
+        if provider.lower() == "ollama":
+            async with httpx.AsyncClient() as client:
+                url = f"{baseUrl}/api/tags"
+                response = await client.get(url, timeout=5.0)
+
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail="Failed to fetch Ollama models"
+                    )
+
+        elif provider.lower() == "openai":
+            # For OpenAI-compatible endpoints
+            headers = {"Authorization": f"Bearer {apiKey}"} if apiKey else {}
+
+            async with httpx.AsyncClient(headers=headers) as client:
+                url = f"{baseUrl}/v1/models"
+                try:
+                    response = await client.get(url, timeout=5.0)
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        model_list = []
+
+                        # Extract model names from response
+                        if isinstance(data, dict) and "data" in data:
+                            model_list = [model.get("id") for model in data["data"]]
+
+                        return {"models": model_list}
+                    elif response.status_code in [401, 403]:
+                        # Authentication issue - likely valid URL but bad/missing API key
+                        return {"models": [], "error": "Authentication failed"}
+                    else:
+                        # Some OpenAI-compatible APIs may not support model listing
+                        # Return empty list in this case
+                        return {"models": []}
+                except:
+                    # Endpoint might not be available, return empty list
+                    return {"models": []}
+
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported provider type")
 
     except Exception as e:
-        logging.error(f"Error fetching models: {e}")
+        logging.error(f"Error fetching LLM models: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get("/ollama/{category}")
 async def get_options_by_category(
@@ -122,6 +175,7 @@ async def get_options_by_category(
             status_code=404, detail=f"No options found for category: {category}"
         )
 
+
 @router.post("/ollama/{category}")
 async def update_options(
     category: str = Path(..., description="The category of options to update"),
@@ -133,6 +187,7 @@ async def update_options(
         "message": f"Options for category '{category}' updated successfully"
     }
 
+
 @router.get("/ollama/models")
 async def get_models(
     ollamaEndpoint: str = Query(..., description="The endpoint for Ollama")
@@ -141,7 +196,7 @@ async def get_models(
     try:
         async with httpx.AsyncClient() as client:
             url = f"{ollamaEndpoint}/api/tags"
-            print(url)
+            logging.info(f"Fetching Ollama models from: {url}")
             response = await client.get(url)
 
             if response.status_code == 200:
@@ -155,6 +210,7 @@ async def get_models(
     except Exception as e:
         logging.error(f"Error fetching models: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get("/whisper/models")
 async def get_whisper_models(
@@ -192,6 +248,7 @@ async def get_whisper_models(
         logging.error(f"Error in get_whisper_models: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
 @router.post("/reset-to-defaults")
 async def reset_to_defaults():
     """Reset configuration settings to their default values."""
@@ -211,6 +268,7 @@ async def update_user_settings(data: dict):
     config_manager.update_user_settings(data)
     return {"message": "User settings updated successfully"}
 
+
 @router.get("/changelog")
 async def get_changelog():
     """Retrieve the full changelog content."""
@@ -222,6 +280,7 @@ async def get_changelog():
     except Exception as e:
         logging.error(f"Error retrieving changelog: {str(e)}")
         return {"content": "Error retrieving changelog."}
+
 
 @router.get("/version")
 async def get_version():
@@ -242,22 +301,31 @@ async def get_version():
         logging.error(f"Error getting version from CHANGELOG.md: {str(e)}")
         return {"version": "unknown"}
 
+
 @router.get("/status")
 async def get_server_status():
-    """Check the status of Ollama and Whisper servers."""
+    """Check the status of LLM and Whisper servers."""
     config = config_manager.get_config()
     status = {
-        "ollama": False,
+        "llm": False,
         "whisper": False
     }
 
     try:
-        # Check Ollama
-        if config.get("OLLAMA_BASE_URL"):
+        # Check LLM provider
+        provider_type = config.get("LLM_PROVIDER", "ollama").lower()
+        base_url = config.get("LLM_BASE_URL")
+
+        if base_url:
             async with httpx.AsyncClient() as client:
                 try:
-                    response = await client.get(f"{config.get('OLLAMA_BASE_URL')}/api/tags", timeout=2.0)
-                    status["ollama"] = response.status_code == 200
+                    if provider_type == "ollama":
+                        response = await client.get(f"{base_url}/api/tags", timeout=2.0)
+                        status["llm"] = response.status_code == 200
+                    elif provider_type == "openai":
+                        response = await client.get(f"{base_url}/v1/models", timeout=2.0)
+                        # If we get 401/403, the service exists but requires auth
+                        status["llm"] = response.status_code in [200, 401, 403]
                 except:
                     pass
 

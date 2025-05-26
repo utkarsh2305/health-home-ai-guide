@@ -10,7 +10,7 @@ import {
 import { SunIcon, MoonIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { useState, useEffect, useCallback } from "react";
 import { TemplateProvider } from "./utils/templates/templateContext";
-import Sidebar from "./components/layout/Sidebar";
+import Sidebar from "./components/sidebar/Sidebar";
 import LandingPage from "./pages/LandingPage";
 import PatientDetails from "./pages/PatientDetails";
 import Settings from "./pages/Settings";
@@ -179,7 +179,7 @@ function AppContent() {
     return (
         <Flex position="relative">
             {/* Floating hamburger button for small screens */}
-            {isSmallScreen && (
+            {isSmallScreen && isSidebarCollapsed && (
                 <IconButton
                     icon={<HamburgerIcon />}
                     onClick={toggleSidebar}
@@ -188,24 +188,7 @@ function AppContent() {
                     left="10px"
                     zIndex="101"
                     aria-label="Toggle sidebar"
-                    size="md"
-                    boxShadow="md"
-                    borderRadius="md"
-                />
-            )}
-
-            {/* Overlay when sidebar is expanded */}
-            {isSmallScreen && !isSidebarCollapsed && (
-                <Box
-                    position="fixed"
-                    top="0"
-                    left="0"
-                    right="0"
-                    bottom="0"
-                    bg="blackAlpha.600"
-                    zIndex="90"
-                    onClick={toggleSidebar}
-                    transition="all 0.3s"
+                    className="dark-toggle"
                 />
             )}
 
@@ -223,7 +206,7 @@ function AppContent() {
 
             <Box
                 flex="1"
-                ml={isSmallScreen ? "0" : isSidebarCollapsed ? "50px" : "200px"}
+                ml={isSmallScreen ? "0" : isSidebarCollapsed ? "60px" : "220px"}
                 p={isSmallScreen ? "6" : "0"}
                 pt={isSmallScreen ? "50px" : "0"}
                 className="main-bg"

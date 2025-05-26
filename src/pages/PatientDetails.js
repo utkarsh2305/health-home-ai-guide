@@ -17,6 +17,7 @@ import Scribe from "../components/patient/Scribe";
 import Summary from "../components/patient/Summary";
 import Chat from "../components/patient/Chat";
 import Letter from "../components/patient/Letter";
+import FloatingActionMenu from "../components/common/FloatingActionMenu"; // Import our new component
 import { usePatient } from "../utils/hooks/usePatient";
 import { useCollapse } from "../utils/hooks/useCollapse";
 import { useChat } from "../utils/hooks/useChat";
@@ -75,6 +76,20 @@ const PatientDetails = ({
         searchPatient,
         loadPatientDetails,
     } = usePatient(initialPatient, setInitialPatient);
+
+    const handleChatToggle = (isOpen) => {
+        if (isOpen && !letter.isCollapsed) {
+            // If chat is opening and letter is open, close letter
+            letter.setIsCollapsed(true);
+        }
+    };
+
+    const handleLetterToggle = (isOpen) => {
+        if (isOpen && chat.chatExpanded) {
+            // If letter is opening and chat is open, close chat
+            chat.setChatExpanded(false);
+        }
+    };
 
     const transcription = useCollapse(false);
     const summary = useCollapse(false);
@@ -446,7 +461,6 @@ const PatientDetails = ({
 
         letter.setIsCollapsed(false);
         transcription.setIsCollapsed(true);
-        summary.setIsCollapsed(true);
         chat.setChatExpanded(false);
 
         await letterHook.generateLetter(
@@ -608,6 +622,32 @@ const PatientDetails = ({
         showWarningToast,
     ]);
 
+    // Functions for the Floating Action Menu
+    const handleOpenLetter = () => {
+        letter.setIsCollapsed(false);
+        chat.setChatExpanded(false);
+    };
+
+    const handleMenuOpen = () => {
+        // You can add any side effects for menu opening here if needed
+        // But we don't need to track menu state anymore
+    };
+
+    const handleOpenChat = () => {
+        chat.setChatExpanded(true);
+        letter.setIsCollapsed(true);
+    };
+
+    const handleMenuClose = () => {
+        // Close both panels when menu closes
+        if (!letter.isCollapsed) {
+            letter.setIsCollapsed(true);
+        }
+        if (chat.chatExpanded) {
+            chat.setChatExpanded(false);
+        }
+    };
+
     if (!patient) {
         return (
             <Center h="100vh">
@@ -647,7 +687,6 @@ const PatientDetails = ({
                     template={currentTemplate}
                     setLoading={setLoading}
                     previousVisitSummary={patient.previous_visit_summary}
-                    template={currentTemplate}
                     patientId={patient.id}
                     reasoning={patient.reasoning_output || null}
                     rawTranscription={patient.raw_transcription}
@@ -681,7 +720,8 @@ const PatientDetails = ({
                 />
 
                 <Letter
-                    isLetterCollapsed={letter.isCollapsed}
+                    isOpen={!letter.isCollapsed} // Convert isCollapsed to isOpen
+                    onClose={() => letter.setIsCollapsed(true)}
                     toggleLetterCollapse={letter.toggle}
                     finalCorrespondence={letterHook.finalCorrespondence}
                     handleSaveLetter={handleLetterSave}
@@ -698,11 +738,13 @@ const PatientDetails = ({
                     toast={toast}
                     patient={patient}
                     setLoading={setLoading}
+                    onLetterToggle={handleLetterToggle}
                 />
 
                 <Chat
-                    chatExpanded={chat.chatExpanded}
+                    isOpen={chat.chatExpanded}
                     setChatExpanded={chat.setChatExpanded}
+                    onClose={() => chat.setChatExpanded(false)}
                     chatLoading={chat.loading}
                     messages={chat.messages}
                     setMessages={chat.setMessages}
@@ -721,6 +763,17 @@ const PatientDetails = ({
                     rawTranscription={patient.raw_transcription}
                     currentTemplate={currentTemplate}
                     patientData={patient}
+                    onChatToggle={handleChatToggle}
+                />
+
+                {/* Add the Floating Action Menu */}
+                <FloatingActionMenu
+                    onOpenChat={handleOpenChat}
+                    onOpenLetter={handleOpenLetter}
+                    isChatOpen={chat.chatExpanded}
+                    isLetterOpen={!letter.isCollapsed}
+                    onMenuOpen={handleMenuOpen}
+                    onMenuClose={handleMenuClose}
                 />
             </VStack>
         </Box>

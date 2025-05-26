@@ -29,6 +29,7 @@ import {
     FaArrowLeft,
 } from "react-icons/fa";
 import { CheckIcon } from "@chakra-ui/icons";
+import { GreyButton } from "../../common/Buttons";
 import { useState } from "react";
 import { useTranscription } from "../../../utils/hooks/useTranscription";
 
@@ -182,7 +183,7 @@ const DocumentUploadTab = ({
                         <Button
                             leftIcon={<FaRedo />}
                             onClick={startNewUpload}
-                            className="blue-button"
+                            className="orange-button"
                         >
                             Upload New Document
                         </Button>
@@ -224,7 +225,7 @@ const DocumentUploadTab = ({
                                     accept=".pdf,.doc,.docx,.txt"
                                     className="input-style"
                                 />
-                                <Button
+                                <GreyButton
                                     px="10"
                                     leftIcon={<FaFileUpload />}
                                     onClick={() =>
@@ -232,10 +233,9 @@ const DocumentUploadTab = ({
                                             .getElementById("file-upload")
                                             .click()
                                     }
-                                    className="blue-button"
                                 >
                                     Choose Document
-                                </Button>
+                                </GreyButton>
                                 {docFileName && (
                                     <Text fontSize="sm">{docFileName}</Text>
                                 )}
@@ -267,7 +267,7 @@ const DocumentUploadTab = ({
                                     leftIcon={<FaFileUpload />}
                                     onClick={startNewUpload}
                                     size="sm"
-                                    className="blue-button"
+                                    className="orange-button"
                                 >
                                     Upload New Document
                                 </Button>
@@ -330,7 +330,7 @@ const DocumentUploadTab = ({
                                                         className={
                                                             isReplaced
                                                                 ? "green-button"
-                                                                : "template-select-button"
+                                                                : "grey-button"
                                                         }
                                                         variant={
                                                             isReplaced

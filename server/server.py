@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from server.api import chat, config, dashboard, patient, rag, transcribe, templates, letter
 from server.database.config import ConfigManager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from server.database.analysis import generate_daily_analysis, run_nightly_reasoning
@@ -38,6 +37,13 @@ DATA_DIR = Path("/usr/src/app/data")
 BUILD_DIR = Path("/usr/src/app/build")
 IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
 
+
+# Initialize config_manager and run migrations
+logger.info("Initializing database and running migrations...")
+from server.database.config import config_manager
+
+# Then load API submodules
+from server.api import chat, config, dashboard, patient, rag, transcribe, templates, letter
 
 # Schedule daily analysis
 scheduler.add_job(generate_daily_analysis, "cron", hour=3)

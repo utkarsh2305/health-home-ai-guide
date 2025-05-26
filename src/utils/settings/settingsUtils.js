@@ -2,6 +2,7 @@ import { settingsApi } from "../api/settingsApi";
 import { letterApi } from "../api/letterApi";
 import { settingsHelpers } from "../helpers/settingsHelpers";
 import { templateService } from "../templates/templateService";
+
 export const settingsService = {
     fetchConfig: async () => {
         const response = await settingsApi.fetchConfig();
@@ -27,12 +28,51 @@ export const settingsService = {
             );
     },
 
+    // New consolidated method to fetch LLM models - works for both Ollama and OpenAI-compatible
+    fetchLLMModels: async (config, setModelOptions) => {
+        try {
+            if (!config.LLM_BASE_URL) {
+                setModelOptions([]);
+                return;
+            }
+
+            const providerType = config.LLM_PROVIDER || "ollama";
+            const baseUrl = config.LLM_BASE_URL;
+            const apiKey = config.LLM_API_KEY || "";
+
+            const response = await settingsApi.fetchLLMModels(
+                providerType,
+                baseUrl,
+                apiKey,
+            );
+
+            if (providerType === "ollama") {
+                // Format for Ollama response
+                setModelOptions(response.models.map((model) => model.name));
+            } else {
+                // Format for OpenAI-compatible response
+                setModelOptions(response.models || []);
+            }
+        } catch (error) {
+            console.error(
+                `Error fetching ${config.LLM_PROVIDER} models:`,
+                error,
+            );
+            setModelOptions([]);
+        }
+    },
+
+    // Keep the old method for backward compatibility, but use the new one internally
     fetchOllamaModels: (ollamaBaseUrl, setModelOptions) => {
         return settingsApi
             .fetchOllamaModels(ollamaBaseUrl)
             .then((data) =>
                 setModelOptions(data.models.map((model) => model.name)),
-            );
+            )
+            .catch((error) => {
+                console.error("Error fetching Ollama models:", error);
+                setModelOptions([]);
+            });
     },
 
     fetchWhisperModels: async (

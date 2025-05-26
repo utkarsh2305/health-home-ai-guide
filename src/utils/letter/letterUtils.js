@@ -1,4 +1,5 @@
 import { encodingForModel } from "js-tiktoken";
+import { letterApi } from "../api/letterApi";
 
 const enc = encodingForModel("gpt-4o");
 
@@ -10,7 +11,7 @@ export const truncateLetterContext = (messages, maxTokens) => {
 
     // Calculate total tokens
     let totalTokens = messages.reduce((sum, msg) => sum + countTokens(msg), 0);
-    console.log(totalTokens);
+
     // Create a working copy of messages
     let workingMessages = [...messages];
 
@@ -54,4 +55,35 @@ export const truncateLetterContext = (messages, maxTokens) => {
     }
 
     return workingMessages;
+};
+
+// New utility functions
+export const autoResizeTextarea = (textarea) => {
+    if (textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+    }
+};
+
+export const formatLetterContent = (content) => {
+    if (!content) return "No letter attached to encounter";
+    return content;
+};
+
+export const getDefaultInstructions = async () => {
+    try {
+        const responseTemplates = await letterApi.fetchLetterTemplates();
+        if (responseTemplates && responseTemplates.default_template_id) {
+            const defaultTemplate = responseTemplates.templates.find(
+                (tpl) => tpl.id === responseTemplates.default_template_id,
+            );
+            if (defaultTemplate) {
+                return defaultTemplate.instructions || "";
+            }
+        }
+        return "";
+    } catch (error) {
+        console.error("Error getting default instructions:", error);
+        return "";
+    }
 };

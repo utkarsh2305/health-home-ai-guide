@@ -13,13 +13,15 @@ export const panelStyles = (props) => ({
                 : colors.dark.textSecondary,
         borderRadius: "sm",
         shadow: "sm",
-        padding: 5,
     },
     ".panel-header": {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 4,
+        borderBottom:
+            props.colorMode === "light"
+                ? `1px solid ${colors.light.surface} !important`
+                : `1px solid ${colors.dark.surface} !important`,
     },
     ".panel-content": {
         backgroundColor:
@@ -44,6 +46,7 @@ export const panelStyles = (props) => ({
                 : `${colors.dark.textSecondary} !important`,
         borderColor: "#cecacd",
         border: "none !important",
+        borderRadius: "md !important",
         fontSize: "1rem !important",
         fontWeight: "700",
     },

@@ -147,11 +147,11 @@ const LetterTemplatesPanel = ({ isCollapsed, setIsCollapsed }) => {
                             setEditTemplate(null);
                             setIsEditing(true);
                         }}
-                        className="summary-buttons"
+                        className="grey-button"
                     >
                         New Template
                     </Button>
-                    <Button onClick={handleReset} colorScheme="yellow">
+                    <Button onClick={handleReset} className="red-button">
                         Reset to Defaults
                     </Button>
                 </HStack>

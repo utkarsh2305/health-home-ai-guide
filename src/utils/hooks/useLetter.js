@@ -2,12 +2,13 @@ import { useState } from "react";
 import { letterApi } from "../api/letterApi";
 import { validateLetterData } from "../helpers/validationHelpers";
 import { useToastMessage } from "./UseToastMessage";
-import { truncateLetterContext } from "../../utils/letter/letterUtils";
+import { truncateLetterContext } from "../letter/letterUtils";
 
 export const useLetter = (setIsModified) => {
     const [loading, setLoading] = useState(false);
     const [finalCorrespondence, setFinalCorrespondence] = useState("");
     const [letterContext, setLetterContext] = useState([]);
+    const [saveState, setSaveState] = useState("idle"); // Added saveState
     const { showSuccessToast, showErrorToast } = useToastMessage();
 
     const generateLetter = async (patient, additionalInstructions) => {
@@ -73,12 +74,16 @@ export const useLetter = (setIsModified) => {
             return;
         }
 
+        setSaveState("saving");
         try {
             await letterApi.saveLetter(patientId, finalCorrespondence);
             setIsModified(false);
+            setSaveState("saved");
+            setTimeout(() => setSaveState("idle"), 2000);
             showSuccessToast("Letter saved successfully");
         } catch (error) {
             console.error("Error saving letter:", error);
+            setSaveState("idle");
             showErrorToast(error.message || "Failed to save letter");
             throw error; // Propagate error to handle in component
         }
@@ -123,7 +128,7 @@ export const useLetter = (setIsModified) => {
                 updatedContext,
                 maxTokens * 0.9,
             );
-            console.log(maxTokens);
+
             // Call the generateLetter API with the new context.
             const response = await letterApi.generateLetter({
                 patientName: patient.name,
@@ -134,13 +139,15 @@ export const useLetter = (setIsModified) => {
             });
 
             // Append the assistant's response.
-            setLetterContext([
+            const newContext = [
                 ...truncatedContext,
                 {
                     role: "assistant",
                     content: response.letter,
                 },
-            ]);
+            ];
+
+            setLetterContext(newContext);
             setFinalCorrespondence(response.letter);
             setIsModified(true);
             onSuccess();
@@ -156,6 +163,7 @@ export const useLetter = (setIsModified) => {
     function clearLetterContext() {
         setLetterContext([]);
     }
+
     async function loadLetter(patientId) {
         setLoading(true);
         try {
@@ -175,6 +183,7 @@ export const useLetter = (setIsModified) => {
 
     function resetLetter() {
         setFinalCorrespondence("");
+        setLetterContext([]);
         setIsModified(false);
     }
 
@@ -190,5 +199,7 @@ export const useLetter = (setIsModified) => {
         letterContext,
         setLetterContext,
         clearLetterContext,
+        saveState,
+        setSaveState,
     };
 };

@@ -42,7 +42,7 @@ const DailyAnalysisPanel = ({
             </Flex>
 
             <Box
-                className="chat-main custom-scrollbar"
+                className="floating-main custom-scrollbar"
                 p="4"
                 minH="200px"
                 maxH="400px"

@@ -27,7 +27,7 @@ import {
     CheckIcon,
 } from "@chakra-ui/icons";
 import { FaMicrophone, FaStop, FaSave, FaFileAlt } from "react-icons/fa";
-import { GreenButton, BlueButton, TertiaryButton } from "../common/Buttons";
+import { GreenButton, OrangeButton, GreyButton } from "../common/Buttons";
 import { useTemplateSelection } from "../../utils/templates/templateContext";
 import ConfirmLeaveModal from "../modals/ConfirmLeaveModal";
 
@@ -315,21 +315,6 @@ const Summary = forwardRef(
                 <Box p={[2, 3, 4]} borderRadius="sm" className="panels-bg">
                     <Flex align="center" justify="space-between">
                         <Flex align="center">
-                            <IconButton
-                                icon={
-                                    isSummaryCollapsed ? (
-                                        <ChevronRightIcon />
-                                    ) : (
-                                        <ChevronDownIcon />
-                                    )
-                                }
-                                onClick={toggleSummaryCollapse}
-                                aria-label="Toggle collapse"
-                                variant="outline"
-                                size="sm"
-                                mr="2"
-                                className="collapse-toggle"
-                            />
                             <HStack spacing={2}>
                                 <EditIcon size="1.2em" />
                                 <Text as="h3">Note</Text>
@@ -400,7 +385,7 @@ const Summary = forwardRef(
                         </Box>
                         <Flex mt="4" justifyContent="space-between">
                             <Flex>
-                                <TertiaryButton
+                                <GreyButton
                                     onClick={() =>
                                         handleGenerateLetterClick(null)
                                     }
@@ -409,10 +394,10 @@ const Summary = forwardRef(
                                     isDisabled={saveLoading}
                                 >
                                     Generate Letter
-                                </TertiaryButton>
+                                </GreyButton>
                             </Flex>
                             <Flex>
-                                <BlueButton
+                                <GreyButton
                                     onClick={onCopy}
                                     width="190px"
                                     leftIcon={
@@ -427,7 +412,7 @@ const Summary = forwardRef(
                                     {recentlyCopied
                                         ? "Copied!"
                                         : "Copy to Clipboard"}
-                                </BlueButton>
+                                </GreyButton>
                                 <GreenButton
                                     onClick={handleSavePatientData}
                                     isLoading={saveLoading}

@@ -1,6 +1,7 @@
-# server/utils/helpers.py
+from ast import Try
 from datetime import datetime
-from ollama import AsyncClient as AsyncOllamaClient
+from numpy import resize
+from server.utils.llm_client import AsyncLLMClient, LLMProviderType, get_llm_client
 from server.schemas.patient import Patient, Condition
 from server.database.config import config_manager
 from server.schemas.grammars import ClinicalReasoning
@@ -33,8 +34,7 @@ async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
 
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
-
-    client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
+    client = get_llm_client()
 
     if not patient.dob or not patient.encounter_date:
         raise ValueError("DOB or Encounter Date is missing")
@@ -116,11 +116,11 @@ async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
 async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: str, gender: str):
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
-    client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
+    client = get_llm_client()
 
     age = calculate_age(dob, encounter_date)
     reasoning_options = prompts["options"].get("reasoning", {})
-    reasoning_prompt = prompts["prompts"]["reasoning"]["system"] # Assuming this structure
+    reasoning_prompt = prompts["prompts"]["reasoning"]["system"]
 
     # Format the clinical note more naturally
     formatted_note = ""
@@ -147,16 +147,74 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
     3. Recommended investigations
     4. Key clinical considerations
 
-    Structure your response using JSON; do your <thinking> (raw reasoning) in the 'thinking' field. Then proceed to generate keywords for 'differentials' (top 3),'investigations' (5-7 items), and 'clinical_considerations' (3-5 items) in the respective JSON field."""
+    The key is to provide additional clinical considerations to the doctor, so feel free to take a critical eye to the clinician's perspective if appropriate."""
 
-    response = await client.chat(
-        model=config["REASONING_MODEL"],
-        messages=[{"role": "user", "content": prompt}],
-        format=ClinicalReasoning.model_json_schema(),
-        options=reasoning_options
-    )
+    # Create a modified schema that doesn't include the thinking field for the final response
+    # We'll add it back later for Qwen models
+    modified_schema = {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "differentials": {"type": "array", "items": {"type": "string"}},
+            "investigations": {"type": "array", "items": {"type": "string"}},
+            "clinical_considerations": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["summary", "differentials", "investigations", "clinical_considerations"]
+    }
 
-    return ClinicalReasoning.model_validate_json(response.message.content)
+    # Check if using Qwen3 model
+    model_name = config["REASONING_MODEL"].lower()
+    thinking = ""
+
+    if "qwen3" in model_name:
+        logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+
+        # First message for thinking only
+        thinking_messages = [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": "<think>"}
+        ]
+
+        # Make initial call for thinking only
+        thinking_options = reasoning_options.copy()
+        thinking_options["stop"] = ["</think>"]
+
+        thinking_response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=thinking_messages,
+            options=thinking_options
+        )
+
+        # Extract thinking content
+        thinking = thinking_response["message"]["content"]
+
+        # Now make the structured output call with thinking included
+        response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": f"<think>{thinking}</think>"}
+            ],
+            format=modified_schema,
+            options=reasoning_options
+        )
+
+        # Create the full response with thinking included
+        result_dict = json.loads(response["message"]["content"])
+        result_dict["thinking"] = thinking
+
+        # Convert to ClinicalReasoning model
+        return ClinicalReasoning.model_validate(result_dict)
+    else:
+        # Standard approach for other models
+        response = await client.chat(
+            model=config["REASONING_MODEL"],
+            messages=[{"role": "user", "content": prompt}],
+            format=ClinicalReasoning.model_json_schema(),
+            options=reasoning_options
+        )
+
+        return ClinicalReasoning.model_validate_json(response.message.content)
 
 def calculate_age(dob: str, encounter_date: str = None) -> int:
     """
@@ -201,6 +259,7 @@ async def refine_field_content(
 ) -> Union[str, Dict]:
     """
     Refine the content of a single field using style examples and format schema.
+    Handles special case for Qwen3 models, allowing for a thinking step before structured output.
 
     Args:
         content (Union[str, Dict]): The raw content to refine.
@@ -216,7 +275,7 @@ async def refine_field_content(
 
         # Get configuration and client
         config = config_manager.get_config()
-        client = AsyncOllamaClient(host=config["OLLAMA_BASE_URL"])
+        client = get_llm_client()
         prompts = config_manager.get_prompts_and_options()
         options = prompts["options"]["general"]
 
@@ -226,16 +285,64 @@ async def refine_field_content(
         # Build system prompt with style example if available
         system_prompt = build_system_prompt(field, format_details, prompts)
 
-        # Execute the model call
-        response = await client.chat(
-            model=config["PRIMARY_MODEL"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": content},
-            ],
-            format=format_details["response_format"],
-            options=options
-        )
+        # Create base messages for all models
+        base_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content}
+        ]
+
+        # Check if using Qwen3 model
+        model_name = config["PRIMARY_MODEL"].lower()
+        thinking = ""
+
+        if "qwen3" in model_name:
+            logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+
+            # Create a copy of base_messages for the thinking step
+            thinking_messages = base_messages.copy()
+            thinking_messages.append({
+                "role": "assistant",
+                "content": "<think>\n"
+            })
+
+            # Make initial call for thinking only
+            thinking_options = options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            thinking_response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+
+            # Add thinking to the main request
+            full_messages = base_messages.copy()
+            full_messages.append({
+                "role": "assistant",
+                "content": thinking
+            })
+            #print(full_messages, flush=True)
+            # Now make the structured output call with the thinking included
+            response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=full_messages,
+                format=format_details["response_format"],
+                options=options
+            )
+            print(response, flush=True)
+        else:
+            # Standard approach for other models
+            response = await client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=base_messages,
+                format=format_details["response_format"],
+                options=options
+            )
+
+        logger.debug(f"Response received for field {field.field_key}")
 
         # Format the response appropriately
         return format_refined_response(response, field, format_details)
@@ -276,7 +383,7 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
     # Check if field has style_example and prioritize it
     if hasattr(field, 'style_example') and field.style_example:
         return f"""
-        You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy.
+        You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy. The medical information is a summary of a patient transcript. The summary was generated by an automated system therefore it may contain irrelevant information.
 
         STYLE EXAMPLE:
         {field.style_example}
@@ -290,7 +397,7 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
         - Tense (past/present) and perspective (first/third person)
 
         2. IMPORTANT CONSTRAINTS:
-        - Preserve ALL clinical details and values from the original text
+        - Preserve ALL important clinical details from the original text; information which is irrelevant to the clinical encounter should be removed.
         - Do not add information not present in the input
         - RETURN JSON IN THE REQUESTED FORMAT
         - If the style example uses abbreviations like "SNT" or "HSM", use similar appropriate medical abbreviations
@@ -353,3 +460,29 @@ def format_bulleted_list(key_points: List[str], field: TemplateField) -> str:
         cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
         formatted_key_points.append(f"{bullet_char} {cleaned_point}")
     return "\n".join(formatted_key_points)
+
+def clean_think_tags(message_list):
+    """
+    Remove <think> tags and their contents from conversation history messages.
+
+    Args:
+        message_list (list): List of message dictionaries
+
+    Returns:
+        list: Cleaned message list with <think> tags removed
+    """
+    cleaned_messages = []
+
+    for message in message_list:
+        if "content" in message and isinstance(message["content"], str):
+            # Remove <think>...</think> patterns from content
+            cleaned_content = re.sub(r'<think>.*?</think>', '', message["content"], flags=re.DOTALL)
+            # Create a new message with cleaned content
+            cleaned_message = message.copy()
+            cleaned_message["content"] = cleaned_content.strip()
+            cleaned_messages.append(cleaned_message)
+        else:
+            # If no content or not a string, keep the message as is
+            cleaned_messages.append(message)
+
+    return cleaned_messages

@@ -4,7 +4,9 @@ import { colors } from "../colors";
 export const tabStyles = (props) => ({
     ".tab-style": {
         backgroundColor: "transparent !important",
-        borderRadius: "sm !important",
+        borderRadius: "0 !important",
+        borderTopLeftRadius: "md !important",
+        borderTopRightRadius: "md !important",
         marginBottom: "-1px",
         "&[aria-selected=true]": {
             backgroundColor:

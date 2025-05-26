@@ -145,23 +145,52 @@ const ModelSettingsPanel = ({
                     </Box>
 
                     <Box>
-                        <Tooltip label="Base URL for the Ollama service">
+                        <Tooltip label="Choose the LLM provider">
                             <Text fontSize="sm" mt="2">
-                                Ollama Base URL
+                                LLM Provider Type
+                            </Text>
+                        </Tooltip>
+                        <Select
+                            size="sm"
+                            value={config?.LLM_PROVIDER || "ollama"}
+                            onChange={(e) =>
+                                handleConfigChange(
+                                    "LLM_PROVIDER",
+                                    e.target.value,
+                                )
+                            }
+                            className="input-style"
+                        >
+                            <option value="ollama">Ollama</option>
+                            <option value="openai">OpenAI-compatible</option>
+                        </Select>
+                    </Box>
+
+                    <Box>
+                        <Tooltip label="Base URL for the LLM API">
+                            <Text fontSize="sm" mt="2">
+                                {config?.LLM_PROVIDER === "openai"
+                                    ? "OpenAI-compatible API Base URL"
+                                    : "Ollama Base URL"}
                             </Text>
                         </Tooltip>
                         <InputGroup size="sm">
                             <Input
-                                value={config?.OLLAMA_BASE_URL || ""}
+                                value={config?.LLM_BASE_URL || ""}
                                 onChange={(e) =>
                                     handleConfigChange(
-                                        "OLLAMA_BASE_URL",
+                                        "LLM_BASE_URL",
                                         e.target.value,
                                     )
                                 }
+                                placeholder={
+                                    config?.LLM_PROVIDER === "openai"
+                                        ? "https://api.openai.com"
+                                        : "http://localhost:11434"
+                                }
                                 className="input-style"
                             />
-                            {urlStatus.ollama && (
+                            {urlStatus.llm && ( // Changed from urlStatus.ollama to urlStatus.llm
                                 <InputRightElement>
                                     <Tooltip label="Connection successful">
                                         <CheckCircleIcon color="green.500" />
@@ -170,6 +199,28 @@ const ModelSettingsPanel = ({
                             )}
                         </InputGroup>
                     </Box>
+
+                    {config?.LLM_PROVIDER === "openai" && (
+                        <Box>
+                            <Tooltip label="API key for the OpenAI-compatible service">
+                                <Text fontSize="sm" mt="2">
+                                    API Key
+                                </Text>
+                            </Tooltip>
+                            <Input
+                                size="sm"
+                                type="password"
+                                value={config?.LLM_API_KEY || ""}
+                                onChange={(e) =>
+                                    handleConfigChange(
+                                        "LLM_API_KEY",
+                                        e.target.value,
+                                    )
+                                }
+                                className="input-style"
+                            />
+                        </Box>
+                    )}
 
                     <Box>
                         <Tooltip label="Primary model for generating responses">

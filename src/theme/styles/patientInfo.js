@@ -12,7 +12,7 @@ export const patientInfoStyles = (props) => ({
                 : `${colors.dark.secondary} !important`,
         border: "none",
         padding: "10px 20px",
-        borderRadius: "sm",
+        borderRadius: "md",
     },
     ".pill-box-icons": {
         color:
@@ -38,7 +38,7 @@ export const patientInfoStyles = (props) => ({
                 ? `1px solid ${colors.light.surface} !important`
                 : `${colors.dark.textTertiary} !important`,
         padding: "7px 8px !important",
-        borderRadius: "sm !important",
+        borderRadius: "md !important",
         fontSize: "0.9rem !important",
     },
     ".search-button": {

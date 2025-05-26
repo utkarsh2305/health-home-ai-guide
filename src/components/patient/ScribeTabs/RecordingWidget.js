@@ -29,7 +29,7 @@ import {
 import { useTranscription } from "../../../utils/hooks/useTranscription";
 
 // WaveformVisualizer component
-const WaveformVisualizer = React.memo(({ isRecording, isPaused }) => {
+const WaveformVisualizer = React.memo(({ isRecording, isPaused, timer }) => {
     const theme = useTheme();
     const { colorMode } = useColorMode();
     const barCount = window.innerWidth < 768 ? 8 : 16;
@@ -43,12 +43,24 @@ const WaveformVisualizer = React.memo(({ isRecording, isPaused }) => {
 
     if (!isRecording && !isPaused) return null;
 
+    // Format the timer
+    const minutes = Math.floor(timer / 60);
+    const seconds = String(timer % 60).padStart(2, "0");
+    const formattedTime = `${minutes}:${seconds}`;
+
     return (
-        <Flex h="40px" align="center" justify="center" mt={2}>
+        <Flex
+            h="50px"
+            align="center"
+            justify="center"
+            mt={2}
+            position="relative"
+        >
             {bars.map((bar, i) => (
                 <Box
                     key={i}
-                    w="3px"
+                    zIndex="1"
+                    w="2px"
                     mx="1.5px"
                     borderRadius="full"
                     bg={
@@ -71,11 +83,25 @@ const WaveformVisualizer = React.memo(({ isRecording, isPaused }) => {
                         animationDelay: `${bar.delay}s`,
                         height: isPaused ? "8px" : undefined,
                         transition: "all 0.3s ease-out",
-                        // Preserve the current animation state when pausing
                         animationPlayState: isPaused ? "paused" : "running",
                     }}
                 />
             ))}
+
+            {/* Overlay timer on the waveform */}
+            <Text
+                position="absolute"
+                fontSize="3rem"
+                fontWeight="bold"
+                fontFamily="'Space Grotesk', sans-serif !important"
+                color={`${theme.colors[colorMode === "light" ? "light" : "dark"].primaryButton}60`}
+                textShadow={
+                    colorMode === "light" ? "0 0 3px white" : "0 0 3px black"
+                }
+                zIndex="0"
+            >
+                {formattedTime}
+            </Text>
         </Flex>
     );
 });
@@ -424,7 +450,7 @@ const RecordingWidget = ({
                         <Button
                             leftIcon={<FaRedo />}
                             onClick={startNewRecording}
-                            className="blue-button"
+                            className="orange-button"
                         >
                             {mode === "upload"
                                 ? "Upload New File"
@@ -473,7 +499,11 @@ const RecordingWidget = ({
                                             <FaMicrophone />
                                         )
                                     }
-                                    className="blue-button"
+                                    className={
+                                        isRecording
+                                            ? "orange-button"
+                                            : "green-button"
+                                    }
                                 >
                                     {isRecording
                                         ? isPaused
@@ -506,7 +536,7 @@ const RecordingWidget = ({
                                         onClick={sendRecording}
                                         colorScheme="blue"
                                         leftIcon={<FaRedo />}
-                                        className="blue-button"
+                                        className="orange-button"
                                     >
                                         Send Recording
                                     </Button>
@@ -519,13 +549,8 @@ const RecordingWidget = ({
                                     isRecording={isRecording}
                                     isPaused={isPaused}
                                     colorMode={colorMode}
+                                    timer={timer}
                                 />
-                            )}
-
-                            {isRecording && (
-                                <Text>{`Recording Time: ${Math.floor(timer / 60)}:${String(
-                                    timer % 60,
-                                ).padStart(2, "0")}`}</Text>
                             )}
                         </>
                     ) : (
@@ -546,7 +571,7 @@ const RecordingWidget = ({
                                         .getElementById("audio-file-input")
                                         .click()
                                 }
-                                className="blue-button"
+                                className="grey-button"
                             >
                                 Upload Audio File
                             </Button>

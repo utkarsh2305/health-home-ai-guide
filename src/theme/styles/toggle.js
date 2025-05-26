@@ -19,7 +19,7 @@ export const toggleStyles = (props) => ({
     },
     ".switch-mode": {
         display: "inline-flex",
-        borderRadius: "sm !important",
+        borderRadius: "lg !important",
         justifyContent: "center",
         alignItems: "center",
         backgroundColor:
@@ -45,7 +45,7 @@ export const toggleStyles = (props) => ({
             props.colorMode === "light"
                 ? `${colors.light.textTertiary} !important`
                 : `${colors.dark.textTertiary} !important`,
-        borderRadius: "sm !important",
+        borderRadius: "md !important",
     },
     ".dark-toggle:hover": {
         backgroundColor:

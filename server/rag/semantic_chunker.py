@@ -92,7 +92,7 @@ class ClusterSemanticChunker(BaseChunker):
 
     def split_text(self, text: str) -> List[str]:
         sentences = self.splitter.split_text(text)
-
+        print(self.embedding_function)
         similarity_matrix = self._get_similarity_matrix(
             self.embedding_function, sentences
         )

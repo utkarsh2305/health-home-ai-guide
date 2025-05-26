@@ -75,9 +75,9 @@ const Settings = () => {
                 default_template: defaultTemplate.template_key,
             }));
 
-            if (configData?.OLLAMA_BASE_URL) {
-                await settingsService.fetchOllamaModels(
-                    configData.OLLAMA_BASE_URL,
+            if (configData?.LLM_BASE_URL) {
+                await settingsService.fetchLLMModels(
+                    configData,
                     setModelOptions,
                 );
             }
@@ -117,17 +117,19 @@ const Settings = () => {
                 setUrlStatus((prev) => ({ ...prev, whisper: whisperValid }));
             }
 
-            if (config?.OLLAMA_BASE_URL) {
-                const ollamaValid = await settingsService.validateUrl(
-                    "ollama",
-                    config.OLLAMA_BASE_URL,
+            if (config?.LLM_BASE_URL) {
+                // Use provider type from config for URL validation
+                const providerType = config?.LLM_PROVIDER || "ollama";
+                const llmValid = await settingsService.validateUrl(
+                    providerType,
+                    config.LLM_BASE_URL,
                 );
-                setUrlStatus((prev) => ({ ...prev, ollama: ollamaValid }));
+                setUrlStatus((prev) => ({ ...prev, llm: llmValid }));
             }
         };
 
         validateUrls();
-    }, [config?.WHISPER_BASE_URL, config?.OLLAMA_BASE_URL]);
+    }, [config?.WHISPER_BASE_URL, config?.LLM_BASE_URL, config?.LLM_PROVIDER]);
 
     useEffect(() => {
         const fetchLetterTemplates = async () => {

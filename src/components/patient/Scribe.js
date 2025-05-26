@@ -162,7 +162,7 @@ const Scribe = ({
                         )}
                     </TabList>
                     <TabPanels>
-                        <TabPanel className="chat-main">
+                        <TabPanel className="floating-main">
                             <VoiceInputTab
                                 mode={mode}
                                 setMode={setMode}
@@ -178,7 +178,7 @@ const Scribe = ({
                             />
                         </TabPanel>
 
-                        <TabPanel className="chat-main">
+                        <TabPanel className="floating-main">
                             <DocumentUploadTab
                                 handleDocumentComplete={handleDocumentComplete}
                                 name={name}
@@ -191,7 +191,7 @@ const Scribe = ({
                         </TabPanel>
 
                         {previousVisitSummary && (
-                            <TabPanel className="chat-main">
+                            <TabPanel className="floating-main">
                                 <PreviousVisitTab
                                     previousVisitSummary={previousVisitSummary}
                                 />
@@ -199,7 +199,7 @@ const Scribe = ({
                         )}
 
                         {patientId && (
-                            <TabPanel className="chat-main">
+                            <TabPanel className="floating-main">
                                 <ReasoningTab
                                     patientId={patientId}
                                     reasoning={reasoning}

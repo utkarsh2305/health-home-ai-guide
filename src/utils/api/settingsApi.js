@@ -1,4 +1,3 @@
-// API functions for fetching and saving settings configurations.
 import { handleApiRequest } from "../helpers/apiHelpers";
 
 export const settingsApi = {
@@ -26,6 +25,26 @@ export const settingsApi = {
             errorMessage: "Failed to fetch options",
         }),
 
+    // New method to fetch models for any LLM provider
+    fetchLLMModels: (providerType, baseUrl, apiKey = null) => {
+        const params = new URLSearchParams({
+            provider: providerType,
+            baseUrl: baseUrl,
+        });
+
+        if (apiKey) {
+            params.append("apiKey", apiKey);
+        }
+
+        const apiUrl = `/api/config/llm/models?${params.toString()}`;
+
+        return handleApiRequest({
+            apiCall: () => fetch(apiUrl),
+            errorMessage: `Failed to fetch ${providerType} models`,
+        });
+    },
+
+    // Keep for backward compatibility
     fetchOllamaModels: (ollamaBaseUrl) => {
         const apiUrl = `/api/config/ollama/models?ollamaEndpoint=${encodeURIComponent(ollamaBaseUrl)}`;
         return handleApiRequest({

@@ -1,9 +1,9 @@
 import random
 import logging
 from fastapi import HTTPException
-from ollama import Client as ollamaClient
 from server.database.config import config_manager
-
+from server.schemas.grammars import LetterDraft
+from server.utils.llm_client import get_llm_client
 
 async def generate_letter_content(
     patient_name: str,
@@ -12,15 +12,15 @@ async def generate_letter_content(
     additional_instruction: str | None = None,
     context: list | None = None
 ):
-    """Generates letter content using Ollama based on provided data and prompts."""
+    """Generates letter content using the LLM client based on provided data and prompts."""
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
-    client = ollamaClient(host=config["OLLAMA_BASE_URL"])
+    llm_client = get_llm_client()
 
     try:
         # Always start with system messages
         request_body = [
-             {
+            {
                 "role": "system",
                 "content": prompts["prompts"]["letter"]["system"]
             },
@@ -40,7 +40,6 @@ async def generate_letter_content(
             doctor_context += f"a {specialty} specialist." if specialty else "a specialist."
             request_body.append({"role": "system", "content": doctor_context})
 
-
         # Format clinic note
         clinic_note = "\n\n".join(
             f"{key.replace('_', ' ').title()}:\n{value}"
@@ -49,34 +48,73 @@ async def generate_letter_content(
         )
 
         # Always include initial patient data as first user message
-        request_body.append({
+        user_message = {
             "role": "user",
-             "content": f"Patient Name: {patient_name}\nGender: {gender}\n\nClinic Note:\n{clinic_note}",
-        })
+            "content": f"Patient Name: {patient_name}\nGender: {gender}\n\nClinic Note:\n{clinic_note}",
+        }
 
         # Add any context from the frontend
         if context:
-            request_body.extend(context)
+            context_messages = context.copy()
+            request_body.extend(context_messages)
 
-        # Always end with the code block prompt
-        request_body.append({
-            "role": "assistant",
-            "content": "I'll write the letter in a code block:\n```",
-        })
+        # Check if using Qwen3 model
+        model_name = config["PRIMARY_MODEL"].lower()
+        thinking = ""
+
+        if "qwen3" in model_name:
+            print(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.", flush=True)
+
+            # Create a copy of request_body for the thinking step
+            thinking_messages = request_body.copy()
+            thinking_messages.append(user_message)
+            thinking_messages.append({
+                "role": "assistant",
+                "content": "<think>"
+            })
+
+            # Make initial call for thinking only
+            thinking_options = prompts["options"]["general"].copy()
+            thinking_options["stop"] = ["</think>"]
+
+            thinking_response = await llm_client.chat(
+                model=config["PRIMARY_MODEL"],
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = thinking_response["message"]["content"] + "</think>"
+
+        # Add user message to the main request body
+        request_body.append(user_message)
+
+        # If we have thinking, add it to the conversation
+        if thinking:
+            request_body.append({
+                "role": "assistant",
+                "content": thinking
+            })
+
+        # Set up response format for structured output
+        response_format = LetterDraft.model_json_schema()
 
         # Letter options
         options = prompts["options"]["general"].copy() # General options
         options["temperature"] = prompts["options"]["letter"]["temperature"] # User defined temperature
-        options["stop"] = ["```"]
 
-        # Generate the letter content
-        ollama_letter_response = client.chat(
+        # Generate the letter content with structured output
+        response = await llm_client.chat(
             model=config["PRIMARY_MODEL"],
             messages=request_body,
-            options=options,
-        )["message"]["content"]
+            format=response_format,
+            options=options
+        )
 
-        return ollama_letter_response.strip()
+        # Parse the JSON response
+        letter_response = LetterDraft.model_validate_json(response["message"]["content"])
+
+        return letter_response.content.strip()
 
     except Exception as e:
         logging.error(f"Error generating letter content: {e}")

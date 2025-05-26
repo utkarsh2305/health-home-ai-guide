@@ -1,13 +1,15 @@
 import httpx
+import json
+import logging
+from typing import Dict, List, Union, Any
 import feedparser
-from fastapi import HTTPException
-from pydantic import HttpUrl
-from typing import List
+from datetime import datetime
 from server.schemas.dashboard import RssItem
 from server.database.config import config_manager
-from ollama import AsyncClient
-from datetime import datetime
+from server.utils.llm_client import get_llm_client
+from server.schemas.grammars import NewsDigest, ItemDigest
 
+logger = logging.getLogger(__name__)
 
 async def get_feed_title(feed_url: str) -> str:
     """Fetches the title of an RSS feed."""
@@ -24,66 +26,207 @@ async def get_feed_title(feed_url: str) -> str:
     return feed.feed.get("title", "Unknown Feed")
 
 
-async def generate_combined_digest(articles: List[dict]) -> str:
-    """Generates a combined summary of multiple articles."""
-    config = config_manager.get_config()
-    client = AsyncClient(host=config["OLLAMA_BASE_URL"])
-
-    # Get user settings for doctor's name and specialty
-    user_settings = config_manager.get_user_settings()
-    specialty = user_settings.get("specialty", "medical")
-
-    # Prepare the content for summarization
-    articles_text = "\n\n".join(
-        [
-            f"Article {i+1}:\nTitle: {article['title']}\nAbstract: {article['description']}"
-            for i, article in enumerate(articles)
-        ]
-    )
-
-    system_prompt = f"You are a helpful assistant that summarizes medical literature for a busy {specialty} specialist."
-    user_prompt = f"Create a single, short, and coherent paragraph of around 3-4 sentences that summarizes the main points from these {len(articles)} medical articles:\n\n{articles_text}"
-
-    request_body = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-        {"role": "assistant", "content": "Here is the combined summary:\n"},
-    ]
-
-    try:
-        response = await client.chat(
-            model=config["PRIMARY_MODEL"],
-            messages=request_body,
-        )
-        return response["message"]["content"]
-    except Exception as e:
-        logger.error(f"Error generating combined digest: {str(e)}")
-        return "Unable to generate combined digest at this time."
-
-
 async def generate_item_digest(item: RssItem) -> str:
-    """Generates a summary of a single RSS item."""
-    config = config_manager.get_config()
-    client = AsyncClient(host=config["OLLAMA_BASE_URL"])
+    """
+    Generates a digest for an RSS item using LLM.
 
-    system_prompt = "You are a helpful assistant that summarizes medical literature for a busy medical specialist."
-    user_prompt = f"Summarize the following article in two or three sentences:\n\nTitle: {item.title}\nDescription: {item.description}"
-    request_body = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-        {"role": "assistant", "content": "Here is the summarized content:\n"},
-    ]
+    Args:
+        item (RssItem): The RSS item to generate a digest for.
+
+    Returns:
+        str: The generated digest.
+    """
+    try:
+        config = config_manager.get_config()
+        client = get_llm_client()
+        model = config["SECONDARY_MODEL"]
+        options = config_manager.get_prompts_and_options()["options"]["secondary"]
+
+        system_prompt = """You are a medical news summarizer. Your task is to summarize medical news articles in a concise, informative way for healthcare professionals. Focus on clinical relevance, key findings, and implications for practice. Keep summaries objective and factual."""
+
+        user_prompt = f"""Summarize this medical article in 1-2 concise sentences that highlight the key finding or clinical implication:
+
+        Title: {item.title}
+        Source: {item.feed_title}
+        Content: {item.description}"""
+
+        # Check if using Qwen3 model
+        model_name = model.lower()
+        is_qwen3 = "qwen3" in model_name
+
+        # Create response format
+        response_format = ItemDigest.model_json_schema()
+
+        if is_qwen3:
+            logger.info(f"Qwen3 model detected: {model_name}. Using thinking step for item digest.")
+
+            # First, get the thinking step
+            thinking_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": "<think>"}
+            ]
+
+            # Create thinking-specific options that stop at </think>
+            thinking_options = options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            # Get the thinking content
+            thinking_response = await client.chat(
+                model=model,
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = thinking_response["message"]["content"]
+
+            # Now make the full request with the thinking included
+            full_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": f"<think>{thinking}</think>"}
+            ]
+
+            # Get the final response with structured format
+            response = await client.chat(
+                model=model,
+                messages=full_messages,
+                format=response_format,
+                options=options
+            )
+        else:
+            # Standard approach for other models
+            request_body = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+
+            response = await client.chat(
+                model=model,
+                messages=request_body,
+                format=response_format,
+                options=options
+            )
+
+        content = response["message"]["content"].strip()
+
+        try:
+            # Try to parse as JSON
+            digest_data = ItemDigest.model_validate_json(content)
+            return digest_data.digest
+        except Exception as e:
+            logger.warning(f"Failed to parse item digest response as JSON: {e}")
+            # Just use content as is
+            return content
+
+    except Exception as e:
+        logger.error(f"Error generating item digest: {e}")
+        return "Unable to generate digest."
+
+async def generate_combined_digest(articles: List[Dict[str, str]]) -> str:
+    """
+    Generates a combined digest for multiple articles using LLM.
+
+    Args:
+        articles (List[Dict[str, str]]): List of articles to generate a digest for.
+
+    Returns:
+        str: The generated combined digest.
+    """
+    if not articles:
+        return "No recent medical news available."
 
     try:
-        response = await client.chat(
-            model=config["PRIMARY_MODEL"],
-            messages=request_body,
-        )
-        digest = response["message"]["content"]
-        return digest
+        config = config_manager.get_config()
+        client = get_llm_client()
+        model = config["PRIMARY_MODEL"]
+        options = config_manager.get_prompts_and_options()["options"]["general"]
+
+        system_prompt = """You are a medical news curator for busy healthcare professionals. Your task is to create a concise digest of recent medical news articles, highlighting their clinical significance. Focus on what's most relevant to medical practice."""
+
+        # Format articles for the prompt
+        article_text = ""
+        for i, article in enumerate(articles, 1):
+            article_text += f"Article {i}:\nTitle: {article['title']}\nSource: {article.get('feed_title', 'Unknown')}\nDescription: {article['description']}\n\n"
+
+        user_prompt = f"""Create a concise digest of these recent medical news articles in 3-4 sentences total. Focus on clinical implications and highlight the most important findings across all articles:
+
+        {article_text}"""
+
+        # Check if using Qwen3 model
+        model_name = model.lower()
+        is_qwen3 = "qwen3" in model_name
+
+        # Create response format
+        response_format = NewsDigest.model_json_schema()
+
+        if is_qwen3:
+            logger.info(f"Qwen3 model detected: {model_name}. Using thinking step for combined digest.")
+
+            # First, get the thinking step
+            thinking_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": "<think>"}
+            ]
+
+            # Create thinking-specific options that stop at </think>
+            thinking_options = options.copy()
+            thinking_options["stop"] = ["</think>"]
+
+            # Get the thinking content
+            thinking_response = await client.chat(
+                model=model,
+                messages=thinking_messages,
+                options=thinking_options
+            )
+
+            # Extract thinking content
+            thinking = thinking_response["message"]["content"]
+
+            # Now make the full request with the thinking included
+            full_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": f"<think>{thinking}</think>"}
+            ]
+
+            # Get the final response with structured format
+            response = await client.chat(
+                model=model,
+                messages=full_messages,
+                format=response_format,
+                options=options
+            )
+        else:
+            # Standard approach for other models
+            request_body = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+
+            response = await client.chat(
+                model=model,
+                messages=request_body,
+                format=response_format,
+                options=options
+            )
+
+        content = response["message"]["content"].strip()
+
+        try:
+            # Try to parse as JSON
+            digest_data = NewsDigest.model_validate_json(content)
+            return digest_data.digest
+        except Exception as e:
+            logger.warning(f"Failed to parse combined digest response as JSON: {e}")
+            # Just use content as is
+            return content
+
     except Exception as e:
-        logger.error(f"Error generating digest: {str(e)}")
-        return "Unable to generate digest at this time."
+        logger.error(f"Error generating combined digest: {e}")
+        return "Unable to generate digest of recent medical news."
 
 
 async def fetch_rss_feed(feed_url: str) -> List[RssItem]:
