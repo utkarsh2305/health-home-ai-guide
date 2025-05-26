@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.6.0](https://github.com/bloodworks-io/phlox/compare/v0.5.0...v0.6.0) (2025-05-26)
+
+
+### Features
+
+* initial draft support for openai-compatible endpoints ([bdf5e07](https://github.com/bloodworks-io/phlox/commit/bdf5e07cbf13e06e7d44ec085769a2e16fa2d203))
+* new speed dial menu for chat and letters ([b9d24f3](https://github.com/bloodworks-io/phlox/commit/b9d24f3b21b995c12b6f3f09393e8f0242c9c788))
+* thinking model improvements in chat ([80832be](https://github.com/bloodworks-io/phlox/commit/80832be58a8e960df915db05a81dcbf046d93f07))
+
+
+### Bug Fixes
+
+* chat handler bug fixes ([1b950ff](https://github.com/bloodworks-io/phlox/commit/1b950ff9f1f35613910cc3286d4f3c39944afd43))
+* corrected json_schema call to OAI backends ([1750c86](https://github.com/bloodworks-io/phlox/commit/1750c86defd3fb16eb3584915f60188eaad223d2))
+* corrected json_schema call to OAI backends ([815ad48](https://github.com/bloodworks-io/phlox/commit/815ad48ef0bf4e9ad0bd3368b24b82133c9591fb))
+* database schema update ([c013577](https://github.com/bloodworks-io/phlox/commit/c013577ab78b1e2d483529067c962de20a93bb38))
+* further fixes to reasoning models in dashboard and other secondary areas ([677989c](https://github.com/bloodworks-io/phlox/commit/677989cbbc2fc262abbc161a29f82c9c73f3b694))
+* further refinements to chat interface ([2d3b019](https://github.com/bloodworks-io/phlox/commit/2d3b0193b15665f69517e4efc27498695a17823d))
+* improvements for Qwen3 models ([c021a6a](https://github.com/bloodworks-io/phlox/commit/c021a6acaf5c07d5468272b526782879d3f976fe))
+* incremental improvements to reasoning model handling in RAG ([8bfbdf5](https://github.com/bloodworks-io/phlox/commit/8bfbdf55ca6e4341be7a374a258a5579203e6a68))
+* initial draft of the improved, more modern sidebar layout ([133f009](https://github.com/bloodworks-io/phlox/commit/133f009e3e45daf036cf1218bc01a0ba35015b05))
+* Layout fixes ([dfb741f](https://github.com/bloodworks-io/phlox/commit/dfb741fb15a446ac09fdb2fc785bf05ae568a72f))
+* layout fixes for patient jobs table ([bb95693](https://github.com/bloodworks-io/phlox/commit/bb95693117ee279f888d30687d9d8f90a2cbfa23))
+* letter bug fix. Now use general prompt options for chat ([81b8485](https://github.com/bloodworks-io/phlox/commit/81b848543d1f54fd69991504044a831484e177c6))
+* letter component and chat component fixes ([d03121e](https://github.com/bloodworks-io/phlox/commit/d03121ecbede3bf1cb366a198599b19a4c3b1aa5))
+* letters support reasoning models by forcing structured output ([c22536d](https://github.com/bloodworks-io/phlox/commit/c22536dbe76f2671d3785b93a9d19b9dfae36232))
+* opacity of speed dial ([05179d6](https://github.com/bloodworks-io/phlox/commit/05179d62e7e015f2d135bb3b695f35cd690016be))
+* RAG was broken with the new OpenAI endpoints. Fixed ([034ebf3](https://github.com/bloodworks-io/phlox/commit/034ebf3e42ce7de8e250e2e5fdb85561f74f6be3))
+* re-worked qwen3 support during refinement ([b17bda5](https://github.com/bloodworks-io/phlox/commit/b17bda5f113832ee8ed111b8e6cec811042c9e31))
+* recording widget layout ([3c27c5d](https://github.com/bloodworks-io/phlox/commit/3c27c5d577e08ba526325c894c8c31179816d5ff))
+* sidebar layout fixes ([b9d24f3](https://github.com/bloodworks-io/phlox/commit/b9d24f3b21b995c12b6f3f09393e8f0242c9c788))
+* style fixes and refinements throughout the application ([da7c6dd](https://github.com/bloodworks-io/phlox/commit/da7c6ddefd3ef6859d136f6aba026d55296a54f4))
+* template generation now works with llm_client ([1b950ff](https://github.com/bloodworks-io/phlox/commit/1b950ff9f1f35613910cc3286d4f3c39944afd43))
+* thinking tag improvements in Chat ([c089aea](https://github.com/bloodworks-io/phlox/commit/c089aea0e42c01f98622ffab219361f1e14b2be9))
+* tool calling fix for OAI endpoints ([42aa821](https://github.com/bloodworks-io/phlox/commit/42aa8213aa7f8e9cdda3b67a791731d970b0514f))
+* updated RagChat for reasoning models ([b9d24f3](https://github.com/bloodworks-io/phlox/commit/b9d24f3b21b995c12b6f3f09393e8f0242c9c788))
+
 ## [0.5.0](https://github.com/bloodworks-io/phlox/compare/v0.4.1...v0.5.0) (2025-04-24)
 
 
