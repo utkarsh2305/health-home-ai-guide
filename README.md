@@ -1,3 +1,10 @@
+> [!WARNING]
+> Phlox is an experimental project intended for educational and personal **experimentation** ONLY.
+> **AS PROVIDED, IT IS NOT A CERTIFIED MEDICAL DEVICE AND MUST NOT BE USED IN ACTUAL CLINICAL SETTINGS or FOR CLINICAL DECISION-MAKING.**
+>
+> AI outputs can be unreliable and inaccurate. Always verify information and use professional clinical judgment.
+> For full details on limitations and risks, please read the **[Usage Warning](#usage-warning-️)** section carefully before proceeding.
+
 <p align="center">
   <img src="/docs/images/readme_logo.png" width="300" alt="Phlox Logo">
 </p>
@@ -14,7 +21,7 @@
 
 </div>
 
-Phlox is an open-source patient management system integrating AI-powered medical transcription, clinical note generation, and an AI chatbot interface. It's designed to run locally, utilizing Ollama and Whisper for inference and transcription.
+Phlox is an open-source patient management system integrating AI-powered medical transcription, clinical note generation, and an AI chatbot interface. It's designed to run locally, utilizing local models for inference and transcription.
 
 ## Key Features ✨
 
@@ -37,13 +44,13 @@ Phlox is an open-source patient management system integrating AI-powered medical
 - **Frontend:** React/Chakra UI
 - **Backend:** FastAPI
 - **Database:** SQLite
-- **LLM Backend:** Ollama
-- **Transcription:** Whisper
+- **LLM Backend:** Ollama or any OpenAI-compatible endpoint
+- **Transcription:** Any Whisper compatible endpoint
 - **RAG:** ChromaDB
 
 ## Quick Start 🚀
 
-1. **Prerequisites:** Podman/Docker, Ollama, Whisper endpoint.
+1. **Prerequisites:** Podman/Docker, Ollama/OpenAI-compatible endpoint, Whisper endpoint.
 2. **Hardware Requirements:** For reasonable performance, a GPU (CUDA, ROCm) or Apple M-Series chip is strongly recommended. Without these, especially with larger models, the system will run extremely slowly.
 3. **Clone:** `git clone https://github.com/bloodworks-io/phlox.git && cd phlox`
 4. **Build:** `docker build -t phlox:latest .`
@@ -58,7 +65,8 @@ Phlox is an open-source patient management system integrating AI-powered medical
 Here's what's coming next for Phlox:
 
 - [x] Use structured JSON outputs for managing LLM responses
-- [ ] Add support for OpenAI-compatible endpoints
+- [x] Add support for OpenAI-compatible endpoints
+- [ ] MCP server support for custom tools and agentic workflows
 - [ ] Create Electron app packaging for desktop use
 - [ ] Develop Progressive Web App (PWA) version
 - [ ] Introduce advanced template version control
