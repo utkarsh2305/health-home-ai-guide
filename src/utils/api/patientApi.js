@@ -2,25 +2,40 @@
 import { handleApiRequest } from "../helpers/apiHelpers";
 
 export const patientApi = {
-    savePatientData: async (patientData, toast, refreshSidebar) => {
-        return handleApiRequest({
-            apiCall: () =>
-                fetch(`/api/patient/save`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ patientData }),
-                }),
-            successMessage: "Patient data saved successfully.",
-            errorMessage: "Error saving patient data",
-            onSuccess: (data) => {
-                console.log("Save successful, calling refreshSidebar");
-                if (typeof refreshSidebar === "function") {
-                    refreshSidebar();
-                }
-                return data;
-            },
-            toast,
-        });
+    async savePatientData(saveRequest, toast, refreshSidebar) {
+        try {
+            const response = await fetch("/api/patient/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(saveRequest),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to save patient");
+            }
+
+            const data = await response.json();
+
+            toast({
+                title: "Success",
+                description: "Patient data saved successfully",
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+            });
+
+            if (refreshSidebar) {
+                await refreshSidebar();
+            }
+
+            return data;
+        } catch (error) {
+            console.error("Error saving patient:", error);
+            throw error;
+        }
     },
 
     searchPatient: async (urNumber, callbacks = {}) => {

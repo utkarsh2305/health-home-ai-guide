@@ -54,6 +54,11 @@ const PatientDetails = ({
     const [replacedFields, setReplacedFields] = useState({});
     const [extractedDocData, setExtractedDocData] = useState(null);
 
+    const [initialTranscriptionContent, setInitialTranscriptionContent] =
+        useState({});
+    const [hasTranscriptionOccurred, setHasTranscriptionOccurred] =
+        useState(false);
+
     const { showWarningToast } = useToastMessage();
 
     // Use template context
@@ -316,6 +321,20 @@ const PatientDetails = ({
         const isRestoration = data.isRestoration === true;
         // Store current transcription state before updating
         previousTranscriptionRef.current = patient?.raw_transcription;
+        console.log("Transcription complete!");
+        if (
+            !hasTranscriptionOccurred &&
+            data.fields &&
+            Object.keys(data.fields).length > 0 &&
+            !isRestoration
+        ) {
+            console.log(
+                "Storing initial transcription content for adaptive refinement:",
+                data.fields,
+            );
+            setInitialTranscriptionContent({ ...data.fields });
+            setHasTranscriptionOccurred(true);
+        }
 
         handleProcessingComplete(data, {
             setLoading,
@@ -480,14 +499,30 @@ const PatientDetails = ({
                     refreshSidebar,
                     selectedDate,
                     toast,
+                    hasTranscriptionOccurred
+                        ? initialTranscriptionContent
+                        : null, // Pass initial content
                 );
                 if (savedPatient?.id) {
                     setIsSummaryModified(false);
+                    // Clear the initial content after successful save
+                    setInitialTranscriptionContent({});
+                    setHasTranscriptionOccurred(false);
                     navigate(`/patient/${savedPatient.id}`);
                 }
             } else {
-                await savePatient(refreshSidebar, selectedDate, toast);
+                await savePatient(
+                    refreshSidebar,
+                    selectedDate,
+                    toast,
+                    hasTranscriptionOccurred
+                        ? initialTranscriptionContent
+                        : null, // Pass initial content
+                );
                 setIsSummaryModified(false);
+                // Clear the initial content after successful save
+                setInitialTranscriptionContent({});
+                setHasTranscriptionOccurred(false);
             }
         } finally {
             setSaveLoading(false);
@@ -537,14 +572,6 @@ const PatientDetails = ({
                 );
                 return;
             }
-
-            // Log template keys at the start for debugging
-            console.log("handleHistoricalTemplate - Start. ", {
-                isNewPatient,
-                isSearchedPatient,
-                patientTemplateKey: patient?.template_key,
-                defaultTemplateKey: defaultTemplate?.template_key,
-            });
 
             // Proceed only for new encounters or pre-filled searches AND if patient template is NOT the default
             if (
@@ -603,9 +630,6 @@ const PatientDetails = ({
                     }
                 }
             } else {
-                console.log(
-                    "No template upgrade needed or viewing historical encounter.",
-                );
             }
         };
 
