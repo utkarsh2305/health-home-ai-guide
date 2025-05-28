@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/bloodworks-io/phlox/compare/v0.6.0...v0.6.1) (2025-05-28)
+
+
+### Bug Fixes
+
+* initialization error for new instances - default to ollama ([bfaff93](https://github.com/bloodworks-io/phlox/commit/bfaff93b25888d0f82264faf210bf9f4c4d51708))
+
 ## [0.6.0](https://github.com/bloodworks-io/phlox/compare/v0.5.0...v0.6.0) (2025-05-26)
 
 
