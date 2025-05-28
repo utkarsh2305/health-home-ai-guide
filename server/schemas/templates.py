@@ -22,6 +22,7 @@ class TemplateField(BaseModel):
     format_schema: Optional[dict] = None
     style_example: str
     refinement_rules: Optional[List[str]] = None
+    adaptive_refinement_instructions: Optional[List[str]] = None
 
     @validator('field_type')
     def validate_field_type(cls, v):
@@ -30,6 +31,9 @@ class TemplateField(BaseModel):
             raise ValueError(f"field_type must be one of {valid_types}")
         return v
 
+class AdaptiveRefinementRequest(BaseModel):
+    initial_content: str
+    modified_content: str
 
 class ClinicalTemplate(BaseModel):
     template_key: str

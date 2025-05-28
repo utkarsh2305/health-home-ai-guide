@@ -417,6 +417,16 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
             if rule in prompts["prompts"]["refinement"]:
                 system_prompt = prompts["prompts"]["refinement"][rule]
                 break
+
+       # Add adaptive_refinement_instructions if they exist
+        # This should be appended regardless of whether a style_example or refinement_rule was applied,
+        # as they are supplementary.
+        if hasattr(field, 'adaptive_refinement_instructions') and field.adaptive_refinement_instructions:
+            instructions_string = "\n\nAdditionally, consider these user-derived preferences to improve the output further:"
+            for i, instruction in enumerate(field.adaptive_refinement_instructions):
+                instructions_string += f"\n- {instruction}"
+            system_prompt += instructions_string
+
     print(system_prompt)
     return system_prompt
 

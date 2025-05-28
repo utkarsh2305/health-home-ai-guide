@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
-from typing import List
-from server.schemas.templates import ClinicalTemplate
+from typing import List, Optional
+from server.schemas.templates import ClinicalTemplate, AdaptiveRefinementRequest
 from server.database.templates import (
     get_all_templates,
     get_default_template,
@@ -10,7 +10,7 @@ from server.database.templates import (
     set_default_template,
     update_template,
     template_exists,
-    soft_delete_template,
+    soft_delete_template
 )
 from server.utils.templates import generate_template_from_note
 import logging
@@ -120,6 +120,7 @@ async def save_templates(
     except Exception as e:
         logging.error(f"Error saving templates: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/generate")
 async def generate_template(request_body: dict):

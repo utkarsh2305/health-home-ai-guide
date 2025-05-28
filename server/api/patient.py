@@ -19,22 +19,24 @@ from server.schemas.patient import (
     Patient,
     JobsListUpdate,
 )
-
 from server.database.jobs import (
     update_patient_jobs_list,
     get_patients_with_outstanding_jobs,
     count_incomplete_jobs,
 )
-
+from server.database.templates import (
+    get_template_by_key,
+    update_field_adaptive_instructions,
+)
 from server.utils.helpers import summarize_encounter, run_clinical_reasoning
 from server.database.analysis import generate_previous_visit_summary
+from server.utils.adaptive_refinement import generate_adaptive_refinement_suggestions
 import logging
-
 router = APIRouter()
 
 @router.post("/save")
 async def save_patient_data(request: SavePatientRequest):
-    """Saves patient data."""
+    """Saves patient data and processes any adaptive refinement requests."""
     patient = request.patientData
 
     try:
@@ -47,18 +49,80 @@ async def save_patient_data(request: SavePatientRequest):
         patient.encounter_summary = encounter_summary
         patient.primary_condition = primary_condition
 
-        # Save or update the patient, depending on whether a patient ID was provide by the frontend
+        # Save or update the patient
         if patient.id:
             update_patient(patient)
             logging.info(f"Patient updated with ID: {patient.id}")
-            return {"id": patient.id}
+            patient_id = patient.id
         else:
-            new_patient_id = save_patient(patient)
-            logging.info(f"Patient saved with ID: {new_patient_id}")
-            return {"id": new_patient_id}
+            patient_id = save_patient(patient)
+            logging.info(f"Patient saved with ID: {patient_id}")
+
+        # Process adaptive refinement if provided
+        if request.adaptive_refinement:
+            await process_adaptive_refinement(
+                template_key=patient.template_key,
+                refinement_data=request.adaptive_refinement
+            )
+
+        return {"id": patient_id}
     except Exception as e:
         logging.error(f"Error processing patient data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+async def process_adaptive_refinement(
+    template_key: str,
+    refinement_data: dict
+):
+    """Process adaptive refinement for multiple fields."""
+    logging.info(f"Processing adaptive refinement for template '{template_key}' with {len(refinement_data)} fields")
+
+    # Get the template to validate it exists
+    template_data = get_template_by_key(template_key, exact_match=False)
+    if not template_data:
+        logging.warning(f"Template '{template_key}' not found for adaptive refinement")
+        return
+
+    for field_key, refinement_request in refinement_data.items():
+        try:
+            # Find the specific field in the template
+            target_field_data = None
+            if 'fields' in template_data and isinstance(template_data['fields'], list):
+                for field_dict in template_data['fields']:
+                    if field_dict.get('field_key') == field_key:
+                        target_field_data = field_dict
+                        break
+
+            if not target_field_data:
+                logging.warning(f"Field '{field_key}' not found in template '{template_key}' - skipping refinement")
+                continue
+
+            existing_instructions = target_field_data.get('adaptive_refinement_instructions')
+            logging.info(f"Processing refinement for field '{field_key}' with existing instructions: {existing_instructions}")
+
+            # Generate updated instructions
+            updated_instructions = await generate_adaptive_refinement_suggestions(
+                initial_content=refinement_request.initial_content,
+                modified_content=refinement_request.modified_content,
+                existing_instructions=existing_instructions,
+            )
+
+            # Save the updated instructions
+            save_success = update_field_adaptive_instructions(
+                template_key=template_data['template_key'],
+                field_key=field_key,
+                new_instructions=updated_instructions
+            )
+
+            if save_success:
+                logging.info(f"Successfully updated adaptive instructions for field '{field_key}'")
+            else:
+                logging.error(f"Failed to save adaptive instructions for field '{field_key}'")
+
+        except Exception as e:
+            logging.error(f"Error processing adaptive refinement for field '{field_key}': {e}")
+            # Continue processing other fields even if one fails
+            continue
 
 @router.get("/list")
 async def get_patients(

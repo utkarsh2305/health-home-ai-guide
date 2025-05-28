@@ -459,3 +459,90 @@ def get_default_template() -> Optional[Dict[str, Any]]:
     except Exception as e:
         logging.error(f"Error getting default template: {e}")
         raise
+
+def update_field_adaptive_instructions(
+    template_key: str,
+    field_key: str,
+    new_instructions: List[str]
+) -> bool:
+    """
+    Update the adaptive_refinement_instructions for a specific field within a template.
+
+    Args:
+        template_key: The key of the template to update.
+        field_key: The key of the field to update.
+        new_instructions: The new list of adaptive refinement instructions.
+
+    Returns:
+        True if the update was successful, False otherwise.
+    """
+    logging.info(
+        f"Attempting to update adaptive instructions for template '{template_key}', field '{field_key}'"
+    )
+    try:
+        # Fetch the current template data using exact match
+        template_data = get_template_by_key(template_key, exact_match=True)
+        if not template_data:
+            logging.error(f"Template '{template_key}' not found for updating field instructions.")
+            # As per instruction: "raise a ValueError or log an error and return False"
+            # Choosing to log and return False for consistency with some other functions
+            # that don't directly interact with API layer HTTPExceptions.
+            return False
+
+        # fields are already parsed by get_template_by_key
+        fields_list = template_data.get("fields")
+        if not isinstance(fields_list, list):
+            logging.error(
+                f"Fields data for template '{template_key}' is not a list or is missing."
+            )
+            return False
+
+        field_found = False
+        updated_fields_list = []
+
+        for field_dict in fields_list:
+            if isinstance(field_dict, dict) and field_dict.get("field_key") == field_key:
+                field_found = True
+                field_dict["adaptive_refinement_instructions"] = new_instructions
+                logging.info(
+                    f"Updated instructions for field '{field_key}' in template '{template_key}'."
+                )
+            updated_fields_list.append(field_dict)
+
+        if not field_found:
+            logging.error(
+                f"Field '{field_key}' not found in template '{template_key}'."
+            )
+            return False
+
+        # Serialize the modified list of field dictionaries back into a JSON string
+        updated_fields_json = json.dumps(updated_fields_list)
+        current_timestamp = datetime.now().isoformat()
+
+        # Update the clinical_templates table
+        db.cursor.execute(
+            """
+            UPDATE clinical_templates
+            SET fields = ?, updated_at = ?
+            WHERE template_key = ?
+            """,
+            (updated_fields_json, current_timestamp, template_key)
+        )
+        db.commit()
+
+        logging.info(
+            f"Successfully updated fields and timestamp for template '{template_key}' in database."
+        )
+        return True
+
+    except json.JSONDecodeError as je:
+        logging.error(f"JSON decode error for template '{template_key}': {je}", exc_info=True)
+        return False
+    except Exception as e:
+        logging.error(
+            f"Error updating adaptive instructions for template '{template_key}', field '{field_key}': {e}",
+            exc_info=True
+        )
+        # Attempt to rollback in case of partial transaction failure if applicable, though simple UPDATEs are often atomic.
+        # db.rollback() # db object does not seem to have rollback based on PatientDatabase structure
+        return False
