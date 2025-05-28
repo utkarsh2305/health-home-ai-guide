@@ -529,7 +529,7 @@ class PatientDatabase:
                 llm_api_key = "&nbsp;"  # Ollama doesn't need API key
             else:
                 # No existing Ollama setup, use defaults
-                llm_provider = "&nbsp;"
+                llm_provider = "ollama"
                 llm_base_url = "&nbsp;"
                 llm_api_key = "&nbsp;"
 
