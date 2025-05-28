@@ -78,6 +78,19 @@ async def delete_template(template_key: str):
         logging.error(f"Error deleting template: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/{template_key}/fields/{field_key}/adaptive-instructions/reset")
+async def reset_adaptive_instructions(template_key: str, field_key: str):
+    """
+    Reset (clear) the adaptive refinement instructions for a given field in a template.
+    """
+    from server.database.templates import update_field_adaptive_instructions
+
+    result = update_field_adaptive_instructions(template_key, field_key, [])
+    if result:
+        return JSONResponse(content={"message": f"Adaptive instructions for field '{field_key}' in template '{template_key}' have been reset."})
+    else:
+        raise HTTPException(status_code=404, detail="Template or field not found, or update failed")
+
 @router.get("")
 async def get_templates():
     """Get all available templates."""
