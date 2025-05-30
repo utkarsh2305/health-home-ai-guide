@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/bloodworks-io/phlox/compare/v0.6.1...v0.7.0) (2025-05-30)
+
+
+### Features
+
+* adaptive refinement; the app wil learn the user's preference for note-style ([a2c6ba1](https://github.com/bloodworks-io/phlox/commit/a2c6ba1224dfa86a12bc0f906c315db4a937280e))
+* endpoint for erasing adaptive refinement instructions for a given template field ([cd11ec6](https://github.com/bloodworks-io/phlox/commit/cd11ec6cba00723e4ca0f60a6a33cc1b32d7ad12))
+
+
+### Bug Fixes
+
+* syntax error ([21737a4](https://github.com/bloodworks-io/phlox/commit/21737a438ad1a341d8a97ad54bcc8d1f9055aea8))
+* template updates will copy over to adaptive refinements ([cd11ec6](https://github.com/bloodworks-io/phlox/commit/cd11ec6cba00723e4ca0f60a6a33cc1b32d7ad12))
+* updated adaptive refinement to also work on re-processing. ([42f940f](https://github.com/bloodworks-io/phlox/commit/42f940f92e751ab7285f9c20d9b23df209c62135))
+
 ## [0.6.1](https://github.com/bloodworks-io/phlox/compare/v0.6.0...v0.6.1) (2025-05-28)
 
 
