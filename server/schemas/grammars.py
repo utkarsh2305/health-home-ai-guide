@@ -92,9 +92,9 @@ class RefinementInstructions(BaseModel):
     Structured model for adaptive refinement instructions generation.
     """
     instructions: List[str] = Field(
-        description="List of 3-5 concise, actionable refinement instructions based on observed improvements",
+        description="List of 3-10 concise, actionable refinement instructions based on observed improvements",
         min_items=3,
-        max_items=5
+        max_items=10
     )
 
 class RefinedContent(BaseModel):
