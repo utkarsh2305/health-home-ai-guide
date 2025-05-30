@@ -115,7 +115,12 @@ export const usePatient = (initialPatient = null) => {
         }
     };
 
-    const savePatient = async (refreshSidebar, selectedDate) => {
+    const savePatient = async (
+        refreshSidebar,
+        selectedDate,
+        toast,
+        initialContent = null,
+    ) => {
         const missingFields = [];
 
         if (!patient?.name) missingFields.push("Name");
@@ -149,15 +154,39 @@ export const usePatient = (initialPatient = null) => {
                 ),
             };
 
+            // Prepare adaptive refinement data if initial content is provided
+            let adaptiveRefinement = null;
+            if (initialContent && patient.template_data) {
+                console.error("Performing adaptive refinement");
+                adaptiveRefinement = buildAdaptiveRefinementData(
+                    initialContent,
+                    patient.template_data,
+                    currentTemplate,
+                );
+            }
+
+            // Create the save request payload
+            const saveRequest = {
+                patientData: patientToSave,
+                ...(adaptiveRefinement &&
+                    Object.keys(adaptiveRefinement).length > 0 && {
+                        adaptive_refinement: adaptiveRefinement,
+                    }),
+            };
+
+            console.log(
+                "Saving patient with adaptive refinement:",
+                saveRequest,
+            );
+
             const response = await patientApi.savePatientData(
-                patientToSave,
+                saveRequest,
                 toast,
                 refreshSidebar,
             );
 
             if (response) {
                 setIsModified(false);
-                // If this was a new patient (no ID), navigate to the patient's page
                 if (!patient.id && response.id) {
                     navigate(`/patient/${response.id}`);
                 }
@@ -175,6 +204,46 @@ export const usePatient = (initialPatient = null) => {
             });
             throw error;
         }
+    };
+
+    const buildAdaptiveRefinementData = (
+        initialContent,
+        currentContent,
+        template,
+    ) => {
+        const refinementData = {};
+
+        if (!template?.fields) return refinementData;
+
+        template.fields.forEach((field) => {
+            const fieldKey = field.field_key;
+            const initialValue = initialContent[fieldKey];
+            const currentValue = currentContent[fieldKey];
+
+            // Only include fields that have both initial and modified content
+            if (initialValue && currentValue && initialValue !== currentValue) {
+                // Ensure we have meaningful content (not just whitespace differences)
+                const normalizedInitial = (initialValue || "").trim();
+                const normalizedCurrent = (currentValue || "").trim();
+
+                if (
+                    normalizedInitial &&
+                    normalizedCurrent &&
+                    normalizedInitial !== normalizedCurrent
+                ) {
+                    refinementData[fieldKey] = {
+                        initial_content: normalizedInitial,
+                        modified_content: normalizedCurrent,
+                    };
+                    console.log(`Detected change in field '${fieldKey}':`, {
+                        initial: normalizedInitial.substring(0, 100),
+                        modified: normalizedCurrent.substring(0, 100),
+                    });
+                }
+            }
+        });
+
+        return refinementData;
     };
 
     const searchPatient = async (urNumber, selectedDate) => {

@@ -86,6 +86,25 @@ class LetterDraft(BaseModel):
         description="The complete formatted letter content ready for display"
     )
 
+# Adaptive Refinement
+class RefinementInstructions(BaseModel):
+    """
+    Structured model for adaptive refinement instructions generation.
+    """
+    instructions: List[str] = Field(
+        description="List of 3-5 concise, actionable refinement instructions based on observed improvements",
+        min_items=3,
+        max_items=5
+    )
+
+class RefinedContent(BaseModel):
+    """
+    Structured model for content refinement results.
+    """
+    content: str = Field(
+        description="The refined version of the original content with improvements applied"
+    )
+
 # RSS News Digests
 class ItemDigest(BaseModel):
     """

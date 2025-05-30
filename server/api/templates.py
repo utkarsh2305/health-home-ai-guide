@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
-from typing import List
-from server.schemas.templates import ClinicalTemplate
+from typing import List, Optional
+from server.schemas.templates import ClinicalTemplate, AdaptiveRefinementRequest
 from server.database.templates import (
     get_all_templates,
     get_default_template,
@@ -10,7 +10,7 @@ from server.database.templates import (
     set_default_template,
     update_template,
     template_exists,
-    soft_delete_template,
+    soft_delete_template
 )
 from server.utils.templates import generate_template_from_note
 import logging
@@ -78,6 +78,19 @@ async def delete_template(template_key: str):
         logging.error(f"Error deleting template: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/{template_key}/fields/{field_key}/adaptive-instructions/reset")
+async def reset_adaptive_instructions(template_key: str, field_key: str):
+    """
+    Reset (clear) the adaptive refinement instructions for a given field in a template.
+    """
+    from server.database.templates import update_field_adaptive_instructions
+
+    result = update_field_adaptive_instructions(template_key, field_key, [])
+    if result:
+        return JSONResponse(content={"message": f"Adaptive instructions for field '{field_key}' in template '{template_key}' have been reset."})
+    else:
+        raise HTTPException(status_code=404, detail="Template or field not found, or update failed")
+
 @router.get("")
 async def get_templates():
     """Get all available templates."""
@@ -120,6 +133,7 @@ async def save_templates(
     except Exception as e:
         logging.error(f"Error saving templates: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/generate")
 async def generate_template(request_body: dict):

@@ -23,6 +23,13 @@ class Patient(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+class AdaptiveRefinementData(BaseModel):
+    """
+    Represents adaptive refinement data for a specific field.
+    """
+    initial_content: str
+    modified_content: str
+
 class SavePatientRequest(BaseModel):
     """
     Represents a request to save patient data.
@@ -31,6 +38,7 @@ class SavePatientRequest(BaseModel):
         patientData (Patient): Patient data to be saved
     """
     patientData: Patient
+    adaptive_refinement: Optional[Dict[str, AdaptiveRefinementData]] = None
 
     class Config:
         arbitrary_types_allowed = True
