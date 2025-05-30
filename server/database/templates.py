@@ -152,7 +152,7 @@ def update_template(template: ClinicalTemplate) -> str:
                         if prev.get("adaptive_refinement_instructions"):
                             field["adaptive_refinement_instructions"] = prev[
                                 "adaptive_refinement_instructions"
-
+                            ]
             # Only update if there are actual changes
             if (current["template_name"] == template.template_name and
                 current_fields == new_fields):

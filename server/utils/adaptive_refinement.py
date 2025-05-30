@@ -10,7 +10,7 @@ from server.schemas.grammars import RefinementInstructions, RefinedContent
 
 logger = logging.getLogger(__name__)
 
-MAX_INSTRUCTIONS = 5
+MAX_INSTRUCTIONS = 10
 
 async def generate_adaptive_refinement_suggestions(
     initial_content: str,
@@ -86,11 +86,11 @@ async def generate_adaptive_refinement_suggestions(
     - Structure and flow improvements
     - Medical/technical terminology usage (if applicable)
 
-    Instructions should be:
+    Each individual instruction should be:
     - Specific and actionable
+    - A single short and concise sentence.
     - General enough to apply to other texts
     - Based on actual improvements observed
-    - Limited to {MAX_INSTRUCTIONS} total items
 
     Make only ONE change that captures the most important improvement."""
 
