@@ -42,3 +42,14 @@ Note: Like all LLM outputs, reasoning suggestions should be verified against cli
 <p align="center">
 <img src="../images/reasoning.png" width="500px" alt="Reasoning Assistant"/>
 </p>
+
+## Adaptive Refinement
+
+Phlox learns your documentation preferences over time to improve note quality:
+
+1. Edit generated content in any template field
+2. When you save the note, Phlox compares your edits with the original AI output
+3. The system generates specific refinement instructions based on your changes
+4. Future notes automatically incorporate these preferences
+
+Note: While adaptive refinement improves stylistic alignment with user preferences over time, it does not reduce the risk of factual errors. **Never assume learned preferences correlate with improved factual accuracy.**

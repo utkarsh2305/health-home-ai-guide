@@ -13,7 +13,7 @@
 ### Backend (FastAPI)
 - REST API endpoints
 - Core application logic
-- Integrates with Ollama, Whisper, and ChromaDB
+- Integrates with Ollama or any OpenAI compatible endpoint, Whisper, and ChromaDB
 - Database operations
 
 ### Database (SQLite)
@@ -25,15 +25,15 @@
   - Templates
   - Settings
 
-### LLM (Ollama)
-- Local model inference
+### LLM
+- Local model inference (or remote if prefered)
 - Handles:
   - Note generation
   - Clinical summaries
   - RSS processing
   - RAG queries
 
-### Transcription (Whisper)
+### Transcription
 - Compatible with any Whisper endpoint
 - Converts audio to text
 - Configurable service selection
@@ -50,7 +50,7 @@ The transcription process involves multiple steps to convert audio into structur
    - Returns raw text with timestamps
    - Segments combined into single transcript
 
-3. **Template Processing (Ollama)**
+3. **Template Processing (LLM)**
    - Transcript broken into template fields to manage context length
    - Each field processed concurrently to:
      1. Extract key points as structured JSON
@@ -58,7 +58,7 @@ The transcription process involves multiple steps to convert audio into structur
      3. Apply formatting
 
    This staged approach helps smaller models by:
-   - Breaking large transcripts into manageable chunks
+   - Breaking large transcripts into manageable chunks given most local models' long-range context limitations
    - Using structured JSON to constrain outputs
    - Allowing multiple refinement passes with focused prompts
    - Reducing hallucination risk through structured extraction
@@ -71,15 +71,15 @@ The transcription process involves multiple steps to convert audio into structur
 
 ### Model Considerations
 
-- **Output Quality:** Smaller models can hallucinate or lose coherence with long outputs. Chunking and JSON extraction step helps maintain structure and accuracy.
+- **Output Quality:** Smaller models can hallucinate or lose coherence with long outputs.
 
-- **Compute Resources:** Async processing of fields with Ollama improves performance if concurrency is enabled.
+- **Compute Resources:** Async processing of fields improves performance if your backend supports concurrency. Chunking and JSON extraction approach helps maintain structure and accuracy while working within resource constraints.
 
-- **Refinement Passes:** Multiple focused passes often produce better results than trying to get perfect output in one go with smaller models.
+- **Refinement Passes:** Multiple focused passes produce better results than single large outputs with smaller models. Adaptive refinement instructions make these passes more effective by incorporating user preferences.
 
 Example flow for a single field:
 ```txt
-Audio → Whisper Transcription → JSON Extraction → Refinement → Formatting → Final Output
+Audio → Raw Transcription → JSON Extraction → Refinement (style + adaptive rules) → Final Output
 ```
 
 ### RAG (ChromaDB)
