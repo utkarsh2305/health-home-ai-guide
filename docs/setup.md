@@ -9,29 +9,40 @@ Before you begin, ensure you have the following prerequisites installed and conf
 1.  **Podman or Docker:**  Phlox uses containerization for easy deployment. Install either [Podman](https://podman.io/) or [Docker](https://www.docker.com/). I like Podman because it is rootless and daemonless.
 
 2.  **LLM Endpoint:** Phlox supports multiple types of LLM providers. The model you choose must support tool calling:
+
     - **Ollama (Easiest):** [Install Ollama](https://ollama.com/) locally for self-hosted models
       - A few models that work well:
         - **Standard Hardware:** `llama3.3:8b` (smaller, faster)
         - **Performance-Optimized:** `llama3.3:70b` (better quality but requires more resources)
+
     - **OpenAI-Compatible Servers (Self-hosted):**
       - [vLLM](https://github.com/vllm-project/vllm): High-throughput LLM serving
       - [llama.cpp](https://github.com/ggerganov/llama.cpp): LLM inference in C/C++
       - [sglang](https://github.com/sgl-project/sglang): Structured generation language
 
     > **For best privacy:** Use self-hosted solutions
+    >
     > **For best performance:** vLLM offers excellent throughput especially if taking advantage of tensor parallelism.
-    > **Advanced Reasoning:** [Qwen3-30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B) MoE model provides llama3.3-70b level performance with lower resource requirements and much better token generation speed. This is what I use day-to-day.
+    >
+    > **Advanced Reasoning:** The [Qwen3-30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B) MoE model provides llama3.3-70b level performance with lower resource requirements and much better token generation speed. This is what I use day-to-day.
 
 3.  **Whisper-compatible Transcription Service:** Phlox needs a service to transcribe audio into text. I recommend self-hosted solutions:
     - **High-Performance Options:**
+
       - **[Parakeet Diarized](https://github.com/jfgonsalves/parakeet-diarized):** A solution I use that leverages NVIDIA Parakeet-TDT 0.6B V2 (Top ASR model on HF leaderboard) + Pyannote diarization. Diarization improves model comprehension for downstream tasks but has relatively steep VRAM requirements. [See Parakeet-Diarized Setup instructions](#parakeet-diarized-setup).
+
       - **[Speaches](https://github.com/speaches-ai/speaches):** Lightweight Dockerized Whisper server.
 
 4.  **Hardware Considerations:**
+
     - **For best performance:** A GPU (CUDA, ROCm) or Apple M-Series chip is strongly recommended (at the moment you can't use Docker to install on an M-Series Mac; will have to be a bare metal installation)
+
     - **Without GPU/Apple silicon:** The system will run but will be unusably slow, especially with larger models
+
     - **Quantization:** Using Q4 quantization can significantly reduce memory usage and improve token generation speed without significant degrading output quality.
+
           - **KV Cache Quantization:** This is an advanced configuration option that can further reduce memory usage. Aggressive KV cache quantization (smaller than Q8) is not recommended for heavily context-dependent tasks like those in Phlox.
+
     - **RAM Recommendations (assuming Q4 quants):**
       - 8GB minimum for smaller models
       - 16GB+ recommended for better performance
