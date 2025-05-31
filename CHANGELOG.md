@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/bloodworks-io/phlox/compare/v0.7.0...v0.7.1) (2025-05-31)
+
+
+### Bug Fixes
+
+* max_items for adaptive refinement increased ([b073df6](https://github.com/bloodworks-io/phlox/commit/b073df657318f60c7e9fe4548be130c78cc35d11))
+
 ## [0.7.0](https://github.com/bloodworks-io/phlox/compare/v0.6.1...v0.7.0) (2025-05-30)
 
 
