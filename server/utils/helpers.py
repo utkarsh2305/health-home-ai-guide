@@ -485,7 +485,7 @@ def clean_think_tags(message_list):
 
     # Handle simple strings
     if isinstance(message_list, str):
-            return re.sub(r'<think>.*?</think>', '', input_data, flags=re.DOTALL)
+            return re.sub(r'<think>.*?</think>', '', message_list, flags=re.DOTALL)
 
     cleaned_messages = []
 
