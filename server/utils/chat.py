@@ -382,17 +382,26 @@ class ChatEngine:
                         )
 
                         transcript_info = transcript_response["message"]["content"]
-                        self.logger.info(f"Transcript query result: {transcript_info[:200]}...")
+
+
+                        # Clean think tags
+                        cleaned_transcript_info = clean_think_tags([{"content": transcript_info}])[0]["content"]
+
+                        self.logger.info(f"Transcript query result: {cleaned_transcript_info[:200]}...")
 
                         # Add transcript info to original conversation as a tool response
                         message_list.append({
                             "role": "tool",
                             "tool_call_id": tool.get("id", ""),
-                            "content": f"The following information was found in the transcript:\n\n{transcript_info}"
+                            "content": f"The following information was found in the transcript:\n\n{cleaned_transcript_info}"
                         })
+
 
                         # Send generating response status
                         yield {"type": "status", "content": "Generating response with transcript information..."}
+
+
+                        self.logger.info(f"Starting response stream to frontend")
 
                         # Stream the answer
                         async for chunk in await self.llm_client.chat(
@@ -404,7 +413,7 @@ class ChatEngine:
                             if 'message' in chunk and 'content' in chunk['message']:
                                 yield {"type": "chunk", "content": chunk['message']['content']}
 
-                        function_response = transcript_info
+                        function_response = None # No need to send the tools response to the frontend
                 else:  # get_relevant_literature
                     self.logger.info("Executing get_relevant_literature tool...")
                     # Send RAG status message

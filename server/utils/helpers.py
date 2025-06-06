@@ -482,6 +482,11 @@ def clean_think_tags(message_list):
     Returns:
         list: Cleaned message list with <think> tags removed
     """
+
+    # Handle simple strings
+    if isinstance(message_list, str):
+            return re.sub(r'<think>.*?</think>', '', input_data, flags=re.DOTALL)
+
     cleaned_messages = []
 
     for message in message_list:
