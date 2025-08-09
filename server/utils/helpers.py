@@ -1,7 +1,11 @@
 from ast import Try
 from datetime import datetime
 from numpy import resize
-from server.utils.llm_client import AsyncLLMClient, LLMProviderType, get_llm_client
+from server.utils.llm_client import (
+    AsyncLLMClient,
+    LLMProviderType,
+    get_llm_client,
+)
 from server.schemas.patient import Patient, Condition
 from server.database.config import config_manager
 from server.schemas.grammars import ClinicalReasoning
@@ -11,12 +15,17 @@ import re
 from pydantic import BaseModel
 from typing import Optional, List, Union, Dict
 import json
-from server.schemas.grammars import FieldResponse, RefinedResponse, NarrativeResponse
+from server.schemas.grammars import (
+    FieldResponse,
+    RefinedResponse,
+    NarrativeResponse,
+)
 from server.schemas.templates import TemplateField, TemplateResponse
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
     """
@@ -92,9 +101,7 @@ async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
         )
         try:
             condition_response = Condition.model_validate_json(
-                response["message"][
-                    "content"
-                ]
+                response["message"]["content"]
             )
 
             condition_name = condition_response.condition_name
@@ -113,7 +120,10 @@ async def summarize_encounter(patient: Patient) -> tuple[str, Optional[str]]:
 
     return summary, condition
 
-async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: str, gender: str):
+
+async def run_clinical_reasoning(
+    template_data: dict, dob: str, encounter_date: str, gender: str
+):
     config = config_manager.get_config()
     prompts = config_manager.get_prompts_and_options()
     client = get_llm_client()
@@ -127,7 +137,7 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
     for section_name, content in template_data.items():
         if content:
             # Convert snake_case to Title Case for section names
-            section_title = section_name.replace('_', ' ').title()
+            section_title = section_name.replace("_", " ").title()
             formatted_note += f"{section_title}:\n{content}\n\n"
 
     prompt = f"""{reasoning_prompt}
@@ -157,9 +167,17 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
             "summary": {"type": "string"},
             "differentials": {"type": "array", "items": {"type": "string"}},
             "investigations": {"type": "array", "items": {"type": "string"}},
-            "clinical_considerations": {"type": "array", "items": {"type": "string"}}
+            "clinical_considerations": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
         },
-        "required": ["summary", "differentials", "investigations", "clinical_considerations"]
+        "required": [
+            "summary",
+            "differentials",
+            "investigations",
+            "clinical_considerations",
+        ],
     }
 
     # Check if using Qwen3 model
@@ -167,12 +185,14 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
     thinking = ""
 
     if "qwen3" in model_name:
-        logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+        logger.info(
+            f"Qwen3 model detected: {model_name}. Getting explicit thinking step."
+        )
 
         # First message for thinking only
         thinking_messages = [
             {"role": "user", "content": prompt},
-            {"role": "assistant", "content": "<think>"}
+            {"role": "assistant", "content": "<think>"},
         ]
 
         # Make initial call for thinking only
@@ -182,7 +202,7 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
         thinking_response = await client.chat(
             model=config["REASONING_MODEL"],
             messages=thinking_messages,
-            options=thinking_options
+            options=thinking_options,
         )
 
         # Extract thinking content
@@ -193,10 +213,10 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
             model=config["REASONING_MODEL"],
             messages=[
                 {"role": "user", "content": prompt},
-                {"role": "assistant", "content": f"<think>{thinking}</think>"}
+                {"role": "assistant", "content": f"<think>{thinking}</think>"},
             ],
             format=modified_schema,
-            options=reasoning_options
+            options=reasoning_options,
         )
 
         # Create the full response with thinking included
@@ -211,10 +231,11 @@ async def run_clinical_reasoning(template_data: dict, dob: str, encounter_date: 
             model=config["REASONING_MODEL"],
             messages=[{"role": "user", "content": prompt}],
             format=ClinicalReasoning.model_json_schema(),
-            options=reasoning_options
+            options=reasoning_options,
         )
 
         return ClinicalReasoning.model_validate_json(response.message.content)
+
 
 def calculate_age(dob: str, encounter_date: str = None) -> int:
     """
@@ -253,9 +274,9 @@ def calculate_age(dob: str, encounter_date: str = None) -> int:
 
     return age
 
+
 async def refine_field_content(
-    content: Union[str, Dict],
-    field: TemplateField
+    content: Union[str, Dict], field: TemplateField
 ) -> Union[str, Dict]:
     """
     Refine the content of a single field using style examples and format schema.
@@ -288,7 +309,7 @@ async def refine_field_content(
         # Create base messages for all models
         base_messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content}
+            {"role": "user", "content": content},
         ]
 
         # Check if using Qwen3 model
@@ -296,14 +317,15 @@ async def refine_field_content(
         thinking = ""
 
         if "qwen3" in model_name:
-            logger.info(f"Qwen3 model detected: {model_name}. Getting explicit thinking step.")
+            logger.info(
+                f"Qwen3 model detected: {model_name}. Getting explicit thinking step."
+            )
 
             # Create a copy of base_messages for the thinking step
             thinking_messages = base_messages.copy()
-            thinking_messages.append({
-                "role": "assistant",
-                "content": "<think>\n"
-            })
+            thinking_messages.append(
+                {"role": "assistant", "content": "<think>\n"}
+            )
 
             # Make initial call for thinking only
             thinking_options = options.copy()
@@ -312,25 +334,24 @@ async def refine_field_content(
             thinking_response = await client.chat(
                 model=config["PRIMARY_MODEL"],
                 messages=thinking_messages,
-                options=thinking_options
+                options=thinking_options,
             )
 
             # Extract thinking content
-            thinking = "<think>" + thinking_response["message"]["content"] + "</think>"
+            thinking = (
+                "<think>" + thinking_response["message"]["content"] + "</think>"
+            )
 
             # Add thinking to the main request
             full_messages = base_messages.copy()
-            full_messages.append({
-                "role": "assistant",
-                "content": thinking
-            })
+            full_messages.append({"role": "assistant", "content": thinking})
 
             # Now make the structured output call with the thinking included
             response = await client.chat(
                 model=config["PRIMARY_MODEL"],
                 messages=full_messages,
                 format=format_details["response_format"],
-                options=options
+                options=options,
             )
         else:
             # Standard approach for other models
@@ -338,7 +359,7 @@ async def refine_field_content(
                 model=config["PRIMARY_MODEL"],
                 messages=base_messages,
                 format=format_details["response_format"],
-                options=options
+                options=options,
             )
 
         logger.debug(f"Response received for field {field.field_key}")
@@ -350,6 +371,7 @@ async def refine_field_content(
         logger.error(f"Error refining field {field.field_key}: {e}")
         raise
 
+
 def determine_format_details(field: TemplateField, prompts: dict) -> dict:
     """Determine response format and format type based on field schema."""
     format_type = None
@@ -360,29 +382,38 @@ def determine_format_details(field: TemplateField, prompts: dict) -> dict:
             return {
                 "format_type": "narrative",
                 "response_format": NarrativeResponse.model_json_schema(),
-                "base_prompt": "Format the following content as a cohesive narrative paragraph."
+                "base_prompt": "Format the following content as a cohesive narrative paragraph.",
             }
 
     # Default to RefinedResponse for non-narrative formats
     format_guidance = ""
     if format_type == "numbered":
-        format_guidance = "Format the key points as a numbered list (1., 2., etc.)."
+        format_guidance = (
+            "Format the key points as a numbered list (1., 2., etc.)."
+        )
     elif format_type == "bullet":
-        format_guidance = "Format the key points as a bulleted list (•) prefixes)."
+        format_guidance = (
+            "Format the key points as a bulleted list (•) prefixes)."
+        )
 
     return {
         "format_type": format_type,
         "response_format": RefinedResponse.model_json_schema(),
         "base_prompt": prompts["prompts"]["refinement"]["system"],
-        "format_guidance": format_guidance
+        "format_guidance": format_guidance,
     }
 
-def build_system_prompt(field: TemplateField, format_details: dict, prompts: dict) -> str:
+
+def build_system_prompt(
+    field: TemplateField, format_details: dict, prompts: dict
+) -> str:
     """Build the system prompt using format guidance and style examples."""
     logger.info(f"Building system prompt for field: {field.field_name}")
 
+    schema_str = json.dumps(format_details["response_format"], indent=2)
+
     # Check if field has style_example and prioritize it
-    if hasattr(field, 'style_example') and field.style_example:
+    if hasattr(field, "style_example") and field.style_example:
         system_prompt = f"""
         You are an expert medical scribe. Your task is to reformat medical information to precisely match the style example provided, while maintaining clinical accuracy. The medical information is a summary of a patient transcript. The summary was generated by an automated system therefore it may contain irrelevant information.
 
@@ -400,16 +431,19 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
         2. IMPORTANT CONSTRAINTS:
         - Preserve ALL important clinical details from the original text; information which is irrelevant to the clinical encounter should be removed.
         - Do not add information not present in the input
-        - RETURN JSON IN THE REQUESTED FORMAT
         - If the style example uses abbreviations like "SNT" or "HSM", use similar appropriate medical abbreviations
 
-        FORMAT THE FOLLOWING MEDICAL INFORMATION:"""
+        Return your response as single valid JSON matching this exact schema with no code fences or prose:
+        {schema_str}"""
     else:
         # If no style example, start with base prompt
         system_prompt = format_details["base_prompt"]
 
         # Add format guidance if available
-        if "format_guidance" in format_details and format_details["format_guidance"]:
+        if (
+            "format_guidance" in format_details
+            and format_details["format_guidance"]
+        ):
             system_prompt += "\n" + format_details["format_guidance"]
 
         # Apply custom refinement rules if specified and no style example exists
@@ -418,11 +452,18 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
                 if rule in prompts["prompts"]["refinement"]:
                     system_prompt = prompts["prompts"]["refinement"][rule]
                     break
+        # Add schema information for all cases
+        system_prompt += f"""
 
+        Return your response as valid JSON matching this exact schema:
+        {schema_str}"""
     # Add adaptive_refinement_instructions if they exist
     # This should be appended regardless of whether a style_example or refinement_rule was applied,
     # as they are supplementary.
-    if hasattr(field, 'adaptive_refinement_instructions') and field.adaptive_refinement_instructions:
+    if (
+        hasattr(field, "adaptive_refinement_instructions")
+        and field.adaptive_refinement_instructions
+    ):
         instructions_string = "\n\nAdditionally, consider these user-derived preferences to improve the output further:"
         for i, instruction in enumerate(field.adaptive_refinement_instructions):
             instructions_string += f"\n- {instruction}"
@@ -431,16 +472,22 @@ def build_system_prompt(field: TemplateField, format_details: dict, prompts: dic
     return system_prompt
 
 
-def format_refined_response(response: dict, field: TemplateField, format_details: dict) -> str:
+def format_refined_response(
+    response: dict, field: TemplateField, format_details: dict
+) -> str:
     """Format the model response according to field requirements."""
     format_type = format_details["format_type"]
 
     if format_type == "narrative":
-        narrative_response = NarrativeResponse.model_validate_json(response['message']['content'])
+        narrative_response = NarrativeResponse.model_validate_json(
+            response["message"]["content"]
+        )
         return narrative_response.narrative
 
     # Handle non-narrative formats
-    refined_response = RefinedResponse.model_validate_json(response['message']['content'])
+    refined_response = RefinedResponse.model_validate_json(
+        response["message"]["content"]
+    )
 
     if format_type == "numbered":
         return format_numbered_list(refined_response.key_points)
@@ -450,14 +497,16 @@ def format_refined_response(response: dict, field: TemplateField, format_details
         # No specific formatting required
         return "\n".join(refined_response.key_points)
 
+
 def format_numbered_list(key_points: List[str]) -> str:
     """Format key points as a numbered list."""
     formatted_key_points = []
     for i, point in enumerate(key_points):
         # Strip any existing numbering
-        cleaned_point = re.sub(r'^\d+\.\s*', '', point.strip())
+        cleaned_point = re.sub(r"^\d+\.\s*", "", point.strip())
         formatted_key_points.append(f"{i+1}. {cleaned_point}")
     return "\n".join(formatted_key_points)
+
 
 def format_bulleted_list(key_points: List[str], field: TemplateField) -> str:
     """Format key points as a bulleted list."""
@@ -468,9 +517,10 @@ def format_bulleted_list(key_points: List[str], field: TemplateField) -> str:
     formatted_key_points = []
     for point in key_points:
         # Strip any existing bullets
-        cleaned_point = re.sub(r'^[•\-\*]\s*', '', point.strip())
+        cleaned_point = re.sub(r"^[•\-\*]\s*", "", point.strip())
         formatted_key_points.append(f"{bullet_char} {cleaned_point}")
     return "\n".join(formatted_key_points)
+
 
 def clean_think_tags(message_list):
     """
@@ -485,14 +535,16 @@ def clean_think_tags(message_list):
 
     # Handle simple strings
     if isinstance(message_list, str):
-            return re.sub(r'<think>.*?</think>', '', message_list, flags=re.DOTALL)
+        return re.sub(r"<think>.*?</think>", "", message_list, flags=re.DOTALL)
 
     cleaned_messages = []
 
     for message in message_list:
         if "content" in message and isinstance(message["content"], str):
             # Remove <think>...</think> patterns from content
-            cleaned_content = re.sub(r'<think>.*?</think>', '', message["content"], flags=re.DOTALL)
+            cleaned_content = re.sub(
+                r"<think>.*?</think>", "", message["content"], flags=re.DOTALL
+            )
             # Create a new message with cleaned content
             cleaned_message = message.copy()
             cleaned_message["content"] = cleaned_content.strip()
