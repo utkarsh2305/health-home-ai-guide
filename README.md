@@ -1,5 +1,5 @@
 > [!WARNING]
-> Phlox is an experimental project intended for educational and personal **experimentation** ONLY.
+> Phlox is an experimental project intended for educational and personal **experimentation** ONLY..
 > **AS PROVIDED, IT IS NOT A CERTIFIED MEDICAL DEVICE AND MUST NOT BE USED IN ACTUAL CLINICAL SETTINGS or FOR CLINICAL DECISION-MAKING.**
 >
 > AI outputs can be unreliable and inaccurate. Always verify information and use professional clinical judgment.
